@@ -4,6 +4,7 @@
 use anyhow::Result;
 use gpui::*;
 use gpui::prelude::*;
+use gpui_component::scroll::ScrollableElement;
 use gpui_component::{
     input::{Input, InputEvent, InputState},
     theme::Theme,
@@ -391,13 +392,13 @@ impl Render for ManagerView {
         folder_items = folder_items
             .child(div().cursor_pointer()
                 .child(sidebar_row("▤  All Servers", host_count, current_filter == ViewFilter::All, p))
-                .on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::All; cx.notify(); })))
+                .id("main-action-394").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::All; cx.notify(); })))
             .child(div().cursor_pointer()
                 .child(sidebar_row("★  Favorites", favorite_count, current_filter == ViewFilter::Favorites, p))
-                .on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::Favorites; cx.notify(); })))
+                .id("main-action-397").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::Favorites; cx.notify(); })))
             .child(div().cursor_pointer()
                 .child(sidebar_row("◷  Recent", recent_count, current_filter == ViewFilter::Recent, p))
-                .on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::Recent; cx.notify(); })));
+                .id("main-action-400").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::Recent; cx.notify(); })));
 
         let mut flat = Vec::new();
         nested_groups(&self.groups, None, 0, &self.collapsed_groups, &mut flat);
@@ -418,14 +419,14 @@ impl Render for ManagerView {
                     .bg(rgb(if active { p.selected } else { p.sidebar }))
                     .child(div().w(px(18.)).text_xs().text_color(rgb(p.secondary)).cursor_pointer()
                         .child(if children { if expanded { "▾" } else { "▸" } } else { "·" })
-                        .on_click(cx.listener(move |this, _, _, cx| {
+                        .id("main-action-421").on_click(cx.listener(move |this, _, _, cx| {
                             if !this.collapsed_groups.insert(id) { this.collapsed_groups.remove(&id); }
                             cx.notify();
                         })))
                     .child(div().flex_1().min_w_0().cursor_pointer().text_sm()
                         .text_color(rgb(if active { p.accent } else { p.primary }))
                         .child(format!("▱  {}", group.name))
-                        .on_click(cx.listener(move |this, _, _, cx| { this.filter = ViewFilter::Group(id); cx.notify(); })))
+                        .id("main-action-428").on_click(cx.listener(move |this, _, _, cx| { this.filter = ViewFilter::Group(id); cx.notify(); })))
                     .child(div().rounded_full().bg(rgb(p.chip)).px_2().py_1()
                         .text_xs().text_color(rgb(p.secondary)).child(count.to_string()))
             );
@@ -451,12 +452,12 @@ impl Render for ManagerView {
                         .child(div().text_sm().font_semibold().text_color(rgb(if active { p.accent } else { p.primary }))
                             .child(host.name.clone()))
                         .child(div().text_xs().text_color(rgb(p.tertiary)).child(host.hostname.clone()))
-                        .on_click(cx.listener(move |this, _, window, cx| this.select_host(id, window, cx))))
+                        .id("main-action-454").on_click(cx.listener(move |this, _, window, cx| this.select_host(id, window, cx))))
                     .child(environment(&label, p))
                     .child(div().cursor_pointer().px_1().text_lg()
                         .text_color(rgb(if starred { 0xF4B532 } else { p.tertiary }))
                         .child(if starred { "★" } else { "☆" })
-                        .on_click(cx.listener(move |this, _, _, cx| this.toggle_list_favorite(id, cx))))
+                        .id("main-action-459").on_click(cx.listener(move |this, _, _, cx| this.toggle_list_favorite(id, cx))))
             );
         }
         if filtered_count == 0 {
@@ -476,12 +477,12 @@ impl Render for ManagerView {
                         .child(format!("▱   {}", self.group_label(self.editor_group))))
                     .child(div().text_xs().text_color(rgb(p.secondary))
                         .child(if self.group_picker_open { "▴" } else { "▾" }))
-                    .on_click(cx.listener(|this, _, _, cx| { this.group_picker_open = !this.group_picker_open; cx.notify(); }))));
+                    .id("main-action-479").on_click(cx.listener(|this, _, _, cx| { this.group_picker_open = !this.group_picker_open; cx.notify(); }))));
         if self.group_picker_open {
             group_picker = group_picker.child(div().cursor_pointer().rounded_md().px_3().py_2()
                 .text_xs().text_color(rgb(p.secondary)).bg(rgb(p.chip))
                 .child("⊘  未分组")
-                .on_click(cx.listener(|this, _, _, cx| { this.editor_group = None; this.group_picker_open = false; cx.notify(); })));
+                .id("main-action-484").on_click(cx.listener(|this, _, _, cx| { this.editor_group = None; this.group_picker_open = false; cx.notify(); })));
             for group in &self.groups {
                 let id = group.id;
                 let selected = self.editor_group == Some(id);
@@ -490,7 +491,7 @@ impl Render for ManagerView {
                         .bg(rgb(if selected { p.selected } else { p.control }))
                         .text_xs().text_color(rgb(if selected { p.accent } else { p.secondary }))
                         .child(format!("{}  {}", if selected { "✓" } else { "·" }, group.name))
-                        .on_click(cx.listener(move |this, _, _, cx| { this.editor_group = Some(id); this.group_picker_open = false; cx.notify(); }))
+                        .id("main-action-493").on_click(cx.listener(move |this, _, _, cx| { this.editor_group = Some(id); this.group_picker_open = false; cx.notify(); }))
                 );
             }
         }
@@ -522,15 +523,15 @@ impl Render for ManagerView {
             secondary_actions = secondary_actions
                 .child(div().text_xs().text_color(rgb(p.secondary)).mr_3().child("配置管理"))
                 .child(div().cursor_pointer().rounded_md().px_3().py_2().bg(rgb(p.control))
-                    .text_xs().child("初始化 SSH").on_click(cx.listener(Self::init)))
+                    .text_xs().child("初始化 SSH").id("main-action-525").on_click(cx.listener(Self::init)))
                 .child(div().cursor_pointer().rounded_md().px_3().py_2().bg(rgb(p.control))
-                    .text_xs().child("导入 SSH Config").on_click(cx.listener(Self::import)))
+                    .text_xs().child("导入 SSH Config").id("main-action-527").on_click(cx.listener(Self::import)))
                 .child(div().cursor_pointer().rounded_md().px_3().py_2().bg(rgb(p.control))
-                    .text_xs().child("同步 Tab Configs").on_click(cx.listener(Self::sync)))
+                    .text_xs().child("同步 Tab Configs").id("main-action-529").on_click(cx.listener(Self::sync)))
                 .child(div().flex_1())
                 .child(div().cursor_pointer().text_xs().text_color(rgb(p.tertiary))
                     .child("关闭 ×")
-                    .on_click(cx.listener(|this, _, _, cx| { this.actions_open = false; cx.notify(); })));
+                    .id("main-action-533").on_click(cx.listener(|this, _, _, cx| { this.actions_open = false; cx.notify(); })));
         }
 
         div().size_full().v_flex().bg(rgb(p.app)).text_color(rgb(p.primary))
@@ -550,25 +551,25 @@ impl Render for ManagerView {
                             .bg(rgb(if self.appearance == Appearance::System { p.selected } else { p.control }))
                             .text_color(rgb(if self.appearance == Appearance::System { p.accent } else { p.secondary }))
                             .text_xs().child("自动")
-                            .on_click(cx.listener(|this, _, window, cx| this.set_theme(Appearance::System, window, cx))))
+                            .id("main-action-553").on_click(cx.listener(|this, _, window, cx| this.set_theme(Appearance::System, window, cx))))
                         .child(div().cursor_pointer().rounded_md().px_2().py_1()
                             .bg(rgb(if self.appearance == Appearance::Dark { p.selected } else { p.control }))
                             .text_color(rgb(if self.appearance == Appearance::Dark { p.accent } else { p.secondary }))
                             .text_xs().child("☾ 深色")
-                            .on_click(cx.listener(|this, _, window, cx| this.set_theme(Appearance::Dark, window, cx))))
+                            .id("main-action-558").on_click(cx.listener(|this, _, window, cx| this.set_theme(Appearance::Dark, window, cx))))
                         .child(div().cursor_pointer().rounded_md().px_2().py_1()
                             .bg(rgb(if self.appearance == Appearance::Light { p.selected } else { p.control }))
                             .text_color(rgb(if self.appearance == Appearance::Light { p.accent } else { p.secondary }))
                             .text_xs().child("☀ 浅色")
-                            .on_click(cx.listener(|this, _, window, cx| this.set_theme(Appearance::Light, window, cx)))))
+                            .id("main-action-563").on_click(cx.listener(|this, _, window, cx| this.set_theme(Appearance::Light, window, cx)))))
                     .child(div().cursor_pointer().rounded_md().px_3().py_2()
                         .bg(rgb(p.accent)).text_color(rgb(p.accent_foreground)).text_sm().font_semibold()
                         .child("+ 新建主机")
-                        .on_click(cx.listener(|this, _, window, cx| this.new_host(window, cx))))
+                        .id("main-action-567").on_click(cx.listener(|this, _, window, cx| this.new_host(window, cx))))
                     .child(div().cursor_pointer().rounded_md().px_3().py_2()
                         .bg(rgb(p.control)).text_color(rgb(p.secondary)).text_sm()
                         .child("⚙")
-                        .on_click(cx.listener(|this, _, _, cx| { this.actions_open = !this.actions_open; cx.notify(); })))))
+                        .id("main-action-571").on_click(cx.listener(|this, _, _, cx| { this.actions_open = !this.actions_open; cx.notify(); })))))
             .when(self.actions_open, |el| el.child(secondary_actions))
             // One continuous three-column layout. Each pane owns its scrolling area.
             .child(div().h_flex().flex_1().min_h_0()
@@ -584,7 +585,7 @@ impl Render for ManagerView {
                         .child(div().cursor_pointer().rounded_md().bg(rgb(p.accent))
                             .text_color(rgb(p.accent_foreground)).text_xs().font_semibold()
                             .px_2().py_2().child("创建")
-                            .on_click(cx.listener(Self::add_group)))))
+                            .id("main-action-587").on_click(cx.listener(Self::add_group)))))
                 .child(div().w(px(340.)).v_flex().min_h_0().bg(rgb(p.list))
                     .border_r_1().border_color(rgb(p.border)).p_3().gap_3()
                     .child(div().h_flex().items_center().justify_between()
@@ -621,19 +622,19 @@ impl Render for ManagerView {
                                     .bg(rgb(if self.favorite { p.accent } else { p.chip }))
                                     .text_color(rgb(if self.favorite { p.accent_foreground } else { p.secondary }))
                                     .text_xs().child(if self.favorite { "●   ON" } else { "OFF   ○" })
-                                    .on_click(cx.listener(Self::toggle_favorite))))))
+                                    .id("main-action-624").on_click(cx.listener(Self::toggle_favorite))))))
                     .child(div().h_flex().items_center().gap_2().px_5().py_3()
                         .border_t_1().border_color(rgb(p.border))
                         .child(div().flex_1().cursor_pointer().rounded_md().px_4().py_3()
                             .bg(rgb(p.accent)).text_color(rgb(p.accent_foreground))
                             .text_sm().font_semibold().flex().items_center().justify_center()
-                            .child("Open in Warp ↗").on_click(cx.listener(Self::connect)))
+                            .child("Open in Warp ↗").id("main-action-630").on_click(cx.listener(Self::connect)))
                         .child(div().cursor_pointer().rounded_md().px_3().py_3().bg(rgb(p.control))
-                            .text_sm().child("Save Changes").on_click(cx.listener(Self::save)))
+                            .text_sm().child("Save Changes").id("main-action-632").on_click(cx.listener(Self::save)))
                         .child(div().cursor_pointer().rounded_md().px_3().py_3()
                             .bg(rgb(p.danger_surface)).text_color(rgb(p.danger)).text_sm()
                             .child(if self.confirm_delete { "确认删除" } else { "Delete" })
-                            .on_click(cx.listener(Self::remove))))))
+                            .id("main-action-636").on_click(cx.listener(Self::remove))))))
             // Never equate generated configuration status with a successful SSH login.
             .child(div().h_flex().items_center().gap_4().px_4().py_2()
                 .bg(rgb(p.titlebar)).border_t_1().border_color(rgb(p.border))
