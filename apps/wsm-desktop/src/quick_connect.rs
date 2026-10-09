@@ -2,6 +2,8 @@
 //! The UI is intentionally GPUI, so it follows the main window's saved light/dark preference.
 //! NOTE: A precisely NSStatusItem-anchored popover is future native integration work.
 use gpui::*;
+use gpui::prelude::*;
+use gpui_component::StyledExt;
 use gpui_component::{input::{Input,InputEvent,InputState}, Root};
 use uuid::Uuid;
 use wsm_core::{Host,Manager};
@@ -98,7 +100,7 @@ impl Render for QuickConnect {
                 .bg(rgb(p.control))
                 .child(div().flex_1().min_w_0().child(Input::new(&self.search)))
                 .child(div().text_xs().text_color(rgb(p.tertiary)).px_3().child("↵")))
-            .child(div().flex_1().min_h_0().overflow_y_scroll().child(list))
+            .child(div().flex_1().min_h_0().overflow_y_scrollbar().child(list))
             .child(div().pt_3().border_t_1().border_color(rgb(p.border))
                 .h_flex().justify_between().items_center()
                 .child(div().text_xs().text_color(rgb(p.secondary)).child(self.status.clone()))
