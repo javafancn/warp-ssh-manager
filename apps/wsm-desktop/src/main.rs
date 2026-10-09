@@ -627,7 +627,7 @@ impl Render for ManagerView {
                         .id("main-interaction-019").on_click(cx.listener(|this, _, _, cx| { this.actions_open = !this.actions_open; cx.notify(); })))))
             .when(self.actions_open, |el| el.child(secondary_actions))
             // One continuous three-column layout. Each pane owns its scrolling area.
-            .child(div().h_flex().flex_1().min_h_0().items_stretch()
+            .child(div().h_flex().flex_1().min_h_0().items_start()
                 .child(div().w(px(240.)).h_full().v_flex().min_h_0().bg(rgb(p.sidebar))
                     .border_r_1().border_color(rgb(p.border)).p_3().gap_3()
                     .child(div().text_sm().font_semibold().child("Folders"))
