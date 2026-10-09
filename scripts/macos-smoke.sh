@@ -21,7 +21,11 @@ cargo run --quiet -p wsm-cli -- sync
 
 uuid="$(cargo run --quiet -p wsm-cli -- list | grep demo-api | awk '{print $1}')"
 [[ -n "$uuid" ]]
-cargo run --quiet -p wsm-cli -- connect "$uuid" --dry-run | grep -q 'ssh demo-api'
+# Capture the full CLI output before matching it. A `grep -q` pipeline closes
+# stdout early, which can make Rust's println! panic with Broken pipe (os error 32)
+# when `pipefail` is enabled.
+dry_run_output="$(cargo run --quiet -p wsm-cli -- connect "$uuid" --dry-run)"
+[[ "$dry_run_output" == *"ssh demo-api"* ]]
 grep -q 'Host demo-api' "$base/ssh/config.d/warp-ssh-manager.conf"
 [[ "$(grep -c '^Include ' "$WSM_SSH_CONFIG")" == 1 ]]
 [[ -f "$base/warp/tab_configs/wsm_${uuid//-/}.toml" ]]
