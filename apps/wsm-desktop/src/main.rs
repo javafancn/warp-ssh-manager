@@ -3,6 +3,7 @@
 //! SSH login itself is delegated to Warp and OpenSSH; this view never handles credentials.
 use anyhow::Result;
 use gpui::*;
+use gpui::prelude::*;
 use gpui_component::{
     input::{Input, InputEvent, InputState},
     theme::Theme,
@@ -576,7 +577,7 @@ impl Render for ManagerView {
                     .child(div().text_sm().font_semibold().child("Folders"))
                     .child(folder_items)
                     .child(div().mt_3().mb_1().text_xs().text_color(rgb(p.tertiary)).child("Groups"))
-                    .child(div().flex_1().overflow_y_scroll().child(group_list))
+                    .child(div().flex_1().overflow_y_scrollbar().child(group_list))
                     .child(div().h_flex().items_center().gap_2()
                         .child(div().flex_1().min_w_0().rounded_md().border_1().border_color(rgb(p.border))
                             .bg(rgb(p.control)).child(Input::new(&self.group_input)))
@@ -591,7 +592,7 @@ impl Render for ManagerView {
                         .child(div().text_xs().text_color(rgb(p.tertiary)).child(format!("{} 台", filtered_count))))
                     .child(div().rounded_md().border_1().border_color(rgb(p.border))
                         .bg(rgb(p.control)).child(Input::new(&self.search)))
-                    .child(div().flex_1().min_h_0().overflow_y_scroll().child(connections)))
+                    .child(div().flex_1().min_h_0().overflow_y_scrollbar().child(connections)))
                 .child(div().flex_1().min_w_0().v_flex().min_h_0().bg(rgb(p.inspector))
                     .child(div().h_flex().items_center().justify_between().px_5().py_3()
                         .border_b_1().border_color(rgb(p.border))
@@ -602,7 +603,7 @@ impl Render for ManagerView {
                                 .child(if imported { "Imported · 连接字段只读" } else { "Managed · OpenSSH" })))
                         .child(div().text_xs().text_color(rgb(if self.favorite { 0xF4B532 } else { p.tertiary }))
                             .child(if self.favorite { "★ 已收藏" } else { "☆ 未收藏" })))
-                    .child(div().flex_1().min_h_0().overflow_y_scroll().px_5().py_4()
+                    .child(div().flex_1().min_h_0().overflow_y_scrollbar().px_5().py_4()
                         .child(div().v_flex().gap_3()
                             .child(detail_field("显示名称", &self.name, false, p))
                             .child(detail_field("SSH 别名", &self.alias, imported, p))
