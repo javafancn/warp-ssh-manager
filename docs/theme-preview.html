@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Warp SSH Manager · v0.3 UI Design Preview</title>
+<style>
+:root {font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif;color-scheme:dark;}
+* {box-sizing:border-box}
+body {margin:0;background:#071127;color:#d9e2ef;padding:32px 20px 60px}
+body.light {background:#e8edf5;color:#223146;color-scheme:light}
+.preview-banner{max-width:1320px;margin:0 auto 16px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.preview-banner h1{font-size:19px;letter-spacing:-.3px;margin:0}
+.preview-banner p{font-size:12px;color:#8c9cb4;margin:5px 0 0}
+.theme-picker{display:flex;background:#1c2940;padding:5px;border-radius:15px;gap:2px;border:1px solid #334258}
+.light .theme-picker{background:#d8e1f0;border-color:#cbd4e1}
+.theme-picker button{appearance:none;border:0;background:transparent;color:#aebfd7;cursor:pointer;padding:9px 19px;border-radius:10px;font-weight:600}
+.theme-picker button.active{background:#2775ee;color:white}
+.theme-picker button:not(.active):hover{background:#ffffff15}
+.app{--app:#101722;--header:#18212e;--sidebar:#1b2432;--list:#131b27;--inspector:#18212e;--field:#263242;--border:#303c4d;--primary:#f1f5fc;--secondary:#a1b0c4;--subtle:#728197;--accent:#3079f5;--active:#1a3d75;--chip:#303b4b;--danger:#f08c8c;--danger-bg:#542f38;--prod:#223f71;--prod-text:#91bbff;--stage:#3b275a;--stage-text:#cdb0fe;--dev:#173e32;--dev-text:#80ddab;display:flex;flex-direction:column;width:min(1320px,100%);height:795px;margin:auto;background:var(--app);color:var(--primary);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 22px 70px #0006}
+.light .app{--app:#f7f9fc;--header:#f8fafd;--sidebar:#f0f3f8;--list:#fff;--inspector:#fff;--field:#f3f5f9;--border:#e0e6ef;--primary:#192638;--secondary:#57677d;--subtle:#8b98ab;--accent:#246df2;--active:#e6efff;--chip:#ebeff5;--danger:#c53a49;--danger-bg:#fce7e8;--prod:#e5eeff;--prod-text:#235ecb;--stage:#f0e5ff;--stage-text:#8c4aca;--dev:#e0f5e9;--dev-text:#208451;box-shadow:0 22px 70px #61718828}
+.header{height:77px;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--header);border-bottom:1px solid var(--border);padding:0 20px}
+.identity{display:flex;align-items:center;gap:12px;white-space:nowrap}
+.logo{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:white;background:linear-gradient(125deg,#448dff,#165bcd);font-size:16px;font-weight:800;box-shadow:0 3px 12px #1458cd55}
+.identity strong{font-size:15px}.identity small{display:block;font-size:11px;color:var(--subtle);margin-top:4px}
+.toolbar{display:flex;align-items:center;gap:8px}
+button{font:inherit;cursor:pointer}
+.tool{background:var(--field);border:1px solid var(--border);border-radius:7px;color:var(--primary);font-size:12px;padding:9px 12px;white-space:nowrap}
+.tool:hover,.secondary:hover{filter:brightness(1.12)}
+.tool.primary,.primary{background:var(--accent);color:white;border-color:transparent;font-weight:600}
+.theme-mini{display:flex;align-items:center;gap:5px;padding:4px;background:var(--field);border:1px solid var(--border);border-radius:9px;margin-left:12px}
+.theme-mini button{border:0;color:var(--secondary);background:transparent;font-size:11px;padding:7px 9px;border-radius:6px}
+.theme-mini button.active{background:var(--active);color:var(--accent)}
+.body{display:grid;grid-template-columns:235px 360px minmax(380px,1fr);min-height:0;flex:1}
+.sidebar{background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:18px 14px;min-height:0}
+.pane-title{font-weight:700;font-size:15px;margin:0 0 20px}.section{color:var(--subtle);font-size:10px;font-weight:700;letter-spacing:.8px;margin:19px 11px 8px}
+.nav{width:100%;border:0;background:transparent;color:var(--primary);display:flex;justify-content:space-between;align-items:center;border-radius:7px;text-align:left;padding:11px 10px;font-size:12px}
+.nav.active{background:var(--active)}.nav:hover:not(.active){background:var(--field)}
+.count{border-radius:50px;background:var(--chip);padding:2px 8px;color:var(--secondary);font-size:10px}
+.group-list{overflow:auto;flex:1}.group .nav{padding-left:12px}
+.sidebar-new{display:flex;gap:7px;margin-top:12px}.sidebar-new input{min-width:0;flex:1}.sidebar-new button{background:var(--accent);color:white;border:0;border-radius:7px;font-weight:700;padding:8px;font-size:11px}
+.connections{padding:19px 14px;background:var(--list);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+.topline{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:11px}.topline strong{font-size:16px}.topline span{font-size:11px;color:var(--subtle)}
+.search{width:100%;background:var(--field);border:1px solid var(--border);padding:10px 12px;color:var(--primary);border-radius:8px;outline:0;font-size:12px;margin-bottom:14px}
+.search:focus,input:focus,textarea:focus{border-color:var(--accent);outline:0;box-shadow:0 0 0 2px #3079f522}
+.hosts{overflow:auto;flex:1}.host{border-radius:9px;padding:10px 9px;margin:0 0 7px;display:flex;align-items:center;gap:9px;cursor:pointer;border:1px solid transparent}
+.host:hover{background:var(--field)}.host.active{background:var(--active);border-color:var(--accent)}
+.server-icon{background:var(--field);height:30px;width:30px;flex-shrink:0;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--secondary);font-size:14px}
+.host-info{flex:1;min-width:0}.host-info strong{display:block;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.host-info small{color:var(--subtle);font-size:11px;display:block;margin-top:4px}
+.badge{font-size:10px;border-radius:6px;padding:5px 7px;white-space:nowrap}
+.badge.prod{background:var(--prod);color:var(--prod-text)}.badge.stage{background:var(--stage);color:var(--stage-text)}.badge.dev{background:var(--dev);color:var(--dev-text)}
+.star{cursor:pointer;background:none;border:0;color:var(--subtle);font-size:18px;padding:0}.star.fav{color:#f4b532}
+.details{background:var(--inspector);display:flex;flex-direction:column;min-height:0}
+.details-head{padding:20px 25px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.details-head strong{font-size:16px}.details-head small{color:var(--subtle);display:block;font-size:11px;margin-top:5px}
+.form{overflow:auto;flex:1;padding:18px 25px;display:grid;align-content:start;gap:12px}
+.form>.field{display:grid;grid-template-columns:100px minmax(0,1fr);align-items:center;gap:12px}.two .field{display:grid;grid-template-columns:55px minmax(0,1fr);align-items:center;gap:8px}.field label{font-size:11px;color:var(--secondary);display:block;margin-bottom:0}
+.field input,.field textarea,.sidebar-new input{display:block;width:100%;padding:9px 10px;background:var(--field);color:var(--primary);font-size:12px;border:1px solid var(--border);border-radius:7px}
+.field textarea{min-height:65px;resize:vertical}.two{display:grid;grid-template-columns:1fr 125px;gap:10px}
+.field-tags{display:flex;gap:5px;align-items:center}.field-tags span{background:var(--chip);padding:5px 9px;font-size:11px;border-radius:6px;color:var(--secondary)}
+.fav-toggle{display:flex;justify-content:space-between;align-items:center;color:var(--secondary);font-size:12px}
+.switch{background:var(--accent);height:22px;width:39px;border-radius:15px;position:relative;cursor:pointer}.switch:before{content:"";position:absolute;right:3px;top:3px;height:16px;width:16px;background:white;border-radius:50%}
+.actions{display:flex;padding:14px 25px;gap:8px;border-top:1px solid var(--border)}.actions button{border:0;border-radius:7px;padding:12px 13px;color:var(--primary);background:var(--field);font-size:12px;white-space:nowrap}.actions .primary{flex:1;color:white;background:var(--accent)}.actions .danger{background:var(--danger-bg);color:var(--danger)}
+.status{display:flex;align-items:center;gap:19px;padding:11px 17px;min-height:41px;background:var(--header);border-top:1px solid var(--border);font-size:10px;color:var(--secondary)}.ok{color:#46d783}.light .ok{color:#239b57}.status .last{margin-left:auto;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.help{max-width:1320px;margin:13px auto 0;text-align:center;color:#8ea2c1;font-size:12px}.light .help{color:#62748c}
+.quick{--border:#303c4d;--inspector:#18212e;--primary:#f1f5fc;--secondary:#a1b0c4;--field:#263242;--prod:#223f71;--prod-text:#91bbff;--stage:#3b275a;--stage-text:#cdb0fe;--dev:#173e32;--dev-text:#80ddab;position:absolute;right:3%;top:1%;width:345px;border:1px solid var(--border);background:var(--inspector);color:var(--primary);border-radius:13px;padding:15px;box-shadow:0 22px 50px #0008;display:none}
+.light .quick{--border:#e0e6ef;--inspector:#ffffff;--primary:#192638;--secondary:#57677d;--field:#f3f5f9;--prod:#e5eeff;--prod-text:#235ecb;--stage:#f0e5ff;--stage-text:#8c4aca;--dev:#e0f5e9;--dev-text:#208451}.quick.show{display:block}.quick b{font-size:13px}.quick .mini{background:var(--field);padding:10px;border-radius:8px;margin-top:10px;font-size:11px;color:var(--secondary)}
+.quick .minirow{padding:11px 3px;border-bottom:1px solid var(--border);font-size:12px;display:flex;justify-content:space-between;align-items:center}
+.overlay{position:relative;max-width:1320px;margin:auto}
+@media (max-width:1100px){.body{grid-template-columns:195px 310px minmax(340px,1fr)}.header{padding:0 12px}.sidebar{padding:13px 9px}.connections{padding:13px 9px}.details-head{padding:14px}.form{padding:14px}.actions{padding:14px}.tool{padding:8px;font-size:11px}}
+@media (max-width:880px){.app{width:100%;height:auto;min-height:760px}.body{display:flex;flex-wrap:wrap}.sidebar{flex:1 1 170px}.connections{flex:2 1 280px}.details{flex:3 1 350px}.toolbar .tool:not(.primary){display:none}}
+
+/* v0.3 design refinements: compact native-like chrome, denser list and field typography */
+body {padding-top:27px}
+.header{height:59px;min-height:59px;padding:0 17px}
+.logo{width:29px;height:29px;border-radius:8px;font-size:13px}
+.identity strong{font-size:13px}
+.theme-mini{margin-left:0}
+.theme-mini button{padding:7px 11px}
+.app{height:770px}
+.body{grid-template-columns:222px 340px minmax(410px,1fr)}
+.sidebar,.connections{padding:15px 13px}
+.pane-title{font-size:14px;margin-bottom:18px}
+.nav{padding:9px 10px}
+.sidebar-new{flex-direction:row}
+.group-list{min-height:0}
+.section{margin-top:17px}
+.connections{gap:0}
+.host{margin-bottom:3px;padding:9px 8px}
+.host:not(.active){border-color:transparent}
+.host-info strong{font-size:12px}
+.host-info small{font-size:10px;margin-top:3px}
+.badge{font-size:10px;padding:4px 6px}
+.details-head{padding:15px 21px 11px}
+.form{padding:16px 21px;gap:12px}
+.field label{width:98px}
+.actions{padding:12px 21px}
+.status{padding:10px 14px;min-height:39px}
+.action-pop{display:flex;gap:9px;align-items:center;padding:9px 18px;background:var(--header);border-bottom:1px solid var(--border);color:var(--secondary);font-size:11px}
+.action-pop[hidden]{display:none}
+.action-pop .tool{font-size:11px;padding:7px 10px}
+:root{scrollbar-color:#64748b55 transparent}
+@media(max-width:1190px){.body{grid-template-columns:200px 320px minmax(350px,1fr)}.theme-mini button{padding:6px}}
+</style>
+</head>
+<body>
+<div class="preview-banner"><div><h1>Warp SSH Manager · UI 设计预览</h1><p>这是独立 HTML 交互预览，非 GPUI 实际运行截图。示例主机不会发起真实 SSH 连接。</p></div><div class="theme-picker"><button data-mode="system">◉ 跟随系统</button><button data-mode="dark" class="active">☾ 深色</button><button data-mode="light">☀ 浅色</button></div></div>
+<div class="overlay"><div class="app">
+<div class="header"><div class="identity"><div class="logo">&gt;_</div><div><strong>Warp SSH Manager</strong></div></div><div class="toolbar"><div class="theme-mini"><button data-mode="system">自动</button><button data-mode="dark" class="active">☾ 深色</button><button data-mode="light">☀ 浅色</button></div><button class="tool primary" id="new">＋ 新建主机</button><button class="tool" id="quick-toggle">⌕ Quick Connect</button><button class="tool" id="actions-toggle" aria-label="配置管理">⚙</button></div></div><div id="action-pop" class="action-pop" hidden><span>配置管理</span><button class="tool">初始化 SSH</button><button class="tool">导入 SSH Config</button><button class="tool">同步 Tab Configs</button></div>
+<div class="body">
+<aside class="sidebar"><div class="pane-title">Folders</div><div><button class="nav active" data-group="All Servers"><span>▣　All Servers</span><span class="count">8</span></button><button class="nav" data-group="Favorites"><span>★　Favorites</span><span class="count">3</span></button><button class="nav" data-group="Recent"><span>◷　Recent</span><span class="count">4</span></button></div><div class="section">Groups</div><div class="group-list"><div class="group"><button class="nav" data-group="Production"><span>▸　▱　Production</span><span class="count">3</span></button><button class="nav" data-group="Staging"><span>▸　▱　Staging</span><span class="count">2</span></button><button class="nav" data-group="Development"><span>▸　▱　Development</span><span class="count">3</span></button><button class="nav" data-group="Backend"><span>▸　▱　Backend</span><span class="count">2</span></button></div></div><div class="sidebar-new"><input placeholder="新建分组…"><button>创建</button></div></aside>
+<section class="connections"><div class="topline"><strong>Connections</strong><span id="count">8 台</span></div><input class="search" placeholder="⌕  搜索名称、IP 或 SSH 别名…" id="search"><div class="hosts" id="hosts"></div></section>
+<section class="details"><div class="details-head"><div><strong id="details-title">Server Details</strong><small>Managed · OpenSSH</small></div><span id="mark" style="color:#f4b532">★ 已收藏</span></div><div class="form"><div class="field"><label>显示名称</label><input id="name" value="API Server"></div><div class="field"><label>SSH 别名</label><input id="alias" value="api-server"></div><div class="field"><label>主机名 / IP</label><input id="hostname" value="192.168.1.10"></div><div class="two"><div class="field"><label>用户名</label><input id="user" value="ubuntu"></div><div class="field"><label>端口</label><input value="22"></div></div><div class="field"><label>身份文件</label><input value="~/.ssh/prod.pem"></div><div class="field"><label>所属分组</label><input id="group-field" value="Production"></div><div class="field"><label>标签</label><div class="field-tags"><span>api ×</span><span>production ×</span><span>＋ 添加</span></div></div><div class="field"><label>ProxyJump</label><input value="bastion"></div><div class="field"><label>备注</label><textarea>生产环境 API 服务器\n负责处理核心业务接口</textarea></div><div class="fav-toggle"><span>设为收藏</span><div class="switch"></div></div></div><div class="actions"><button class="primary" id="connect">Open in Warp ↗</button><button>保存更改</button><button class="danger">删除</button></div></section>
+</div><footer class="status"><span><span class="ok">●</span> Warp Tab Configs ready</span><span><span class="ok">●</span> SSH Config linked</span><span>8 servers · 4 groups</span><span class="last" id="feedback">交互演示 / 无真实连接</span></footer>
+</div><div class="quick"><b>Quick Connect</b><div class="mini">⌕ 搜索服务器…　　⌘K</div><div id="quick-hosts"></div><div class="mini">按 Enter 在 Warp 中打开连接（预览不实际连接）</div></div></div>
+<p class="help">交互原型：支持黑色、白色、跟随系统外观；点击分组/主机、搜索、收藏、打开 Quick Connect。实际 SSH 不会由预览发起。</p>
+<script>
+const hosts=[{name:'API Server',alias:'api-server',ip:'192.168.1.10',group:'Production',fav:true,user:'ubuntu'},{name:'DB Server',alias:'db-server',ip:'10.0.0.5',group:'Staging',fav:false,user:'root'},{name:'Bastion Host',alias:'bastion',ip:'bastion.company.com',group:'Production',fav:false,user:'admin'},{name:'Worker-01',alias:'worker-01',ip:'10.0.1.21',group:'Development',fav:true,user:'developer'},{name:'Cache Server',alias:'cache-server',ip:'10.0.1.22',group:'Development',fav:false,user:'deploy'},{name:'Admin Server',alias:'admin-server',ip:'192.168.1.11',group:'Production',fav:false,user:'root'},{name:'Test Server',alias:'test-server',ip:'10.0.2.10',group:'Staging',fav:false,user:'tester'},{name:'Dev-Local',alias:'dev-local',ip:'dev.local',group:'Development',fav:true,user:'developer'}];
+let sel=hosts[0],group='All Servers';
+function badge(g){return g==='Production'?'prod':g==='Staging'?'stage':'dev'}
+function selectHost(h){sel=h;['name','alias','hostname','user'].forEach((id,i)=>document.getElementById(id).value=[h.name,h.alias,h.ip,h.user][i]);document.getElementById('group-field').value=h.group;document.getElementById('mark').textContent=h.fav?'★ 已收藏':'☆ 未收藏';render()}
+function render(){const q=document.getElementById('search').value.toLowerCase();const arr=hosts.filter(h=>(group==='All Servers'||group==='Favorites'&&h.fav||group==='Recent'||h.group===group||group==='Backend'&&(h.name.includes('API')||h.name.includes('Worker')))&&[h.name,h.ip,h.alias].join(' ').toLowerCase().includes(q));document.getElementById('count').textContent=arr.length+' 台';document.getElementById('hosts').innerHTML='';arr.forEach(h=>{const row=document.createElement('div');row.className='host'+(sel===h?' active':'');row.innerHTML=`<div class="server-icon">▤</div><div class="host-info"><strong>${h.name}</strong><small>${h.ip}</small></div><span class="badge ${badge(h.group)}">${h.group}</span><button class="star ${h.fav?'fav':''}">${h.fav?'★':'☆'}</button>`;row.addEventListener('click',()=>selectHost(h));row.querySelector('button').addEventListener('click',e=>{e.stopPropagation();h.fav=!h.fav;render()});document.getElementById('hosts').appendChild(row)});document.getElementById('quick-hosts').innerHTML=hosts.filter(h=>h.fav).map(h=>`<div class="minirow"><span>▤ &nbsp;${h.name}<br><small style="opacity:.6">&nbsp;&nbsp;&nbsp;&nbsp; ${h.ip}</small></span><span class="badge ${badge(h.group)}">${h.group}</span></div>`).join('')}
+const systemMedia=window.matchMedia('(prefers-color-scheme: light)');let preferredMode='system';
+function setTheme(mode){
+  preferredMode=mode;
+  const light=mode==='light'||mode==='system'&&systemMedia.matches;
+  document.body.classList.toggle('light',light);
+  document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+  try{localStorage.setItem('wsm-preview-appearance',mode)}catch{}
+}
+systemMedia.addEventListener('change',()=>{if(preferredMode==='system')setTheme('system')});
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>setTheme(b.dataset.mode)));
+document.querySelectorAll('[data-group]').forEach(b=>b.addEventListener('click',()=>{group=b.dataset.group;document.querySelectorAll('[data-group]').forEach(x=>x.classList.toggle('active',x===b));render()}));
+document.getElementById('search').addEventListener('input',render);
+document.getElementById('new').addEventListener('click',()=>document.getElementById('feedback').textContent='演示：在原生应用中可新建主机');
+document.getElementById('connect').addEventListener('click',()=>document.getElementById('feedback').textContent='预览模式：不会连接 '+sel.alias);
+document.getElementById('quick-toggle').addEventListener('click',()=>document.querySelector('.quick').classList.toggle('show'));
+document.getElementById('actions-toggle').addEventListener('click',()=>{const el=document.getElementById('action-pop');el.hidden=!el.hidden});
+let initial=new URLSearchParams(location.search).get('theme');
+if(!['system','dark','light'].includes(initial)) {try{initial=localStorage.getItem('wsm-preview-appearance')}catch{}}
+setTheme(['system','dark','light'].includes(initial)?initial:'system');
+render();
+</script>
+</body></html>

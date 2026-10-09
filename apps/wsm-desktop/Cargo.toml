@@ -1,0 +1,29 @@
+[package]
+name = "wsm-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "warp-ssh-manager"
+path = "src/main.rs"
+
+[features]
+default = []
+tray = ["dep:tray-icon"]
+
+[dependencies]
+anyhow.workspace = true
+uuid.workspace = true
+wsm-core = { path = "../../crates/wsm-core" }
+gpui = "=0.2.2"
+gpui-component = "=0.5.1"
+gpui-component-assets = "=0.5.1"
+tray-icon = { version = "0.21", optional = true }
+
+[package.metadata.bundle]
+name = "Warp SSH Manager"
+identifier = "dev.warpsshmanager.app"
+category = "Developer Tool"
+short_description = "Native SSH connection manager for Warp Terminal"
+minimum_system_version = "12.0"

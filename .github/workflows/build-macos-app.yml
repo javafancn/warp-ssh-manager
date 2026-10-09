@@ -1,59 +1,82 @@
 name: Build macOS App (Universal 2)
+
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
+    tags:
+      - 'v*'
+
 permissions:
   contents: read
+
 jobs:
-  build:
+  native-build:
+    name: Build ${{ matrix.arch }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-15
-            target: aarch64-apple-darwin
-            label: arm64
-          - runner: macos-15-intel
-            target: x86_64-apple-darwin
-            label: intel
+          - arch: arm64
+            runner: macos-15
+            rust_target: aarch64-apple-darwin
+          - arch: intel
+            runner: macos-15-intel
+            rust_target: x86_64-apple-darwin
     runs-on: ${{ matrix.runner }}
     env:
       MACOSX_DEPLOYMENT_TARGET: '12.0'
     steps:
       - uses: actions/checkout@v4
+      - name: Report architecture and toolchain
+        run: |
+          sw_vers
+          uname -m
+          xcodebuild -version
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ matrix.rust_target }}
       - uses: Swatinem/rust-cache@v2
-      - name: Test core
+        with:
+          key: ${{ matrix.arch }}
+      - name: Test business core
         run: cargo test -p wsm-core
-      - name: Build desktop
-        run: cargo build --release -p wsm-desktop --features tray --target ${{ matrix.target }}
+      - name: Build GPUI desktop program
+        run: cargo build --release -p wsm-desktop --features tray --target '${{ matrix.rust_target }}'
+      - name: Verify executable deployment metadata
+        run: bash scripts/verify-macos-binary.sh "target/${{ matrix.rust_target }}/release/warp-ssh-manager"
       - uses: actions/upload-artifact@v4
         with:
-          name: binary-${{ matrix.label }}
-          path: target/${{ matrix.target }}/release/warp-ssh-manager
+          name: native-${{ matrix.arch }}
+          path: target/${{ matrix.rust_target }}/release/warp-ssh-manager
           if-no-files-found: error
-  package:
-    needs: build
+          retention-days: 14
+
+  package-universal:
+    name: Package downloadable macOS app
+    needs: native-build
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: binary-arm64
+          name: native-arm64
           path: staging/arm64
       - uses: actions/download-artifact@v4
         with:
-          name: binary-intel
+          name: native-intel
           path: staging/intel
-      - name: Package application
-        run: bash scripts/package-macos-app.sh --universal staging/arm64/warp-ssh-manager staging/intel/warp-ssh-manager
+      - name: Build .app / .dmg / .zip
+        run: |
+          bash scripts/package-macos-app.sh --universal \
+            staging/arm64/warp-ssh-manager \
+            staging/intel/warp-ssh-manager
       - uses: actions/upload-artifact@v4
         with:
-          name: WarpSSHManager-Universal2
+          name: WarpSSHManager-Universal2-macOS12-plus
           path: |
             dist/*.dmg
             dist/*.app.zip
           if-no-files-found: error
+          retention-days: 30

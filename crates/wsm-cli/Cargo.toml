@@ -1,0 +1,15 @@
+[package]
+name = "wsm-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "wsm"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+uuid.workspace = true
+wsm-core = { path = "../wsm-core" }
