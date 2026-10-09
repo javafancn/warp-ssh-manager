@@ -29,6 +29,9 @@ enum ViewFilter {
     Group(Uuid),
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Feedback { Info, Success, Error, Warning }
+
 struct ManagerView {
     manager: Manager,
     hosts: Vec<Host>,
@@ -53,6 +56,7 @@ struct ManagerView {
     notes: Entity<InputState>,
     favorite: bool,
     message: String,
+    feedback: Feedback,
     confirm_delete: bool,
     _subscription: Subscription,
     _appearance_subscription: Subscription,
@@ -117,6 +121,7 @@ impl ManagerView {
             notes:cx.new(|cx| InputState::new(window,cx).placeholder("添加服务器备注...").multi_line(true)),
             favorite:false,confirm_delete:false,
             message:"请选择服务器；新建自管主机前需先初始化 SSH 集成。".into(),
+            feedback:Feedback::Info,
             _subscription:subscription,_appearance_subscription:appearance_subscription,
         };
         if let Some(id) = first_host { view.select_host(id, window, cx); }
@@ -144,6 +149,7 @@ impl ManagerView {
         self.group_picker_open=false;
         self.favorite=host.favorite;
         self.confirm_delete=false;
+        self.feedback=Feedback::Info;
         Self::set_input(&self.name,&host.name,window,cx);
         Self::set_input(&self.alias,&host.alias,window,cx);
         Self::set_input(&self.hostname,&host.hostname,window,cx);
@@ -170,6 +176,7 @@ impl ManagerView {
         self.editor_group=match self.filter {ViewFilter::Group(id)=>Some(id),_=>None};
         self.group_picker_open=false;
         self.confirm_delete=false;
+        self.feedback=Feedback::Info;
         for input in [&self.name,&self.alias,&self.hostname,&self.username,&self.identity,&self.jump,&self.tags,&self.notes] {
             Self::set_input(input,"",window,cx);
         }
@@ -179,9 +186,27 @@ impl ManagerView {
     }
 
     fn save(&mut self,_:&ClickEvent,_:&mut Window,cx:&mut Context<Self>) {
+        // Placeholder values are examples, never actual SSH input.
+        let name=Self::read(&self.name,cx);
+        let alias=Self::read(&self.alias,cx);
+        let host=Self::read(&self.hostname,cx);
+        let user=Self::read(&self.username,cx);
+        let problem=if name.trim().is_empty() {Some("请填写显示名称。")}
+            else if alias.trim().is_empty() {Some("请填写 SSH 别名，例如 prod-api-01；灰色文字仅是示例。")}
+            else if wsm_core::ssh::validate_alias(alias.trim()).is_err() {
+                Some("SSH 别名必须以字母或数字开头，仅可包含字母、数字、点、下划线和连字符。")
+            } else if host.trim().is_empty() {Some("请填写主机名或 IP 地址。")}
+            else if user.trim().is_empty() {Some("请填写 SSH 登录用户名。")}
+            else {None};
+        if let Some(error)=problem {
+            self.feedback=Feedback::Error;
+            self.message=error.into();
+            cx.notify();
+            return;
+        }
         let port=match Self::read(&self.port,cx).parse::<u16>() {
             Ok(v) if v>0=>v,
-            _=>{self.message="端口必须在 1~65535 之间".into();cx.notify();return;}
+            _=>{self.feedback=Feedback::Error;self.message="端口必须在 1～65535 之间。".into();cx.notify();return;}
         };
         let optional=|s:String| if s.trim().is_empty(){None}else{Some(s.trim().to_string())};
         let fields=HostInput {
@@ -219,13 +244,21 @@ impl ManagerView {
                 let tags=Self::read(&self.tags,cx);
                 let notes=Self::read(&self.notes,cx);
                 match self.manager.db.save_annotations(id,tags.trim(),notes.trim()) {
-                    Ok(())=>self.message="主机及备注已保存，配置已同步。".into(),
-                    Err(err)=>self.message=format!("主机已保存，但标签/备注保存失败：{err:#}"),
+                    Ok(())=>{self.feedback=Feedback::Success;self.message="主机及备注已保存，配置已同步。".into()},
+                    Err(err)=>{self.feedback=Feedback::Warning;self.message=format!("主机已保存，但标签/备注保存失败：{err:#}")},
                 }
                 self.selected=Some(id);
                 self.refresh(cx);
             },
-            Err(err)=>self.message=format!("保存失败：{err:#}"),
+            Err(err)=>{
+                self.feedback=Feedback::Error;
+                let raw=format!("{err:#}");
+                self.message=if raw.contains("wsm init") {
+                    "保存失败：请先点击顶部「⚙」→「初始化 SSH」，然后再试。".into()
+                } else if raw.contains("SSH alias") {
+                    "保存失败：SSH 别名格式无效或已存在，请检查别名字段。".into()
+                } else {format!("保存失败：{raw}")};
+            },
         }
         cx.notify();
     }
@@ -234,30 +267,34 @@ impl ManagerView {
         let Some(id)=self.selected else {return};
         if !self.confirm_delete {
             self.confirm_delete=true;
+            self.feedback=Feedback::Warning;
             self.message="再次点击删除按钮以确认删除该主机。".into();
             cx.notify();return;
         }
         match self.manager.delete_host(id) {
             Ok(())=>{
                 self.new_host(window,cx);
+                self.feedback=Feedback::Success;
                 self.message="主机已删除。导入的用户 SSH 配置文件没有被修改。".into();
                 self.refresh(cx);
             },
-            Err(err)=>self.message=format!("删除失败：{err:#}"),
+            Err(err)=>{self.feedback=Feedback::Error;self.message=format!("删除失败：{err:#}")},
         }
         cx.notify();
     }
 
     fn connect(&mut self,_:&ClickEvent,_:&mut Window,cx:&mut Context<Self>) {
         let Some(id)=self.selected else {
-            self.message="请先选择主机。".into();cx.notify();return;
+            self.feedback=Feedback::Warning;
+            self.message="请先保存主机，再点击 Open in Warp。".into();cx.notify();return;
         };
         match self.manager.connect(id,false,false) {
             Ok(())=>{
+                self.feedback=Feedback::Success;
                 self.message="已请求 Warp 打开标签页；SSH 认证由 Warp/OpenSSH 负责。".into();
                 self.refresh(cx);
             },
-            Err(err)=>self.message=format!("启动连接失败：{err:#}"),
+            Err(err)=>{self.feedback=Feedback::Error;self.message=format!("启动连接失败：{err:#}")},
         }
         cx.notify();
     }
@@ -267,6 +304,7 @@ impl ManagerView {
             Ok((added,updated,errors))=>self.message=format!("导入 {added} 台，更新 {updated} 台，跳过 {} 项；原 SSH 文件保持只读。",errors.len()),
             Err(err)=>self.message=format!("导入失败：{err:#}"),
         }
+        self.feedback=if self.message.starts_with("导入失败") {Feedback::Error} else {Feedback::Success};
         self.refresh(cx);
     }
 
@@ -276,6 +314,7 @@ impl ManagerView {
             Ok(false)=>self.message="SSH 集成已经启用。".into(),
             Err(err)=>self.message=format!("初始化失败：{err:#}"),
         }
+        self.feedback=if self.message.starts_with("初始化失败") {Feedback::Error} else {Feedback::Success};
         cx.notify();
     }
 
@@ -284,6 +323,7 @@ impl ManagerView {
             Ok(count)=>self.message=format!("已同步 {count} 条已生成或收藏的 Warp Tab Config。"),
             Err(err)=>self.message=format!("同步失败：{err:#}"),
         }
+        self.feedback=if self.message.starts_with("同步失败") {Feedback::Error} else {Feedback::Success};
         cx.notify();
     }
 
@@ -298,6 +338,7 @@ impl ManagerView {
             },
             Err(err)=>self.message=format!("创建分组失败：{err:#}"),
         }
+        self.feedback=if self.message.starts_with("创建分组失败") {Feedback::Error} else {Feedback::Success};
         cx.notify();
     }
 
@@ -392,13 +433,13 @@ impl Render for ManagerView {
         folder_items = folder_items
             .child(div().cursor_pointer()
                 .child(sidebar_row("▤  All Servers", host_count, current_filter == ViewFilter::All, p))
-                .id("main-action-394").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::All; cx.notify(); })))
+                .id("main-interaction-001").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::All; cx.notify(); })))
             .child(div().cursor_pointer()
                 .child(sidebar_row("★  Favorites", favorite_count, current_filter == ViewFilter::Favorites, p))
-                .id("main-action-397").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::Favorites; cx.notify(); })))
+                .id("main-interaction-002").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::Favorites; cx.notify(); })))
             .child(div().cursor_pointer()
                 .child(sidebar_row("◷  Recent", recent_count, current_filter == ViewFilter::Recent, p))
-                .id("main-action-400").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::Recent; cx.notify(); })));
+                .id("main-interaction-003").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::Recent; cx.notify(); })));
 
         let mut flat = Vec::new();
         nested_groups(&self.groups, None, 0, &self.collapsed_groups, &mut flat);
@@ -419,14 +460,14 @@ impl Render for ManagerView {
                     .bg(rgb(if active { p.selected } else { p.sidebar }))
                     .child(div().w(px(18.)).text_xs().text_color(rgb(p.secondary)).cursor_pointer()
                         .child(if children { if expanded { "▾" } else { "▸" } } else { "·" })
-                        .id("main-action-421").on_click(cx.listener(move |this, _, _, cx| {
+                        .id("main-interaction-004").on_click(cx.listener(move |this, _, _, cx| {
                             if !this.collapsed_groups.insert(id) { this.collapsed_groups.remove(&id); }
                             cx.notify();
                         })))
                     .child(div().flex_1().min_w_0().cursor_pointer().text_sm()
                         .text_color(rgb(if active { p.accent } else { p.primary }))
                         .child(format!("▱  {}", group.name))
-                        .id("main-action-428").on_click(cx.listener(move |this, _, _, cx| { this.filter = ViewFilter::Group(id); cx.notify(); })))
+                        .id("main-interaction-005").on_click(cx.listener(move |this, _, _, cx| { this.filter = ViewFilter::Group(id); cx.notify(); })))
                     .child(div().rounded_full().bg(rgb(p.chip)).px_2().py_1()
                         .text_xs().text_color(rgb(p.secondary)).child(count.to_string()))
             );
@@ -452,12 +493,12 @@ impl Render for ManagerView {
                         .child(div().text_sm().font_semibold().text_color(rgb(if active { p.accent } else { p.primary }))
                             .child(host.name.clone()))
                         .child(div().text_xs().text_color(rgb(p.tertiary)).child(host.hostname.clone()))
-                        .id("main-action-454").on_click(cx.listener(move |this, _, window, cx| this.select_host(id, window, cx))))
+                        .id("main-interaction-006").on_click(cx.listener(move |this, _, window, cx| this.select_host(id, window, cx))))
                     .child(environment(&label, p))
                     .child(div().cursor_pointer().px_1().text_lg()
                         .text_color(rgb(if starred { 0xF4B532 } else { p.tertiary }))
                         .child(if starred { "★" } else { "☆" })
-                        .id("main-action-459").on_click(cx.listener(move |this, _, _, cx| this.toggle_list_favorite(id, cx))))
+                        .id("main-interaction-007").on_click(cx.listener(move |this, _, _, cx| this.toggle_list_favorite(id, cx))))
             );
         }
         if filtered_count == 0 {
@@ -477,12 +518,12 @@ impl Render for ManagerView {
                         .child(format!("▱   {}", self.group_label(self.editor_group))))
                     .child(div().text_xs().text_color(rgb(p.secondary))
                         .child(if self.group_picker_open { "▴" } else { "▾" }))
-                    .id("main-action-479").on_click(cx.listener(|this, _, _, cx| { this.group_picker_open = !this.group_picker_open; cx.notify(); }))));
+                    .id("main-interaction-008").on_click(cx.listener(|this, _, _, cx| { this.group_picker_open = !this.group_picker_open; cx.notify(); }))));
         if self.group_picker_open {
             group_picker = group_picker.child(div().cursor_pointer().rounded_md().px_3().py_2()
                 .text_xs().text_color(rgb(p.secondary)).bg(rgb(p.chip))
                 .child("⊘  未分组")
-                .id("main-action-484").on_click(cx.listener(|this, _, _, cx| { this.editor_group = None; this.group_picker_open = false; cx.notify(); })));
+                .id("main-interaction-009").on_click(cx.listener(|this, _, _, cx| { this.editor_group = None; this.group_picker_open = false; cx.notify(); })));
             for group in &self.groups {
                 let id = group.id;
                 let selected = self.editor_group == Some(id);
@@ -491,7 +532,7 @@ impl Render for ManagerView {
                         .bg(rgb(if selected { p.selected } else { p.control }))
                         .text_xs().text_color(rgb(if selected { p.accent } else { p.secondary }))
                         .child(format!("{}  {}", if selected { "✓" } else { "·" }, group.name))
-                        .id("main-action-493").on_click(cx.listener(move |this, _, _, cx| { this.editor_group = Some(id); this.group_picker_open = false; cx.notify(); }))
+                        .id("main-interaction-010").on_click(cx.listener(move |this, _, _, cx| { this.editor_group = Some(id); this.group_picker_open = false; cx.notify(); }))
                 );
             }
         }
@@ -514,6 +555,20 @@ impl Render for ManagerView {
         let doctor = self.manager.doctor().ok();
         let linked = doctor.as_ref().map(|d| d.include_enabled).unwrap_or(false);
         let warp_ready = self.manager.paths.warp_configs.exists();
+        let (banner_bg,banner_fg,banner_icon,banner_title)=match self.feedback {
+            Feedback::Error => (p.danger_surface,p.danger,"!","操作失败"),
+            Feedback::Warning => (p.stage_surface,p.stage_foreground,"!","请确认"),
+            Feedback::Success => (p.dev_surface,p.dev_foreground,"✓","操作成功"),
+            Feedback::Info => (p.chip,p.secondary,"i","提示"),
+        };
+        let banner=div().h_flex().items_start().gap_3().mx_4().mt_3().px_3().py_3()
+            .rounded_lg().border_1().border_color(rgb(banner_fg)).bg(rgb(banner_bg))
+            .child(div().w(px(22.)).h(px(22.)).rounded_full().bg(rgb(banner_fg))
+                .text_color(rgb(p.inspector)).font_semibold().flex().items_center().justify_center()
+                .child(banner_icon))
+            .child(div().flex_1().min_w_0().v_flex().gap_1()
+                .child(div().text_sm().font_semibold().text_color(rgb(banner_fg)).child(banner_title))
+                .child(div().text_sm().text_color(rgb(p.primary)).child(self.message.clone())));
         let status_color = if linked { p.success } else { p.tertiary };
         let tab_color = if warp_ready { p.success } else { p.tertiary };
 
@@ -523,15 +578,15 @@ impl Render for ManagerView {
             secondary_actions = secondary_actions
                 .child(div().text_xs().text_color(rgb(p.secondary)).mr_3().child("配置管理"))
                 .child(div().cursor_pointer().rounded_md().px_3().py_2().bg(rgb(p.control))
-                    .text_xs().child("初始化 SSH").id("main-action-525").on_click(cx.listener(Self::init)))
+                    .text_xs().child("初始化 SSH").id("main-interaction-011").on_click(cx.listener(Self::init)))
                 .child(div().cursor_pointer().rounded_md().px_3().py_2().bg(rgb(p.control))
-                    .text_xs().child("导入 SSH Config").id("main-action-527").on_click(cx.listener(Self::import)))
+                    .text_xs().child("导入 SSH Config").id("main-interaction-012").on_click(cx.listener(Self::import)))
                 .child(div().cursor_pointer().rounded_md().px_3().py_2().bg(rgb(p.control))
-                    .text_xs().child("同步 Tab Configs").id("main-action-529").on_click(cx.listener(Self::sync)))
+                    .text_xs().child("同步 Tab Configs").id("main-interaction-013").on_click(cx.listener(Self::sync)))
                 .child(div().flex_1())
                 .child(div().cursor_pointer().text_xs().text_color(rgb(p.tertiary))
                     .child("关闭 ×")
-                    .id("main-action-533").on_click(cx.listener(|this, _, _, cx| { this.actions_open = false; cx.notify(); })));
+                    .id("main-interaction-014").on_click(cx.listener(|this, _, _, cx| { this.actions_open = false; cx.notify(); })));
         }
 
         div().size_full().v_flex().bg(rgb(p.app)).text_color(rgb(p.primary))
@@ -551,25 +606,25 @@ impl Render for ManagerView {
                             .bg(rgb(if self.appearance == Appearance::System { p.selected } else { p.control }))
                             .text_color(rgb(if self.appearance == Appearance::System { p.accent } else { p.secondary }))
                             .text_xs().child("自动")
-                            .id("main-action-553").on_click(cx.listener(|this, _, window, cx| this.set_theme(Appearance::System, window, cx))))
+                            .id("main-interaction-015").on_click(cx.listener(|this, _, window, cx| this.set_theme(Appearance::System, window, cx))))
                         .child(div().cursor_pointer().rounded_md().px_2().py_1()
                             .bg(rgb(if self.appearance == Appearance::Dark { p.selected } else { p.control }))
                             .text_color(rgb(if self.appearance == Appearance::Dark { p.accent } else { p.secondary }))
                             .text_xs().child("☾ 深色")
-                            .id("main-action-558").on_click(cx.listener(|this, _, window, cx| this.set_theme(Appearance::Dark, window, cx))))
+                            .id("main-interaction-016").on_click(cx.listener(|this, _, window, cx| this.set_theme(Appearance::Dark, window, cx))))
                         .child(div().cursor_pointer().rounded_md().px_2().py_1()
                             .bg(rgb(if self.appearance == Appearance::Light { p.selected } else { p.control }))
                             .text_color(rgb(if self.appearance == Appearance::Light { p.accent } else { p.secondary }))
                             .text_xs().child("☀ 浅色")
-                            .id("main-action-563").on_click(cx.listener(|this, _, window, cx| this.set_theme(Appearance::Light, window, cx)))))
+                            .id("main-interaction-017").on_click(cx.listener(|this, _, window, cx| this.set_theme(Appearance::Light, window, cx)))))
                     .child(div().cursor_pointer().rounded_md().px_3().py_2()
                         .bg(rgb(p.accent)).text_color(rgb(p.accent_foreground)).text_sm().font_semibold()
                         .child("+ 新建主机")
-                        .id("main-action-567").on_click(cx.listener(|this, _, window, cx| this.new_host(window, cx))))
+                        .id("main-interaction-018").on_click(cx.listener(|this, _, window, cx| this.new_host(window, cx))))
                     .child(div().cursor_pointer().rounded_md().px_3().py_2()
                         .bg(rgb(p.control)).text_color(rgb(p.secondary)).text_sm()
                         .child("⚙")
-                        .id("main-action-571").on_click(cx.listener(|this, _, _, cx| { this.actions_open = !this.actions_open; cx.notify(); })))))
+                        .id("main-interaction-019").on_click(cx.listener(|this, _, _, cx| { this.actions_open = !this.actions_open; cx.notify(); })))))
             .when(self.actions_open, |el| el.child(secondary_actions))
             // One continuous three-column layout. Each pane owns its scrolling area.
             .child(div().h_flex().flex_1().min_h_0().items_stretch()
@@ -585,7 +640,7 @@ impl Render for ManagerView {
                         .child(div().cursor_pointer().rounded_md().bg(rgb(p.accent))
                             .text_color(rgb(p.accent_foreground)).text_xs().font_semibold()
                             .px_2().py_2().child("创建")
-                            .id("main-action-587").on_click(cx.listener(Self::add_group)))))
+                            .id("main-interaction-020").on_click(cx.listener(Self::add_group)))))
                 .child(div().w(px(370.)).h_full().v_flex().min_h_0().bg(rgb(p.list))
                     .border_r_1().border_color(rgb(p.border)).p_3().gap_3()
                     .child(div().h_flex().items_center().justify_between()
@@ -604,6 +659,7 @@ impl Render for ManagerView {
                                 .child(if imported { "Imported · 连接字段只读" } else { "Managed · OpenSSH" })))
                         .child(div().text_xs().text_color(rgb(if self.favorite { 0xF4B532 } else { p.tertiary }))
                             .child(if self.favorite { "★ 已收藏" } else { "☆ 未收藏" })))
+                    .child(banner)
                     .child(div().flex_1().min_h_0().overflow_y_scrollbar().px_4().py_3()
                         .child(div().v_flex().gap_2()
                             .child(detail_field("显示名称", &self.name, false, p))
@@ -622,19 +678,19 @@ impl Render for ManagerView {
                                     .bg(rgb(if self.favorite { p.accent } else { p.chip }))
                                     .text_color(rgb(if self.favorite { p.accent_foreground } else { p.secondary }))
                                     .text_xs().child(if self.favorite { "●   ON" } else { "OFF   ○" })
-                                    .id("main-action-624").on_click(cx.listener(Self::toggle_favorite))))))
+                                    .id("main-interaction-021").on_click(cx.listener(Self::toggle_favorite))))))
                     .child(div().h_flex().items_center().gap_2().px_4().py_3()
                         .border_t_1().border_color(rgb(p.border))
                         .child(div().flex_1().cursor_pointer().rounded_md().px_4().py_3()
                             .bg(rgb(p.accent)).text_color(rgb(p.accent_foreground))
                             .text_sm().font_semibold().flex().items_center().justify_center()
-                            .child("Open in Warp ↗").id("main-action-630").on_click(cx.listener(Self::connect)))
+                            .child("Open in Warp ↗").id("main-interaction-022").on_click(cx.listener(Self::connect)))
                         .child(div().cursor_pointer().rounded_md().px_3().py_3().bg(rgb(p.control))
-                            .text_sm().child("Save Changes").id("main-action-632").on_click(cx.listener(Self::save)))
+                            .text_sm().child("Save Changes").id("main-interaction-023").on_click(cx.listener(Self::save)))
                         .child(div().cursor_pointer().rounded_md().px_3().py_3()
                             .bg(rgb(p.danger_surface)).text_color(rgb(p.danger)).text_sm()
                             .child(if self.confirm_delete { "确认删除" } else { "Delete" })
-                            .id("main-action-636").on_click(cx.listener(Self::remove))))))
+                            .id("main-interaction-024").on_click(cx.listener(Self::remove))))))
             // Never equate generated configuration status with a successful SSH login.
             .child(div().h_flex().items_center().gap_4().px_4().py_2()
                 .bg(rgb(p.titlebar)).border_t_1().border_color(rgb(p.border))
@@ -644,8 +700,8 @@ impl Render for ManagerView {
                     .child(format!("●  SSH Config {}", if linked { "linked" } else { "setup needed" })))
                 .child(div().text_xs().text_color(rgb(p.tertiary))
                     .child(format!("{} servers  ·  {} groups", host_count, self.groups.len())))
-                .child(div().flex_1().min_w_0().text_xs().text_color(rgb(p.secondary))
-                    .overflow_hidden().child(self.message.clone())))
+                .child(div().flex_1().min_w_0().text_xs().text_color(rgb(p.tertiary))
+                    .overflow_hidden().child("SSH 连接由 Warp / OpenSSH 执行")))
     }
 }
 
