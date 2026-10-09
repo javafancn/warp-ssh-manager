@@ -3,6 +3,7 @@
 //! NOTE: A precisely NSStatusItem-anchored popover is future native integration work.
 use gpui::*;
 use gpui::prelude::*;
+use gpui_component::scroll::ScrollableElement;
 use gpui_component::StyledExt;
 use gpui_component::{input::{Input,InputEvent,InputState}, Root};
 use uuid::Uuid;
@@ -83,7 +84,7 @@ impl Render for QuickConnect {
                 .child(environment(label, p))
                 .child(div().text_lg().text_color(rgb(if host.favorite { 0xF4B532 } else { p.tertiary }))
                     .child(if host.favorite { "★" } else { "☆" }))
-                .on_click(cx.listener(move |this, _, window, cx| this.connect(id, window, cx))));
+                .id("quick_connect-action-86").on_click(cx.listener(move |this, _, window, cx| this.connect(id, window, cx))));
         }
         if hosts.is_empty() {
             list = list.child(div().py_8().v_flex().items_center().gap_2()
@@ -95,7 +96,7 @@ impl Render for QuickConnect {
                 .child(div().text_lg().font_semibold().child("Quick Connect"))
                 .child(div().cursor_pointer().px_2().py_1().rounded_md()
                     .bg(rgb(p.control)).text_color(rgb(p.secondary)).child("✕")
-                    .on_click(cx.listener(|_, _, window, _| window.remove_window()))))
+                    .id("quick_connect-action-98").on_click(cx.listener(|_, _, window, _| window.remove_window()))))
             .child(div().h_flex().items_center().rounded_lg().border_1().border_color(rgb(p.border))
                 .bg(rgb(p.control))
                 .child(div().flex_1().min_w_0().child(Input::new(&self.search)))
