@@ -45,6 +45,7 @@ struct ManagerView {
     editor_group: Option<Uuid>,
     group_picker_open: bool,
     actions_open: bool,
+    filter_menu_open: bool,
     collapsed_groups: HashSet<Uuid>,
     appearance: Appearance,
     search: Entity<InputState>,
@@ -112,7 +113,7 @@ impl ManagerView {
         let first_host = hosts.first().map(|host| host.id);
         let mut view = Self {
             manager,hosts,groups,selected:None,detail_tab:DetailTab::Basic,filter:ViewFilter::All,
-            editor_group:None,group_picker_open:false,actions_open:false,collapsed_groups:HashSet::new(),appearance,search,
+            editor_group:None,group_picker_open:false,actions_open:false,filter_menu_open:false,collapsed_groups:HashSet::new(),appearance,search,
             group_input:make_input(window,cx,"新建分组名称"),
             name:make_input(window,cx,"服务器显示名称"),
             alias:make_input(window,cx,"prod-api-01"),
@@ -818,8 +819,34 @@ impl Render for ManagerView {
                     .child(div().h_flex().items_center().justify_between()
                         .child(div().text_lg().font_semibold().text_color(rgb(p.primary)).child("连接列表"))
                         .child(div().rounded_full().px_2().py_1().bg(rgb(p.chip)).text_xs().text_color(rgb(p.secondary)).child(format!("{} 台", filtered_count))))
-                    .child(div().rounded_lg().border_1().border_color(rgb(p.border)).bg(rgb(p.control))
-                        .child(Input::new(&self.search).prefix(Icon::new(IconName::Search).small())))
+                    .child(div().h_flex().items_center().gap_2()
+                        .child(div().flex_1().min_w_0().rounded_lg().border_1()
+                            .border_color(rgb(p.border)).bg(rgb(p.control))
+                            .child(Input::new(&self.search).prefix(Icon::new(IconName::Search).small())))
+                        .child(div().id("list-filter-menu-toggle").cursor_pointer().rounded_lg()
+                            .border_1().border_color(rgb(p.border)).px_3().py_2()
+                            .bg(rgb(if self.filter_menu_open { p.selected } else { p.control }))
+                            .text_color(rgb(p.secondary))
+                            .child(Icon::new(IconName::Settings))
+                            .on_click(cx.listener(|this,_,_,cx| {
+                                this.filter_menu_open = !this.filter_menu_open;
+                                cx.notify();
+                            }))))
+                    .when(self.filter_menu_open, |el| el.child(
+                        div().h_flex().items_center().gap_2()
+                            .child(div().id("list-filter-all").cursor_pointer().px_3().py_2().rounded_md()
+                                .bg(rgb(if self.filter == ViewFilter::All { p.selected } else { p.control }))
+                                .text_xs().child("全部")
+                                .on_click(cx.listener(|this,_,_,cx| { this.filter=ViewFilter::All; this.filter_menu_open=false;cx.notify(); })))
+                            .child(div().id("list-filter-favorites").cursor_pointer().px_3().py_2().rounded_md()
+                                .bg(rgb(if self.filter == ViewFilter::Favorites { p.selected } else { p.control }))
+                                .text_xs().child("已收藏")
+                                .on_click(cx.listener(|this,_,_,cx| { this.filter=ViewFilter::Favorites; this.filter_menu_open=false;cx.notify(); })))
+                            .child(div().id("list-filter-recent").cursor_pointer().px_3().py_2().rounded_md()
+                                .bg(rgb(if self.filter == ViewFilter::Recent { p.selected } else { p.control }))
+                                .text_xs().child("最近连接")
+                                .on_click(cx.listener(|this,_,_,cx| { this.filter=ViewFilter::Recent; this.filter_menu_open=false;cx.notify(); })))
+                    ))
                     .child(div().text_xs().text_color(rgb(p.tertiary))
                         .child("单击查看详情   ·   双击在 Warp 中连接"))
                     .child(div().flex_1().min_h_0().overflow_y_scrollbar().child(connections)))
@@ -831,8 +858,11 @@ impl Render for ManagerView {
                                 .child(if selected_is_host { "主机详情" } else { "新建主机" }))
                             .child(div().text_xs().text_color(rgb(p.tertiary))
                                 .child(if imported { "已导入 · 连接字段只读" } else { "自管主机 · OpenSSH" })))
-                        .child(div().text_xs().text_color(rgb(if self.favorite { 0xF4B532 } else { p.tertiary }))
-                            .child(if self.favorite { "★ 已收藏" } else { "☆ 未收藏" })))
+                        .child(div().id("inspector-favorite").cursor_pointer().rounded_lg().px_3().py_2()
+                            .bg(rgb(if self.favorite { p.selected } else { p.control }))
+                            .text_color(rgb(if self.favorite { 0xEFB53D } else { p.secondary }))
+                            .text_xs().child(if self.favorite { "★ 已收藏" } else { "☆ 设为收藏" })
+                            .on_click(cx.listener(Self::toggle_favorite))))
                     .child(detail_tabs)
                     .when(self.feedback != Feedback::Info, |el| el.child(banner))
                     .child(div().flex_1().min_h_0().overflow_y_scrollbar().px_5().py_4()
@@ -857,9 +887,9 @@ impl Render for ManagerView {
             .child(div().h_flex().items_center().gap_3().px_4().py_2()
                 .bg(rgb(p.titlebar)).border_t_1().border_color(rgb(p.border))
                 .child(div().text_xs().text_color(rgb(tab_color))
-                    .child(format!("●  Warp 标签配置{}", if warp_ready { "已就绪" } else { "未生成" })))
+                    .child(format!("Warp 标签配置{}", if warp_ready { "已就绪" } else { "未生成" })))
                 .child(div().text_xs().text_color(rgb(status_color))
-                    .child(format!("●  SSH 配置{}", if linked { "已接入" } else { "需初始化" })))
+                    .child(format!("SSH 配置{}", if linked { "已接入" } else { "需初始化" })))
                 .child(div().text_xs().text_color(rgb(p.tertiary))
                     .child(format!("{} 台主机  ·  {} 个分组", host_count, self.groups.len())))
                 .child(div().flex_1().min_w_0().text_xs().text_color(rgb(p.tertiary))
