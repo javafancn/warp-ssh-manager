@@ -8,7 +8,7 @@ use gpui_component::scroll::ScrollableElement;
 use gpui_component::{
     input::{Input, InputEvent, InputState},
     theme::Theme,
-    Root, StyledExt,
+    Icon, IconName, Root, StyledExt,
 };
 use std::collections::HashSet;
 use uuid::Uuid;
@@ -409,11 +409,12 @@ fn environment(name: &str, p: Palette) -> impl IntoElement {
         .text_xs().font_semibold().text_color(rgb(fg)).child(name.to_owned())
 }
 
-fn sidebar_row(text: &'static str, count: usize, active: bool, p: Palette) -> impl IntoElement {
+fn sidebar_row(icon: IconName, text: &'static str, count: usize, active: bool, p: Palette) -> impl IntoElement {
     div().h_flex().items_center().justify_between().rounded_lg().px_3().py_3()
         .bg(rgb(if active { p.selected } else { p.sidebar }))
-        .child(div().text_sm().font_semibold()
-            .text_color(rgb(if active { p.accent } else { p.primary })).child(text))
+        .child(div().h_flex().items_center().gap_2().text_sm().font_semibold()
+            .text_color(rgb(if active { p.accent } else { p.primary }))
+            .child(Icon::new(icon)).child(text))
         .child(div().px_2().py_1().rounded_full()
             .bg(rgb(if active { p.control } else { p.chip })).text_xs()
             .text_color(rgb(if active { p.accent } else { p.secondary }))
@@ -435,13 +436,13 @@ impl Render for ManagerView {
         let mut folder_items = div().v_flex().gap_1();
         folder_items = folder_items
             .child(div().cursor_pointer()
-                .child(sidebar_row("▤  All Servers", host_count, current_filter == ViewFilter::All, p))
+                .child(sidebar_row(IconName::SquareTerminal, "All Servers", host_count, current_filter == ViewFilter::All, p))
                 .id("main-interaction-001").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::All; cx.notify(); })))
             .child(div().cursor_pointer()
-                .child(sidebar_row("★  Favorites", favorite_count, current_filter == ViewFilter::Favorites, p))
+                .child(sidebar_row(IconName::Star, "Favorites", favorite_count, current_filter == ViewFilter::Favorites, p))
                 .id("main-interaction-002").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::Favorites; cx.notify(); })))
             .child(div().cursor_pointer()
-                .child(sidebar_row("◷  Recent", recent_count, current_filter == ViewFilter::Recent, p))
+                .child(sidebar_row(IconName::Calendar, "Recent", recent_count, current_filter == ViewFilter::Recent, p))
                 .id("main-interaction-003").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::Recent; cx.notify(); })));
 
         let mut flat = Vec::new();
@@ -456,7 +457,7 @@ impl Render for ManagerView {
                 div().v_flex().items_center().gap_2().rounded_lg()
                     .border_1().border_color(rgb(p.border)).bg(rgb(p.control))
                     .px_3().py_5()
-                    .child(div().text_lg().text_color(rgb(p.tertiary)).child("▤"))
+                    .child(div().text_lg().text_color(rgb(p.tertiary)).child(Icon::new(IconName::Folder)))
                     .child(div().text_sm().font_semibold().text_color(rgb(p.secondary)).child("还没有分组"))
                     .child(div().text_xs().text_color(rgb(p.tertiary)).child("在下方创建分组，整理服务器"))
             );
@@ -479,7 +480,9 @@ impl Render for ManagerView {
                         })))
                     .child(div().flex_1().min_w_0().cursor_pointer().text_sm()
                         .text_color(rgb(if active { p.accent } else { p.primary }))
-                        .child(format!("▱  {}", group.name))
+                        .child(div().h_flex().items_center().gap_2()
+                            .child(Icon::new(IconName::Folder))
+                            .child(group.name.clone()))
                         .id(SharedString::from(format!("group-select-{id}"))).on_click(cx.listener(move |this, _, _, cx| { this.filter = ViewFilter::Group(id); cx.notify(); })))
                     .child(div().rounded_full().bg(rgb(p.chip)).px_2().py_1()
                         .text_xs().text_color(rgb(p.secondary)).child(count.to_string()))
@@ -510,7 +513,7 @@ impl Render for ManagerView {
                         .bg(rgb(if active { p.prod_surface } else { p.control }))
                         .flex().items_center().justify_center()
                         .text_color(rgb(if active { p.accent } else { p.secondary }))
-                        .child("▤"))
+                        .child(Icon::new(IconName::SquareTerminal)))
                     .child(div().flex_1().min_w_0().v_flex().gap_1()
                         .child(div().text_sm().font_semibold()
                             .text_color(rgb(if active { p.accent } else { p.primary }))
@@ -632,7 +635,7 @@ impl Render for ManagerView {
                 .child(div().h_flex().items_center().gap_3()
                     .child(div().w(px(30.)).h(px(30.)).rounded_lg().bg(rgb(p.accent))
                         .flex().items_center().justify_center()
-                        .text_color(rgb(p.accent_foreground)).font_semibold().child(">_"))
+                        .text_color(rgb(p.accent_foreground)).font_semibold().child(Icon::new(IconName::SquareTerminal)))
                     .child(div().v_flex().gap_1()
                         .child(div().text_sm().font_semibold().child("Warp SSH Manager"))
                         .child(div().text_xs().text_color(rgb(p.tertiary)).child("SSH Workspace"))))
@@ -662,7 +665,7 @@ impl Render for ManagerView {
                     .child(div().cursor_pointer().rounded_md().px_3().py_2()
                         .bg(rgb(p.control)).hover(|style| style.bg(rgb(p.chip)))
                         .text_color(rgb(p.secondary)).text_sm()
-                        .child("⚙")
+                        .child(Icon::new(IconName::Settings))
                         .id("main-interaction-019").on_click(cx.listener(|this, _, _, cx| { this.actions_open = !this.actions_open; cx.notify(); })))))
             .when(self.actions_open, |el| el.child(secondary_actions))
             // One continuous three-column layout. Each pane owns its scrolling area.
