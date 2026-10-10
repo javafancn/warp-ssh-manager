@@ -97,19 +97,19 @@ impl Palette {
             }
         } else {
             Self {
-                app: 0xEFF4FC, titlebar: 0xF8FBFF, sidebar: 0xEAF0FA,
-                list: 0xF7FAFF, inspector: 0xFFFFFF, control: 0xEFF3F9,
-                border: 0xD6E0EF, primary: 0x15243E, secondary: 0x5B6E8B,
+                app: 0xF3F6FC, titlebar: 0xFBFCFF, sidebar: 0xF0F4FA,
+                list: 0xF9FBFE, inspector: 0xFFFFFF, control: 0xF5F7FA,
+                border: 0xE1E7F0, primary: 0x19273D, secondary: 0x60718A,
                 tertiary: 0x8598B4, accent: 0x1674F8, accent_foreground: 0xFFFFFF,
-                selected: 0xE5F0FF, selected_border: 0x3280FF, chip: 0xE9F1FF,
+                selected: 0xEAF1FF, selected_border: 0x4D8FF8, chip: 0xEDF2F9,
                 danger: 0xC53A49, danger_surface: 0xFCE7E8, success: 0x209E59,
                 prod_surface: 0xE5EEFF, prod_foreground: 0x235ECB,
                 stage_surface: 0xF0E5FF, stage_foreground: 0x8C4ACA,
                 dev_surface: 0xE0F5E9, dev_foreground: 0x208451,
                 warning_surface: 0xFFF0DD, warning_foreground: 0xA95715,
-                sidebar_end: 0xF0E9F0, titlebar_end: 0xEAF2FF,
-                card_end: 0xFBFDFF, selected_end: 0xF8FCFF,
-                input_surface: 0xF5F8FD, input_surface_end: 0xFFFFFF,
+                sidebar_end: 0xEFF3FA, titlebar_end: 0xF4F7FC,
+                card_end: 0xFFFFFF, selected_end: 0xF7FAFF,
+                input_surface: 0xF8FAFD, input_surface_end: 0xFFFFFF,
             }
         }
     }

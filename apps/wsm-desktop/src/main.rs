@@ -419,17 +419,15 @@ fn detail_field(label: &'static str, input: &Entity<InputState>, readonly: bool,
     // gpui-component 0.5.1 lacks Input::readonly, so imported connection
     // values are shown in a non-editable surface matching the editable input.
     let display_value = input.read(cx).value().to_string();
-    div().h_flex().items_center().gap_4().min_h(px(46.))
-        .child(div().w(px(116.)).text_base().text_color(rgb(p.primary)).child(label))
+    div().h_flex().items_center().gap_3().min_h(px(38.))
+        .child(div().w(px(101.)).text_sm().text_color(rgb(p.secondary)).child(label))
         .child(div().flex_1().min_w_0()
-            .when(label=="端口", |el| el.max_w(px(145.)))
-            .rounded_lg().border_1().border_color(rgb(p.border))
-            .bg(linear_gradient(90.,
-                linear_color_stop(rgb(p.input_surface),0.),
-                linear_color_stop(rgb(p.input_surface_end),1.)))
-            .min_h(px(44.)).p_1()
-            .when(readonly, |el| el.child(div().px_2().py_2().min_h(px(34.))
-                .text_base().text_color(rgb(p.primary))
+            .when(label=="端口", |el| el.max_w(px(105.)))
+            .rounded_md().border_1().border_color(rgb(p.border))
+            .bg(rgb(p.input_surface))
+            .min_h(px(36.)).px_1()
+            .when(readonly, |el| el.child(div().px_2().py_2().min_h(px(32.))
+                .text_sm().text_color(rgb(p.primary))
                 .child(display_value.clone())))
             .when(!readonly, |el| el.child(Input::new(input).appearance(false))))
 }
@@ -666,14 +664,11 @@ impl Render for ManagerView {
         }
 
         let mut group_picker = div().v_flex().gap_1()
-            .child(div().h_flex().items_center().gap_4()
-                .child(div().w(px(116.)).text_base().text_color(rgb(p.primary)).child("所属分组"))
-                .child(div().h_flex().flex_1().min_w_0().items_center().rounded_lg().border_1()
-                    .border_color(rgb(p.border))
-                    .bg(linear_gradient(90.,
-                        linear_color_stop(rgb(p.input_surface),0.),
-                        linear_color_stop(rgb(p.input_surface_end),1.)))
-                    .min_h(px(44.)).px_3().py_2().cursor_pointer()
+            .child(div().h_flex().items_center().gap_3()
+                .child(div().w(px(101.)).text_sm().text_color(rgb(p.secondary)).child("所属分组"))
+                .child(div().h_flex().flex_1().min_w_0().items_center().rounded_md().border_1()
+                    .border_color(rgb(p.border)).bg(rgb(p.input_surface))
+                    .min_h(px(36.)).px_3().py_2().cursor_pointer()
                     .child(Icon::new(IconName::Folder))
                     .child(div().flex_1().text_sm().text_color(rgb(p.primary))
                         .child(self.group_label(self.editor_group)))
@@ -715,8 +710,8 @@ impl Render for ManagerView {
                         this.remove_tag(&tag_name,window,cx);
                     }))));
         }
-        let tags_field = div().h_flex().items_start().gap_4().min_h(px(44.))
-            .child(div().w(px(116.)).py_2().text_base().text_color(rgb(p.primary)).child("标签"))
+        let tags_field = div().h_flex().items_start().gap_3().min_h(px(36.))
+            .child(div().w(px(101.)).py_2().text_sm().text_color(rgb(p.secondary)).child("标签"))
             .child(div().v_flex().flex_1().min_w_0().gap_2()
                 .child(div().h_flex().items_center().gap_2().flex_wrap()
                     .when(!raw_tags.trim().is_empty(), |el| el.child(tag_chips))
@@ -732,7 +727,7 @@ impl Render for ManagerView {
                 .when(self.tag_input_open, |el| el.child(Input::new(&self.tags))));
 
         // Tabs are real controls; each exposes a focused subset of the existing SSH editor.
-        let mut detail_tabs = div().h_flex().items_center().gap_4().px_5()
+        let mut detail_tabs = div().h_flex().items_center().gap_2().px_4()
             .border_b_1().border_color(rgb(p.border));
         for (index, (tab, title)) in [
             (DetailTab::Basic, "基本信息"),
@@ -743,8 +738,8 @@ impl Render for ManagerView {
             let chosen = self.detail_tab == tab;
             detail_tabs = detail_tabs.child(
                 div().id(SharedString::from(format!("detail-tab-{index}")))
-                    .cursor_pointer().px_2().py_3().v_flex().gap_2()
-                    .child(div().text_base().font_semibold()
+                    .cursor_pointer().px_2().py_2().v_flex().gap_2()
+                    .child(div().text_sm().font_semibold()
                         .text_color(rgb(if chosen { p.accent } else { p.secondary }))
                         .child(title))
                     .child(div().h(px(3.)).rounded_full()
@@ -756,16 +751,13 @@ impl Render for ManagerView {
                     }))
             );
         }
-        let notes_field = div().h_flex().items_start().gap_4()
-            .child(div().w(px(116.)).py_2().text_base().text_color(rgb(p.primary)).child("备注"))
-            .child(div().flex_1().min_w_0().rounded_lg().border_1()
-                .border_color(rgb(p.border))
-                .bg(linear_gradient(90.,
-                    linear_color_stop(rgb(p.input_surface),0.),
-                    linear_color_stop(rgb(p.input_surface_end),1.)))
-                .px_2().py_2()
-                .child(Input::new(&self.notes).appearance(false).h(px(106.))));
-        let favorite_switch = div().h_flex().items_center().justify_between().px_1().py_3()
+        let notes_field = div().h_flex().items_start().gap_3()
+            .child(div().w(px(101.)).py_2().text_sm().text_color(rgb(p.secondary)).child("备注"))
+            .child(div().flex_1().min_w_0().rounded_md().border_1()
+                .border_color(rgb(p.border)).bg(rgb(p.input_surface))
+                .px_2().py_1()
+                .child(Input::new(&self.notes).appearance(false).h(px(72.))));
+        let favorite_switch = div().h_flex().items_center().justify_between().px_1().py_1()
             .child(div().h_flex().items_center().gap_2()
                 .child(Icon::new(IconName::Star))
                 .child(div().text_sm().text_color(rgb(p.secondary)).child("设为收藏")))
@@ -778,7 +770,7 @@ impl Render for ManagerView {
                 .when(!self.favorite, |el| el.child(div().flex_1()))
                 .on_click(cx.listener(Self::toggle_favorite)));
         let detail_panel = match self.detail_tab {
-            DetailTab::Basic => div().v_flex().gap_3()
+            DetailTab::Basic => div().v_flex().gap_2()
                 .child(detail_field("显示名称", &self.name, false, p, cx))
                 .child(detail_field("SSH 别名", &self.alias, imported, p, cx))
                 .child(detail_field("主机名 / IP", &self.hostname, imported, p, cx))
@@ -869,19 +861,19 @@ impl Render for ManagerView {
         let sidebar = div().w(px(245.)).h_full().v_flex().min_h_0()
             .bg(linear_gradient(160.,linear_color_stop(rgb(p.sidebar),0.),linear_color_stop(rgb(p.sidebar_end),1.)))
             .border_r_1().border_color(rgb(p.border))
-            .child(div().h_flex().items_center().gap_3().px_4().pt_16().pb_5()
-                .child(div().w(px(54.)).h(px(54.)).rounded_lg().shadow_sm()
+            .child(div().h_flex().items_center().gap_2().px_3().pt_14().pb_4()
+                .child(div().w(px(42.)).h(px(42.)).rounded_lg().shadow_sm()
                     .bg(linear_gradient(160.,linear_color_stop(rgb(0x28D8F6),0.),linear_color_stop(rgb(0x1231E9),1.)))
                     .border_1().border_color(rgb(p.selected_border))
                     .flex().items_center().justify_center()
-                    .text_color(rgb(p.accent_foreground)).text_2xl().font_semibold()
+                    .text_color(rgb(p.accent_foreground)).text_lg().font_semibold()
                     .child(">_"))
                 .child(div().v_flex().gap_1()
                     .child(div().text_base().font_semibold().text_color(rgb(p.primary))
                         .child("Warp SSH 管理器"))
                     .child(div().text_xs().text_color(rgb(p.tertiary))
                         .child("高效管理 · 快速连接"))))
-            .child(div().v_flex().flex_1().min_h_0().px_4().py_3().gap_4()
+            .child(div().v_flex().flex_1().min_h_0().px_3().py_2().gap_3()
                 .child(folder_items)
                 .child(div().h_flex().items_center().justify_between().pt_2()
                     .child(div().text_sm().font_semibold().text_color(rgb(p.secondary))
@@ -960,7 +952,7 @@ impl Render for ManagerView {
 
         let connections_pane = div().w(px(365.)).h_full().v_flex().min_h_0()
             .bg(rgb(p.list)).border_r_1().border_color(rgb(p.border))
-            .p_4().gap_3()
+            .p_3().gap_2()
             .child(div().h_flex().items_center().gap_2()
                 .child(div().flex_1().min_w_0().rounded_lg().border_1()
                     .border_color(rgb(p.border)).bg(rgb(p.control))
@@ -999,7 +991,7 @@ impl Render for ManagerView {
 
         let inspector_pane = div().flex_1().min_w_0().h_full().v_flex().min_h_0()
             .bg(rgb(p.inspector))
-            .child(div().h_flex().items_center().justify_between().px_5().py_3()
+            .child(div().h_flex().items_center().justify_between().px_4().py_2()
                 .child(div().v_flex().gap_1()
                     .child(div().text_xl().font_semibold().text_color(rgb(p.primary))
                         .child(if selected_is_host { "主机详情" } else { "新建主机" }))
@@ -1012,11 +1004,11 @@ impl Render for ManagerView {
                     .on_click(cx.listener(Self::toggle_favorite))))
             .child(detail_tabs)
             .when(self.feedback != Feedback::Info, |el| el.child(banner))
-            .child(div().flex_1().min_h_0().overflow_y_scrollbar().px_5().py_4()
+            .child(div().flex_1().min_h_0().overflow_y_scrollbar().px_4().py_3()
                 .child(detail_panel))
-            .child(div().h_flex().items_center().gap_2().px_4().py_3()
+            .child(div().h_flex().items_center().gap_2().px_4().py_2()
                 .border_t_1().border_color(rgb(p.border))
-                .child(div().id("main-interaction-022").w(px(210.))
+                .child(div().id("main-interaction-022").w(px(160.))
                     .cursor_pointer().rounded_lg().px_3().py_3().shadow_sm()
                     .bg(linear_gradient(180.,linear_color_stop(rgb(0x3198FF),0.),linear_color_stop(rgb(p.accent),1.))).hover(|style| style.bg(rgb(p.selected_border)))
                     .text_color(rgb(p.accent_foreground))
