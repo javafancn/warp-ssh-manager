@@ -73,11 +73,11 @@ impl Palette {
     pub fn new(dark: bool) -> Self {
         if dark {
             Self {
-                app: 0x0D1420, titlebar: 0x131F30, sidebar: 0x152132,
-                list: 0x101A2A, inspector: 0x142033, control: 0x223044,
-                border: 0x2A3A50, primary: 0xF1F6FF, secondary: 0xA9B9D0,
-                tertiary: 0x8194AC, accent: 0x2478FC, accent_foreground: 0xFFFFFF,
-                selected: 0x173D71, selected_border: 0x3485FF, chip: 0x223248,
+                app: 0x0D1421, titlebar: 0x162239, sidebar: 0x1A263B,
+                list: 0x111B2E, inspector: 0x17243A, control: 0x26344B,
+                border: 0x324158, primary: 0xF4F7FF, secondary: 0xA8B8D3,
+                tertiary: 0x879AB5, accent: 0x1979FA, accent_foreground: 0xFFFFFF,
+                selected: 0x153D84, selected_border: 0x3191FF, chip: 0x253852,
                 danger: 0xFF9BA5, danger_surface: 0x4A2B35, success: 0x4BD899,
                 prod_surface: 0x223F71, prod_foreground: 0x91BBFF,
                 stage_surface: 0x3B275A, stage_foreground: 0xCDB0FE,
@@ -85,11 +85,11 @@ impl Palette {
             }
         } else {
             Self {
-                app: 0xF4F7FC, titlebar: 0xFBFCFF, sidebar: 0xF0F5FB,
-                list: 0xFFFFFF, inspector: 0xFFFFFF, control: 0xF5F7FB,
-                border: 0xDDE6F1, primary: 0x17243A, secondary: 0x59708B,
-                tertiary: 0x899BB0, accent: 0x246EF2, accent_foreground: 0xFFFFFF,
-                selected: 0xE7F0FF, selected_border: 0x3884FF, chip: 0xEEF3F9,
+                app: 0xEFF4FC, titlebar: 0xF8FBFF, sidebar: 0xEAF0FA,
+                list: 0xF7FAFF, inspector: 0xFFFFFF, control: 0xEFF3F9,
+                border: 0xD6E0EF, primary: 0x15243E, secondary: 0x5B6E8B,
+                tertiary: 0x8598B4, accent: 0x1674F8, accent_foreground: 0xFFFFFF,
+                selected: 0xE5F0FF, selected_border: 0x3280FF, chip: 0xE9F1FF,
                 danger: 0xC53A49, danger_surface: 0xFCE7E8, success: 0x209E59,
                 prod_surface: 0xE5EEFF, prod_foreground: 0x235ECB,
                 stage_surface: 0xF0E5FF, stage_foreground: 0x8C4ACA,
