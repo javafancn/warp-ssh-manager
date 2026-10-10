@@ -448,6 +448,16 @@ impl Render for ManagerView {
             flat.push((group.clone(), 0));
         }
         let mut group_list = div().v_flex().gap_1();
+        if self.groups.is_empty() {
+            group_list = group_list.child(
+                div().v_flex().items_center().gap_2().rounded_lg()
+                    .border_1().border_color(rgb(p.border)).bg(rgb(p.control))
+                    .px_3().py_5()
+                    .child(div().text_lg().text_color(rgb(p.tertiary)).child("▤"))
+                    .child(div().text_sm().font_semibold().text_color(rgb(p.secondary)).child("还没有分组"))
+                    .child(div().text_xs().text_color(rgb(p.tertiary)).child("在下方创建分组，整理服务器"))
+            );
+        }
         for (group, level) in flat {
             let id = group.id;
             let children = self.groups.iter().any(|g| g.parent_id == Some(id));
@@ -460,14 +470,14 @@ impl Render for ManagerView {
                     .bg(rgb(if active { p.selected } else { p.sidebar }))
                     .child(div().w(px(18.)).text_xs().text_color(rgb(p.secondary)).cursor_pointer()
                         .child(if children { if expanded { "▾" } else { "▸" } } else { "·" })
-                        .id("main-interaction-004").on_click(cx.listener(move |this, _, _, cx| {
+                        .id(SharedString::from(format!("group-collapse-{id}"))).on_click(cx.listener(move |this, _, _, cx| {
                             if !this.collapsed_groups.insert(id) { this.collapsed_groups.remove(&id); }
                             cx.notify();
                         })))
                     .child(div().flex_1().min_w_0().cursor_pointer().text_sm()
                         .text_color(rgb(if active { p.accent } else { p.primary }))
                         .child(format!("▱  {}", group.name))
-                        .id("main-interaction-005").on_click(cx.listener(move |this, _, _, cx| { this.filter = ViewFilter::Group(id); cx.notify(); })))
+                        .id(SharedString::from(format!("group-select-{id}"))).on_click(cx.listener(move |this, _, _, cx| { this.filter = ViewFilter::Group(id); cx.notify(); })))
                     .child(div().rounded_full().bg(rgb(p.chip)).px_2().py_1()
                         .text_xs().text_color(rgb(p.secondary)).child(count.to_string()))
             );
@@ -476,29 +486,49 @@ impl Render for ManagerView {
         let mut filtered: Vec<Host> = self.hosts.iter().filter(|h| self.filtered(h, &search)).cloned().collect();
         if current_filter == ViewFilter::Recent { filtered.sort_by(|a, b| b.last_connected.cmp(&a.last_connected)); }
         let filtered_count = filtered.len();
-        let mut connections = div().v_flex().gap_1();
+        let mut connections = div().v_flex().gap_2();
         for host in filtered {
             let id = host.id;
             let active = self.selected == Some(id);
             let label = self.group_label(host.group_id);
             let starred = host.favorite;
+            // GPUI interactive IDs must be unique per sibling; the old static ID
+            // was reused for all rows, which broke click targeting.
             connections = connections.child(
-                div().h_flex().items_center().gap_2().rounded_lg().px_2().py_2()
-                    .border_1().border_color(rgb(if active { p.selected_border } else { p.list }))
+                div().id(SharedString::from(format!("connection-row-{id}")))
+                    .h_flex().items_center().gap_3().rounded_lg()
+                    .px_3().py_3().cursor_pointer()
+                    .border_1().border_color(rgb(if active { p.selected_border } else { p.border }))
                     .bg(rgb(if active { p.selected } else { p.list }))
-                    .child(div().w(px(31.)).h(px(31.)).rounded_md()
-                        .bg(rgb(p.control)).flex().items_center().justify_center()
-                        .text_color(rgb(p.secondary)).child("▤"))
-                    .child(div().flex_1().min_w_0().v_flex().gap_1().cursor_pointer()
-                        .child(div().text_sm().font_semibold().text_color(rgb(if active { p.accent } else { p.primary }))
+                    .hover(|style| style.bg(rgb(if active { p.selected } else { p.chip })))
+                    .child(div().w(px(3.)).h(px(35.)).rounded_full()
+                        .bg(rgb(if active { p.accent } else { p.border })))
+                    .child(div().w(px(34.)).h(px(34.)).rounded_lg()
+                        .bg(rgb(if active { p.prod_surface } else { p.control }))
+                        .flex().items_center().justify_center()
+                        .text_color(rgb(if active { p.accent } else { p.secondary }))
+                        .child("▣"))
+                    .child(div().flex_1().min_w_0().v_flex().gap_1()
+                        .child(div().text_sm().font_semibold()
+                            .text_color(rgb(if active { p.accent } else { p.primary }))
                             .child(host.name.clone()))
-                        .child(div().text_xs().text_color(rgb(p.tertiary)).child(host.hostname.clone()))
-                        .id("main-interaction-006").on_click(cx.listener(move |this, _, window, cx| this.select_host(id, window, cx))))
+                        .child(div().text_xs().text_color(rgb(p.tertiary))
+                            .child(format!("{}  ·  {}", host.hostname, host.username))))
                     .child(environment(&label, p))
-                    .child(div().cursor_pointer().px_1().text_lg()
-                        .text_color(rgb(if starred { 0xF4B532 } else { p.tertiary }))
+                    .child(div().id(SharedString::from(format!("connection-star-{id}")))
+                        .cursor_pointer().px_2().py_2().rounded_md().text_lg()
+                        .text_color(rgb(if starred { 0xEAA830 } else { p.tertiary }))
                         .child(if starred { "★" } else { "☆" })
-                        .id("main-interaction-007").on_click(cx.listener(move |this, _, _, cx| this.toggle_list_favorite(id, cx))))
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            cx.stop_propagation();
+                            this.toggle_list_favorite(id, cx);
+                        })))
+                    .on_click(cx.listener(move |this, event, window, cx| {
+                        this.select_host(id, window, cx);
+                        if event.click_count() >= 2 {
+                            this.connect(event, window, cx);
+                        }
+                    }))
             );
         }
         if filtered_count == 0 {
@@ -506,7 +536,7 @@ impl Render for ManagerView {
                 .child(div().text_2xl().text_color(rgb(p.tertiary)).child("⌕"))
                 .child(div().text_sm().text_color(rgb(p.secondary)).child("没有找到匹配的服务器"))
                 .child(div().text_xs().text_color(rgb(p.tertiary))
-                    .child("可以更换搜索条件，或在工具栏中新增主机")));
+                    .child("试试其他关键词，或点击右上角「新建主机」")));
         }
 
         let mut group_picker = div().v_flex().gap_1()
@@ -532,7 +562,7 @@ impl Render for ManagerView {
                         .bg(rgb(if selected { p.selected } else { p.control }))
                         .text_xs().text_color(rgb(if selected { p.accent } else { p.secondary }))
                         .child(format!("{}  {}", if selected { "✓" } else { "·" }, group.name))
-                        .id("main-interaction-010").on_click(cx.listener(move |this, _, _, cx| { this.editor_group = Some(id); this.group_picker_open = false; cx.notify(); }))
+                        .id(SharedString::from(format!("group-picker-{id}"))).on_click(cx.listener(move |this, _, _, cx| { this.editor_group = Some(id); this.group_picker_open = false; cx.notify(); }))
                 );
             }
         }
@@ -630,7 +660,7 @@ impl Render for ManagerView {
             .child(div().h_flex().flex_1().min_h_0().items_start()
                 .child(div().w(px(240.)).h_full().v_flex().min_h_0().bg(rgb(p.sidebar))
                     .border_r_1().border_color(rgb(p.border)).p_3().gap_3()
-                    .child(div().text_sm().font_semibold().child("Folders"))
+                    .child(div().text_sm().font_semibold().text_color(rgb(p.primary)).child("Folders"))
                     .child(folder_items)
                     .child(div().mt_3().mb_1().text_xs().text_color(rgb(p.tertiary)).child("Groups"))
                     .child(div().flex_1().overflow_y_scrollbar().child(group_list))
@@ -644,8 +674,8 @@ impl Render for ManagerView {
                 .child(div().w(px(370.)).h_full().v_flex().min_h_0().bg(rgb(p.list))
                     .border_r_1().border_color(rgb(p.border)).p_3().gap_3()
                     .child(div().h_flex().items_center().justify_between()
-                        .child(div().text_lg().font_semibold().child("Connections"))
-                        .child(div().text_xs().text_color(rgb(p.tertiary)).child(format!("{} 台", filtered_count))))
+                        .child(div().text_lg().font_semibold().text_color(rgb(p.primary)).child("Connections"))
+                        .child(div().rounded_full().px_2().py_1().bg(rgb(p.chip)).text_xs().text_color(rgb(p.secondary)).child(format!("{} 台", filtered_count))))
                     .child(div().rounded_md().border_1().border_color(rgb(p.border))
                         .bg(rgb(p.control)).child(Input::new(&self.search)))
                     .child(div().flex_1().min_h_0().overflow_y_scrollbar().child(connections)))
@@ -659,7 +689,7 @@ impl Render for ManagerView {
                                 .child(if imported { "Imported · 连接字段只读" } else { "Managed · OpenSSH" })))
                         .child(div().text_xs().text_color(rgb(if self.favorite { 0xF4B532 } else { p.tertiary }))
                             .child(if self.favorite { "★ 已收藏" } else { "☆ 未收藏" })))
-                    .child(banner)
+                    .when(self.feedback != Feedback::Info, |el| el.child(banner))
                     .child(div().flex_1().min_h_0().overflow_y_scrollbar().px_4().py_3()
                         .child(div().v_flex().gap_2()
                             .child(detail_field("显示名称", &self.name, false, p))
