@@ -65,9 +65,10 @@ impl Render for QuickConnect {
         let p = Palette::new(setting.dark(window.appearance()));
         let hosts = self.hosts(cx);
         let groups = self.manager.db.list_groups().unwrap_or_default();
+        let failed = self.status.starts_with("连接请求失败");
         let mut list = div().v_flex().gap_2()
             .child(div().px_2().py_2().text_xs().font_semibold().text_color(rgb(p.tertiary))
-                .child("AVAILABLE CONNECTIONS"));
+                .child(format!("AVAILABLE CONNECTIONS  ·  {}", hosts.len())));
         for (index, host) in hosts.iter().enumerate() {
             let id = host.id;
             let host_name = host.name.clone();
@@ -92,7 +93,7 @@ impl Render for QuickConnect {
                     .child(div().text_xs().text_color(rgb(p.tertiary)).child(host.hostname.clone())))
                 .child(environment(label, p))
                 .child(div().text_lg().text_color(rgb(if host.favorite { 0xF4B532 } else { p.tertiary }))
-                    .child(if host.favorite { "★" } else { "☆" }))
+                    .child(Icon::new(if host.favorite { IconName::Star } else { IconName::StarOff })))
                  .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
                     this.selected=Some(id);
                     if event.click_count() >= 2 { this.connect(id,window,cx); }
@@ -122,13 +123,15 @@ impl Render for QuickConnect {
                     .bg(rgb(p.control)).text_color(rgb(p.secondary)).child(Icon::new(IconName::Close))
                     .id("quick_connect-action-98").on_click(cx.listener(|_, _, window, _| window.remove_window()))))
             .child(div().h_flex().items_center().rounded_lg().bg(rgb(p.control))
-                .child(div().flex_1().min_w_0().child(Input::new(&self.search)))
+                .child(div().flex_1().min_w_0()
+                    .child(Input::new(&self.search).prefix(Icon::new(IconName::Search).small())))
                 .child(div().rounded_md().px_2().py_1().mr_2()
                     .bg(rgb(p.chip)).text_xs().text_color(rgb(p.tertiary)).child("↵")))
             .child(div().flex_1().min_h_0().overflow_y_scrollbar().child(list))
             .child(div().pt_3().border_t_1().border_color(rgb(p.border))
                 .h_flex().justify_between().items_center()
-                .child(div().flex_1().min_w_0().text_xs().text_color(rgb(p.secondary))
+                .child(div().flex_1().min_w_0().text_xs()
+                    .text_color(rgb(if failed { p.danger } else { p.secondary }))
                     .child(self.status.clone()))
                 .child(div().px_2().py_1().rounded_md().bg(rgb(p.chip))
                     .text_xs().text_color(rgb(p.tertiary)).child("WARP ↗")))
@@ -138,7 +141,7 @@ impl Render for QuickConnect {
 pub fn open_window(cx:&mut App) {
     let opts=WindowOptions {
         titlebar:None,
-        window_bounds:Some(WindowBounds::centered(size(px(500.),px(540.)),cx)),
+        window_bounds:Some(WindowBounds::centered(size(px(460.),px(425.)),cx)),
         kind:WindowKind::Floating,
         is_resizable:false,
         ..WindowOptions::default()
