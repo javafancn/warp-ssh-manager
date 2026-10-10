@@ -26,6 +26,7 @@ enum ViewFilter {
     All,
     Favorites,
     Recent,
+    Ungrouped,
     Group(Uuid),
 }
 
@@ -398,6 +399,7 @@ impl ManagerView {
             ViewFilter::All=>true,
             ViewFilter::Favorites=>host.favorite,
             ViewFilter::Recent=>host.last_connected.is_some(),
+            ViewFilter::Ungrouped=>host.group_id.is_none(),
             ViewFilter::Group(id)=>is_descendant(&self.groups,host.group_id,id),
         };
         matches && (search.is_empty() || [&host.name,&host.alias,&host.hostname]
@@ -449,8 +451,9 @@ fn environment(name: &str, p: Palette) -> impl IntoElement {
 }
 
 fn sidebar_row(icon: IconName, text: &'static str, count: usize, active: bool, p: Palette) -> impl IntoElement {
-    div().h_flex().items_center().justify_between().rounded_lg().px_3().py_2()
-        .bg(rgb(if active { p.selected } else { p.sidebar }))
+    div().h_flex().items_center().justify_between().rounded_lg().px_3().py_3()
+        .bg(if active { linear_gradient(90., rgb(p.selected), rgb(p.selected_end)) }
+            else {linear_gradient(90., rgb(p.sidebar), rgb(p.sidebar_end))})
         .child(div().h_flex().items_center().gap_3().text_sm().font_semibold()
             .text_color(rgb(if active { p.accent } else { p.primary }))
             .child(Icon::new(icon)).child(text))
@@ -491,16 +494,17 @@ impl Render for ManagerView {
             flat.push((group.clone(), 0));
         }
         let mut group_list = div().v_flex().gap_1();
-        if self.groups.is_empty() {
-            group_list = group_list.child(
-                div().v_flex().gap_2().rounded_lg().px_2().py_4()
-                    .child(div().h_flex().items_center().gap_2()
-                        .child(Icon::new(IconName::Folder))
-                        .child(div().text_sm().text_color(rgb(p.secondary))
-                            .child("暂时没有分组")))
-                    .child(div().text_xs().text_color(rgb(p.tertiary))
-                        .child("点击下方「新建分组」开始整理主机"))
-            );
+        let ungrouped_count = self.hosts.iter().filter(|h|h.group_id.is_none()).count();
+        if ungrouped_count>0 || self.groups.is_empty() {
+            group_list=group_list.child(
+                div().id("ungrouped-sidebar-item").cursor_pointer()
+                    .hover(|style| style.bg(rgb(p.chip)))
+                    .child(sidebar_row(IconName::Folder, "未分组", ungrouped_count,
+                        current_filter==ViewFilter::Ungrouped,p))
+                    .on_click(cx.listener(|this,_,_,cx|{
+                        this.filter=ViewFilter::Ungrouped;
+                        cx.notify();
+                    })));
         }
         for (group, level) in flat {
             let id = group.id;
@@ -556,23 +560,25 @@ impl Render for ManagerView {
                     chips = chips.child(environment(&label, p));
                 }
             }
-            let icon_outline = if tags.contains("database") || host.name.contains("db-") {
-                p.danger
+            let (icon_top,icon_bottom,icon_outline) = if tags.contains("database") || host.name.contains("db-") {
+                (0x593442, 0x1A1C29, p.danger)
             } else if tags.contains("dev") || label.contains("开发") {
-                p.stage_foreground
+                (0x52447F, 0x181B37, p.stage_foreground)
             } else if tags.contains("prod") || label.contains("生产") {
-                p.accent
-            } else {p.selected_border};
+                (0x28584D, 0x152932, p.dev_foreground)
+            } else { (0x33566B, 0x142332, p.selected_border) };
             connections = connections.child(
                 div().id(SharedString::from(format!("connection-row-{id}")))
                     .v_flex().rounded_lg().cursor_pointer().overflow_hidden().shadow_sm()
                     .border_1().border_color(rgb(if active { p.accent } else { p.border }))
-                    .bg(rgb(if active { p.selected } else { p.inspector }))
-                    .hover(|style| style.bg(rgb(if active { p.selected } else { p.control })))
+                    .bg(if active {linear_gradient(90.,rgb(p.selected),rgb(p.selected_end))}
+                        else {linear_gradient(90.,rgb(p.inspector),rgb(p.card_end))})
+                    .hover(|style| style.border_color(rgb(p.selected_border)))
                     .child(div().h_flex().items_center().gap_3().px_4().py_3()
                         .child(div().w(px(55.)).h(px(55.)).rounded_lg()
                             .border_1().border_color(rgb(icon_outline))
-                            .bg(rgb(if p.app == 0x0D1421 { 0x0D192C } else { 0x172B40 }))
+                            .shadow_sm()
+                            .bg(linear_gradient(160.,rgb(icon_top),rgb(icon_bottom)))
                             .flex().items_center().justify_center()
                             .text_color(rgb(0xF1FAFF))
                             .text_lg().font_semibold().child(">_"))
@@ -827,11 +833,13 @@ impl Render for ManagerView {
 
         // Window shell mirrors the reference: persistent branded sidebar,
         // independent toolbar over connection cards and inspector, native macOS chrome.
-        let sidebar = div().w(px(300.)).h_full().v_flex().min_h_0()
-            .bg(rgb(p.sidebar)).border_r_1().border_color(rgb(p.border))
+        let sidebar = div().w(px(330.)).h_full().v_flex().min_h_0()
+            .bg(linear_gradient(160.,rgb(p.sidebar),rgb(p.sidebar_end)))
+            .border_r_1().border_color(rgb(p.border))
             .child(div().h_flex().items_center().gap_3().px_4().py_5()
                 .child(div().w(px(54.)).h(px(54.)).rounded_lg().shadow_sm()
-                    .bg(rgb(p.accent)).border_1().border_color(rgb(p.selected_border))
+                    .bg(linear_gradient(160.,rgb(0x28D8F6),rgb(0x1231E9)))
+                    .border_1().border_color(rgb(p.selected_border))
                     .flex().items_center().justify_center()
                     .text_color(rgb(p.accent_foreground)).text_2xl().font_semibold()
                     .child(">_"))
@@ -882,7 +890,8 @@ impl Render for ManagerView {
                     }))));
 
         let toolbar = div().h_flex().items_center().justify_between().px_5().py_3()
-            .bg(rgb(p.titlebar)).border_b_1().border_color(rgb(p.border))
+            .bg(linear_gradient(90.,rgb(p.titlebar),rgb(p.titlebar_end)))
+            .border_b_1().border_color(rgb(p.border))
             .child(div().text_xl().font_semibold().text_color(rgb(p.primary))
                 .child("连接列表"))
             .child(div().h_flex().items_center().gap_3()
@@ -910,21 +919,15 @@ impl Render for ManagerView {
                         .on_click(cx.listener(|this,_,window,cx| this.set_theme(Appearance::Light,window,cx)))
                     ))
                 .child(div().id("main-interaction-018").cursor_pointer().rounded_lg().shadow_sm()
-                    .px_4().py_3().bg(rgb(p.accent))
+                    .px_4().py_3().bg(linear_gradient(180.,rgb(0x3398FF),rgb(p.accent)))
                     .hover(|style| style.bg(rgb(p.selected_border)))
                     .text_color(rgb(p.accent_foreground)).text_sm().font_semibold()
                     .child("+ 新建主机")
                     .on_click(cx.listener(|this,_,window,cx| this.new_host(window,cx)))));
 
-        let connections_pane = div().w(px(510.)).h_full().v_flex().min_h_0()
+        let connections_pane = div().w(px(560.)).h_full().v_flex().min_h_0()
             .bg(rgb(p.list)).border_r_1().border_color(rgb(p.border))
             .p_4().gap_3()
-            .child(div().h_flex().items_center().justify_between()
-                .child(div().text_sm().font_semibold().text_color(rgb(p.primary))
-                    .child("全部主机"))
-                .child(div().rounded_full().px_2().py_1().bg(rgb(p.chip))
-                    .text_xs().text_color(rgb(p.secondary))
-                    .child(format!("{} 台", filtered_count))))
             .child(div().h_flex().items_center().gap_2()
                 .child(div().flex_1().min_w_0().rounded_lg().border_1()
                     .border_color(rgb(p.border)).bg(rgb(p.control))
@@ -963,7 +966,7 @@ impl Render for ManagerView {
 
         let inspector_pane = div().flex_1().min_w_0().h_full().v_flex().min_h_0()
             .bg(rgb(p.inspector))
-            .child(div().h_flex().items_center().justify_between().px_5().py_4()
+            .child(div().h_flex().items_center().justify_between().px_5().py_3()
                 .child(div().v_flex().gap_1()
                     .child(div().text_xl().font_semibold().text_color(rgb(p.primary))
                         .child(if selected_is_host { "主机详情" } else { "新建主机" }))
@@ -982,7 +985,7 @@ impl Render for ManagerView {
                 .border_t_1().border_color(rgb(p.border))
                 .child(div().id("main-interaction-022").w(px(210.))
                     .cursor_pointer().rounded_lg().px_3().py_3().shadow_sm()
-                    .bg(rgb(p.accent)).hover(|style| style.bg(rgb(p.selected_border)))
+                    .bg(linear_gradient(180.,rgb(0x3198FF),rgb(p.accent))).hover(|style| style.bg(rgb(p.selected_border)))
                     .text_color(rgb(p.accent_foreground))
                     .text_sm().font_semibold().flex().items_center().justify_center()
                     .child(div().h_flex().items_center().gap_2()

@@ -69,6 +69,12 @@ pub struct Palette {
     pub dev_foreground: u32,
     pub warning_surface: u32,
     pub warning_foreground: u32,
+    pub sidebar_end: u32,
+    pub titlebar_end: u32,
+    pub card_end: u32,
+    pub selected_end: u32,
+    pub input_surface: u32,
+    pub input_surface_end: u32,
 }
 
 impl Palette {
@@ -85,6 +91,9 @@ impl Palette {
                 stage_surface: 0x3B275A, stage_foreground: 0xCDB0FE,
                 dev_surface: 0x173E32, dev_foreground: 0x80DDAB,
                 warning_surface: 0x51371E, warning_foreground: 0xFFC385,
+                sidebar_end: 0x20283A, titlebar_end: 0x192A42,
+                card_end: 0x192A41, selected_end: 0x234B83,
+                input_surface: 0x202E45, input_surface_end: 0x273650,
             }
         } else {
             Self {
@@ -98,6 +107,9 @@ impl Palette {
                 stage_surface: 0xF0E5FF, stage_foreground: 0x8C4ACA,
                 dev_surface: 0xE0F5E9, dev_foreground: 0x208451,
                 warning_surface: 0xFFF0DD, warning_foreground: 0xA95715,
+                sidebar_end: 0xF0E9F0, titlebar_end: 0xEAF2FF,
+                card_end: 0xFBFDFF, selected_end: 0xF8FCFF,
+                input_surface: 0xF5F8FD, input_surface_end: 0xFFFFFF,
             }
         }
     }
