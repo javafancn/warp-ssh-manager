@@ -68,6 +68,7 @@ struct ManagerView {
     feedback: Feedback,
     confirm_delete: bool,
     _subscription: Subscription,
+    _tags_subscription: Subscription,
     _appearance_subscription: Subscription,
 }
 
@@ -108,6 +109,10 @@ impl ManagerView {
         let subscription=cx.subscribe_in(&search,window,|_,_,event:&InputEvent,_,cx| {
             if matches!(event,InputEvent::Change) {cx.notify();}
         });
+        let tags=make_input(window,cx,"api, production");
+        let tags_subscription=cx.subscribe_in(&tags,window,|_,_,event:&InputEvent,_,cx| {
+            if matches!(event,InputEvent::Change) { cx.notify(); }
+        });
         let appearance_subscription=cx.observe_window_appearance(window,|this,window,cx| {
             if this.appearance==Appearance::System {
                 Theme::change(this.appearance.mode(window.appearance()),Some(window),cx);
@@ -126,12 +131,13 @@ impl ManagerView {
             port:make_input(window,cx,"22"),
             identity:make_input(window,cx,"~/.ssh/id_ed25519"),
             jump:make_input(window,cx,"可选跳板机别名"),
-            tags:make_input(window,cx,"api, production"),
+            tags,
             notes:cx.new(|cx| InputState::new(window,cx).placeholder("添加主机备注…").multi_line(true)),
             favorite:false,confirm_delete:false,
             message:"请选择一台主机；新增自管主机前请先初始化 SSH 集成。".into(),
             feedback:Feedback::Info,
-            _subscription:subscription,_appearance_subscription:appearance_subscription,
+            _subscription:subscription,_tags_subscription:tags_subscription,
+            _appearance_subscription:appearance_subscription,
         };
         if let Some(id) = first_host { view.select_host(id, window, cx); }
         view
