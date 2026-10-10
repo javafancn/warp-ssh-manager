@@ -342,6 +342,20 @@ impl ManagerView {
         cx.notify();
     }
 
+
+    fn remove_tag(&mut self, tag_to_remove: &str, window: &mut Window, cx: &mut Context<Self>) {
+        let values=Self::read(&self.tags,cx);
+        let mut removed=false;
+        let result=values.split(',').map(str::trim)
+            .filter(|item| !item.is_empty())
+            .filter(|item| {
+                if !removed && *item == tag_to_remove { removed=true; false } else { true }
+            })
+            .collect::<Vec<_>>().join(", ");
+        Self::set_input(&self.tags,&result,window,cx);
+        cx.notify();
+    }
+
     fn toggle_favorite(&mut self,_:&ClickEvent,_:&mut Window,cx:&mut Context<Self>) {
         self.favorite=!self.favorite;
         cx.notify();
@@ -577,9 +591,18 @@ impl Render for ManagerView {
         // remains editable through the input beneath them, and is persisted to SQLite.
         let raw_tags = Self::read(&self.tags, cx);
         let mut tag_chips = div().h_flex().gap_2();
-        for tag in raw_tags.split(',').map(str::trim).filter(|tag| !tag.is_empty()).take(4) {
-            tag_chips = tag_chips.child(div().rounded_md().bg(rgb(p.chip)).px_2().py_1()
-                .text_xs().font_semibold().text_color(rgb(p.secondary)).child(tag.to_string()));
+        for (index,tag) in raw_tags.split(',').map(str::trim).filter(|tag| !tag.is_empty()).take(4).enumerate() {
+            let tag_name=tag.to_owned();
+            tag_chips = tag_chips.child(div().h_flex().items_center().gap_1().rounded_md()
+                .bg(rgb(p.chip)).px_2().py_1()
+                .child(div().text_xs().font_semibold().text_color(rgb(p.secondary))
+                    .child(tag_name.clone()))
+                .child(div().id(SharedString::from(format!("tag-remove-{index}")))
+                    .cursor_pointer().px_1().text_color(rgb(p.tertiary))
+                    .child(Icon::new(IconName::Close).xsmall())
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        this.remove_tag(&tag_name,window,cx);
+                    }))));
         }
         let tags_field = div().h_flex().items_center().gap_3()
             .child(div().w(px(105.)).text_sm().text_color(rgb(p.secondary)).child("标签"))
@@ -603,7 +626,11 @@ impl Render for ManagerView {
                 .child(banner_icon))
             .child(div().text_sm().font_semibold().text_color(rgb(banner_fg)).child(banner_title))
             .child(div().flex_1().min_w_0().text_sm().text_color(rgb(p.primary))
-                .child(self.message.clone()));
+                .child(self.message.clone()))
+            .child(div().id("feedback-dismiss").cursor_pointer().px_1().py_1()
+                .text_color(rgb(banner_fg))
+                .child(Icon::new(IconName::Close).small())
+                .on_click(cx.listener(|this,_,_,cx| { this.feedback=Feedback::Info; cx.notify(); })));
         let status_color = if linked { p.success } else { p.tertiary };
         let tab_color = if warp_ready { p.success } else { p.tertiary };
 
