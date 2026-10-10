@@ -5,7 +5,7 @@ use gpui::*;
 use gpui::prelude::*;
 use gpui_component::scroll::ScrollableElement;
 use gpui_component::StyledExt;
-use gpui_component::{input::{Input,InputEvent,InputState}, Icon, IconName, Root};
+use gpui_component::{input::{Input,InputEvent,InputState}, Icon, IconName, Root, Sizable};
 use uuid::Uuid;
 use wsm_core::{Host,Manager};
 use super::{environment, theme::{Appearance,Palette}};
