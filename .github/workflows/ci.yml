@@ -21,5 +21,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check -p wsm-desktop --features tray
+      - name: Check GPUI desktop
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo check -p wsm-desktop --features tray 2>&1 | tee macos-gui-check.log
+      - name: Upload compiler diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpui-compiler-diagnostics
+          path: macos-gui-check.log
+          if-no-files-found: warn
       - run: bash scripts/macos-smoke.sh
