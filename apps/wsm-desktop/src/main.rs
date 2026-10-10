@@ -634,6 +634,81 @@ impl Render for ManagerView {
                 .child(Input::new(&self.tags))
                 .when(!raw_tags.trim().is_empty(), |el| el.child(tag_chips)));
 
+        // Tabs are real controls; each exposes a focused subset of the existing SSH editor.
+        let mut detail_tabs = div().h_flex().items_center().gap_4().px_4()
+            .border_b_1().border_color(rgb(p.border));
+        for (index, (tab, title)) in [
+            (DetailTab::Basic, "基本信息"),
+            (DetailTab::Connection, "连接配置"),
+            (DetailTab::Tags, "标签与分组"),
+            (DetailTab::Advanced, "高级设置"),
+        ].into_iter().enumerate() {
+            let chosen = self.detail_tab == tab;
+            detail_tabs = detail_tabs.child(
+                div().id(SharedString::from(format!("detail-tab-{index}")))
+                    .cursor_pointer().px_2().py_3().v_flex().gap_2()
+                    .child(div().text_sm().font_semibold()
+                        .text_color(rgb(if chosen { p.accent } else { p.secondary }))
+                        .child(title))
+                    .child(div().h(px(3.)).rounded_full()
+                        .bg(rgb(if chosen { p.accent } else { p.inspector })))
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.detail_tab = tab;
+                        this.group_picker_open = false;
+                        cx.notify();
+                    }))
+            );
+        }
+        let favorite_switch = div().h_flex().items_center().justify_between().px_1().py_3()
+            .child(div().h_flex().items_center().gap_2()
+                .child(Icon::new(IconName::Star))
+                .child(div().text_sm().text_color(rgb(p.secondary)).child("设为收藏")))
+            .child(div().id("main-interaction-021").cursor_pointer()
+                .h_flex().items_center().w(px(44.)).h(px(24.)).px_1().rounded_full()
+                .bg(rgb(if self.favorite { p.accent } else { p.border }))
+                .when(self.favorite, |el| el.child(div().flex_1()))
+                .child(div().w(px(17.)).h(px(17.)).rounded_full()
+                    .bg(rgb(p.accent_foreground)))
+                .when(!self.favorite, |el| el.child(div().flex_1()))
+                .on_click(cx.listener(Self::toggle_favorite)));
+        let detail_panel = match self.detail_tab {
+            DetailTab::Basic => div().v_flex().gap_3()
+                .child(detail_field("显示名称", &self.name, false, p))
+                .child(detail_field("SSH 别名", &self.alias, imported, p))
+                .child(detail_field("主机名 / IP", &self.hostname, imported, p))
+                .child(detail_field("用户名", &self.username, imported, p))
+                .child(detail_field("端口", &self.port, imported, p))
+                .child(detail_field("身份文件", &self.identity, imported, p))
+                .child(group_picker)
+                .child(tags_field)
+                .child(detail_field("备注", &self.notes, false, p))
+                .child(favorite_switch),
+            DetailTab::Connection => div().v_flex().gap_3()
+                .child(div().text_sm().font_semibold().text_color(rgb(p.primary))
+                    .child("SSH 连接参数"))
+                .child(div().text_xs().text_color(rgb(p.tertiary))
+                    .child("由 Warp 使用系统 OpenSSH 发起连接"))
+                .child(detail_field("SSH 别名", &self.alias, imported, p))
+                .child(detail_field("主机名 / IP", &self.hostname, imported, p))
+                .child(detail_field("用户名", &self.username, imported, p))
+                .child(detail_field("端口", &self.port, imported, p))
+                .child(detail_field("身份文件", &self.identity, imported, p))
+                .child(detail_field("跳板机", &self.jump, imported, p)),
+            DetailTab::Tags => div().v_flex().gap_4()
+                .child(div().text_sm().font_semibold().text_color(rgb(p.primary))
+                    .child("分类与备注"))
+                .child(group_picker)
+                .child(tags_field)
+                .child(detail_field("备注", &self.notes, false, p)),
+            DetailTab::Advanced => div().v_flex().gap_4()
+                .child(div().text_sm().font_semibold().text_color(rgb(p.primary))
+                    .child("高级连接选项"))
+                .child(detail_field("跳板机", &self.jump, imported, p))
+                .child(favorite_switch)
+                .child(div().rounded_lg().px_3().py_3().bg(rgb(p.control))
+                    .text_xs().text_color(rgb(p.secondary))
+                    .child("连接配置由 OpenSSH 管理。导入的主机连接字段保持只读；可以修改备注、收藏和分组。")),
+        };
         let doctor = self.manager.doctor().ok();
         let linked = doctor.as_ref().map(|d| d.include_enabled).unwrap_or(false);
         let warp_ready = self.manager.paths.warp_configs.exists();
@@ -758,33 +833,10 @@ impl Render for ManagerView {
                                 .child(if imported { "已导入 · 连接字段只读" } else { "自管主机 · OpenSSH" })))
                         .child(div().text_xs().text_color(rgb(if self.favorite { 0xF4B532 } else { p.tertiary }))
                             .child(if self.favorite { "★ 已收藏" } else { "☆ 未收藏" })))
+                    .child(detail_tabs)
                     .when(self.feedback != Feedback::Info, |el| el.child(banner))
-                    .child(div().flex_1().min_h_0().overflow_y_scrollbar().px_4().py_3()
-                        .child(div().v_flex().gap_2()
-                            .child(div().h_flex().items_center().gap_2().py_2()
-                                .child(div().w(px(3.)).h(px(14.)).rounded_full().bg(rgb(p.accent)))
-                                .child(div().text_xs().font_semibold().text_color(rgb(p.secondary))
-                                    .child("连接配置")))
-                            .child(detail_field("显示名称", &self.name, false, p))
-                            .child(detail_field("SSH 别名", &self.alias, imported, p))
-                            .child(detail_field("主机名 / IP", &self.hostname, imported, p))
-                            .child(detail_field("用户名", &self.username, imported, p))
-                            .child(detail_field("端口", &self.port, imported, p))
-                            .child(detail_field("身份文件", &self.identity, imported, p))
-                            .child(group_picker)
-                            .child(tags_field)
-                            .child(detail_field("跳板机", &self.jump, imported, p))
-                            .child(detail_field("备注", &self.notes, false, p))
-                            .child(div().h_flex().items_center().justify_between().px_1().py_2()
-                                .child(div().text_sm().text_color(rgb(p.secondary)).child("设为收藏"))
-                                .child(div().cursor_pointer().h_flex().items_center()
-                                    .w(px(44.)).h(px(24.)).px_1().rounded_full()
-                                    .bg(rgb(if self.favorite { p.accent } else { p.border }))
-                                    .when(self.favorite, |el| el.child(div().flex_1()))
-                                    .child(div().w(px(17.)).h(px(17.)).rounded_full()
-                                        .bg(rgb(p.accent_foreground)))
-                                    .when(!self.favorite, |el| el.child(div().flex_1()))
-                                    .id("main-interaction-021").on_click(cx.listener(Self::toggle_favorite))))))
+                    .child(div().flex_1().min_h_0().overflow_y_scrollbar().px_5().py_4()
+                        .child(detail_panel))
                     .child(div().h_flex().items_center().gap_2().px_4().py_3()
                         .bg(rgb(p.inspector)).border_t_1().border_color(rgb(p.border))
                         .child(div().w(px(170.)).cursor_pointer().rounded_md().px_3().py_2()
