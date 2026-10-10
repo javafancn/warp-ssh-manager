@@ -390,10 +390,10 @@ impl ManagerView {
 // Reusable, semantic styles keep Dark, Light and System modes visually identical.
 // macOS chrome stays native. Never draw a second set of traffic-light buttons.
 fn detail_field(label: &'static str, input: &Entity<InputState>, readonly: bool, p: Palette) -> impl IntoElement {
+    // The GPUI component input already draws a focus ring and border: avoid double frames.
     div().h_flex().items_center().gap_3()
-        .child(div().w(px(102.)).text_xs().text_color(rgb(p.secondary)).child(label))
-        .child(div().flex_1().min_w_0().rounded_md().border_1().border_color(rgb(p.border))
-            .bg(rgb(p.control)).child(Input::new(input).disabled(readonly)))
+        .child(div().w(px(105.)).text_sm().text_color(rgb(p.secondary)).child(label))
+        .child(div().flex_1().min_w_0().child(Input::new(input).disabled(readonly)))
 }
 
 fn environment(name: &str, p: Palette) -> impl IntoElement {
@@ -406,15 +406,18 @@ fn environment(name: &str, p: Palette) -> impl IntoElement {
         (p.dev_surface, p.dev_foreground)
     } else { (p.chip, p.secondary) };
     div().px_2().py_1().rounded_md().bg(rgb(bg))
-        .text_xs().text_color(rgb(fg)).child(name.to_owned())
+        .text_xs().font_semibold().text_color(rgb(fg)).child(name.to_owned())
 }
 
 fn sidebar_row(text: &'static str, count: usize, active: bool, p: Palette) -> impl IntoElement {
-    div().h_flex().items_center().justify_between().rounded_md().px_3().py_2()
+    div().h_flex().items_center().justify_between().rounded_lg().px_3().py_3()
         .bg(rgb(if active { p.selected } else { p.sidebar }))
-        .child(div().text_sm().text_color(rgb(if active { p.accent } else { p.primary })).child(text))
-        .child(div().px_2().py_1().rounded_full().bg(rgb(p.chip)).text_xs()
-            .text_color(rgb(p.secondary)).child(count.to_string()))
+        .child(div().text_sm().font_semibold()
+            .text_color(rgb(if active { p.accent } else { p.primary })).child(text))
+        .child(div().px_2().py_1().rounded_full()
+            .bg(rgb(if active { p.control } else { p.chip })).text_xs()
+            .text_color(rgb(if active { p.accent } else { p.secondary }))
+            .child(count.to_string()))
 }
 
 impl Render for ManagerView {
@@ -486,7 +489,7 @@ impl Render for ManagerView {
         let mut filtered: Vec<Host> = self.hosts.iter().filter(|h| self.filtered(h, &search)).cloned().collect();
         if current_filter == ViewFilter::Recent { filtered.sort_by(|a, b| b.last_connected.cmp(&a.last_connected)); }
         let filtered_count = filtered.len();
-        let mut connections = div().v_flex().gap_2();
+        let mut connections = div().v_flex().gap_1();
         for host in filtered {
             let id = host.id;
             let active = self.selected == Some(id);
@@ -497,17 +500,17 @@ impl Render for ManagerView {
             connections = connections.child(
                 div().id(SharedString::from(format!("connection-row-{id}")))
                     .h_flex().items_center().gap_3().rounded_lg()
-                    .px_3().py_3().cursor_pointer()
-                    .border_1().border_color(rgb(if active { p.selected_border } else { p.border }))
+                    .px_3().py_2().cursor_pointer()
+                    .border_1().border_color(rgb(if active { p.selected_border } else { p.list }))
                     .bg(rgb(if active { p.selected } else { p.list }))
                     .hover(|style| style.bg(rgb(if active { p.selected } else { p.chip })))
                     .child(div().w(px(3.)).h(px(35.)).rounded_full()
                         .bg(rgb(if active { p.accent } else { p.border })))
-                    .child(div().w(px(34.)).h(px(34.)).rounded_lg()
+                    .child(div().w(px(36.)).h(px(36.)).rounded_lg()
                         .bg(rgb(if active { p.prod_surface } else { p.control }))
                         .flex().items_center().justify_center()
                         .text_color(rgb(if active { p.accent } else { p.secondary }))
-                        .child("▣"))
+                        .child("▤"))
                     .child(div().flex_1().min_w_0().v_flex().gap_1()
                         .child(div().text_sm().font_semibold()
                             .text_color(rgb(if active { p.accent } else { p.primary }))
@@ -570,17 +573,16 @@ impl Render for ManagerView {
         // Tag chips are only a visual representation. The same comma-separated value
         // remains editable through the input beneath them, and is persisted to SQLite.
         let raw_tags = Self::read(&self.tags, cx);
-        let mut tag_chips = div().h_flex().gap_1();
+        let mut tag_chips = div().h_flex().gap_2();
         for tag in raw_tags.split(',').map(str::trim).filter(|tag| !tag.is_empty()).take(4) {
             tag_chips = tag_chips.child(div().rounded_md().bg(rgb(p.chip)).px_2().py_1()
-                .text_xs().text_color(rgb(p.secondary)).child(format!("{}  ×", tag)));
+                .text_xs().font_semibold().text_color(rgb(p.secondary)).child(tag.to_string()));
         }
         let tags_field = div().h_flex().items_center().gap_3()
-            .child(div().w(px(102.)).text_xs().text_color(rgb(p.secondary)).child("标签"))
+            .child(div().w(px(105.)).text_sm().text_color(rgb(p.secondary)).child("标签"))
             .child(div().v_flex().flex_1().min_w_0().gap_2()
-                .child(tag_chips)
-                .child(div().rounded_md().border_1().border_color(rgb(p.border))
-                    .bg(rgb(p.control)).child(Input::new(&self.tags))));
+                .child(Input::new(&self.tags))
+                .when(!raw_tags.trim().is_empty(), |el| el.child(tag_chips)));
 
         let doctor = self.manager.doctor().ok();
         let linked = doctor.as_ref().map(|d| d.include_enabled).unwrap_or(false);
@@ -591,14 +593,14 @@ impl Render for ManagerView {
             Feedback::Success => (p.dev_surface,p.dev_foreground,"✓","操作成功"),
             Feedback::Info => (p.chip,p.secondary,"i","提示"),
         };
-        let banner=div().h_flex().items_start().gap_3().mx_4().mt_3().px_3().py_3()
+        let banner=div().h_flex().items_center().gap_2().mx_4().mt_3().px_3().py_2()
             .rounded_lg().border_1().border_color(rgb(banner_fg)).bg(rgb(banner_bg))
-            .child(div().w(px(22.)).h(px(22.)).rounded_full().bg(rgb(banner_fg))
+            .child(div().w(px(20.)).h(px(20.)).rounded_full().bg(rgb(banner_fg))
                 .text_color(rgb(p.inspector)).font_semibold().flex().items_center().justify_center()
                 .child(banner_icon))
-            .child(div().flex_1().min_w_0().v_flex().gap_1()
-                .child(div().text_sm().font_semibold().text_color(rgb(banner_fg)).child(banner_title))
-                .child(div().text_sm().text_color(rgb(p.primary)).child(self.message.clone())));
+            .child(div().text_sm().font_semibold().text_color(rgb(banner_fg)).child(banner_title))
+            .child(div().flex_1().min_w_0().text_sm().text_color(rgb(p.primary))
+                .child(self.message.clone()));
         let status_color = if linked { p.success } else { p.tertiary };
         let tab_color = if warp_ready { p.success } else { p.tertiary };
 
