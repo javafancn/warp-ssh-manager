@@ -31,7 +31,7 @@ impl QuickConnect {
         });
         // Open as a keyboard-first search utility. No mouse click is required.
         search.update(cx,|state,cx|state.focus(window,cx));
-        Self {manager,search,status:"选择主机后按 Enter，或双击直接连接 Warp。".into(),selected:None,_subscription:sub}
+        Self {manager,search,status:"单击选择 · 双击连接 · Enter 打开当前主机".into(),selected:None,_subscription:sub}
     }
 
     fn hosts(&self,cx:&Context<Self>)->Vec<Host> {
@@ -65,55 +65,80 @@ impl Render for QuickConnect {
         let p = Palette::new(setting.dark(window.appearance()));
         let hosts = self.hosts(cx);
         let groups = self.manager.db.list_groups().unwrap_or_default();
-        let mut list = div().v_flex().gap_1();
+        let mut list = div().v_flex().gap_2()
+            .child(div().px_2().py_2().text_xs().font_semibold().text_color(rgb(p.tertiary))
+                .child("AVAILABLE CONNECTIONS"));
         for (index, host) in hosts.iter().enumerate() {
             let id = host.id;
+            let host_name = host.name.clone();
             let picked = self.selected.map_or(index == 0, |selected| selected == id);
             let label = host.group_id
                 .and_then(|id| groups.iter().find(|g| g.id == id))
                 .map(|group| group.name.as_str()).unwrap_or("未分组");
-            list = list.child(div().id(SharedString::from(format!("quick-host-{id}"))).h_flex().items_center().gap_2().px_3().py_2().rounded_lg()
+            list = list.child(div().id(SharedString::from(format!("quick-host-{id}")))
+                .h_flex().items_center().gap_3().px_3().py_3().rounded_lg()
                 .bg(rgb(if picked { p.selected } else { p.inspector }))
-                .border_1().border_color(rgb(if picked { p.selected_border } else { p.inspector }))
+                .border_1().border_color(rgb(if picked { p.selected_border } else { p.border }))
+                .hover(|style| style.bg(rgb(if picked { p.selected } else { p.chip })))
                 .cursor_pointer()
-                .child(div().w(px(30.)).h(px(30.)).rounded_md()
-                    .bg(rgb(p.control)).flex().items_center().justify_center()
-                    .text_color(rgb(p.secondary)).child("▤"))
+                .child(div().w(px(34.)).h(px(34.)).rounded_lg()
+                    .bg(rgb(if picked { p.prod_surface } else { p.control }))
+                    .flex().items_center().justify_center()
+                    .text_color(rgb(if picked { p.accent } else { p.secondary })).child("▤"))
                 .child(div().v_flex().gap_1().flex_1().min_w_0()
-                    .child(div().text_sm().font_semibold().text_color(rgb(p.primary)).child(host.name.clone()))
+                    .child(div().text_sm().font_semibold()
+                        .text_color(rgb(if picked { p.accent } else { p.primary }))
+                        .child(host.name.clone()))
                     .child(div().text_xs().text_color(rgb(p.tertiary)).child(host.hostname.clone())))
                 .child(environment(label, p))
                 .child(div().text_lg().text_color(rgb(if host.favorite { 0xF4B532 } else { p.tertiary }))
                     .child(if host.favorite { "★" } else { "☆" }))
-                .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| { this.selected=Some(id); if event.click_count() >= 2 { this.connect(id,window,cx); } else { cx.notify(); } })));
+                 .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
+                    this.selected=Some(id);
+                    if event.click_count() >= 2 { this.connect(id,window,cx); }
+                    else {
+                        this.status=format!("已选择 {host_name} · 按 Enter 连接");
+                        cx.notify();
+                    }
+                })));
         }
         if hosts.is_empty() {
             list = list.child(div().py_8().v_flex().items_center().gap_2()
                 .child(div().text_2xl().text_color(rgb(p.tertiary)).child("⌕"))
                 .child(div().text_sm().text_color(rgb(p.secondary)).child("没有找到匹配的服务器")));
         }
-        div().size_full().v_flex().p_4().gap_3().bg(rgb(p.inspector)).text_color(rgb(p.primary))
-            .child(div().h_flex().justify_between().items_center()
-                .child(div().text_lg().font_semibold().child("Quick Connect"))
-                .child(div().cursor_pointer().px_2().py_1().rounded_md()
+        div().size_full().v_flex().p_4().gap_3()
+            .bg(rgb(p.inspector)).text_color(rgb(p.primary))
+            .child(div().h_flex().justify_between().items_center().py_2()
+                .child(div().h_flex().items_center().gap_3()
+                    .child(div().w(px(32.)).h(px(32.)).rounded_lg().bg(rgb(p.accent))
+                        .flex().items_center().justify_center()
+                        .font_semibold().text_color(rgb(p.accent_foreground)).child(">_"))
+                    .child(div().v_flex().gap_1()
+                        .child(div().text_lg().font_semibold().child("Quick Connect"))
+                        .child(div().text_xs().text_color(rgb(p.tertiary))
+                            .child("快速查找并在 Warp 中打开 SSH"))))
+                .child(div().cursor_pointer().px_3().py_2().rounded_lg()
                     .bg(rgb(p.control)).text_color(rgb(p.secondary)).child("✕")
                     .id("quick_connect-action-98").on_click(cx.listener(|_, _, window, _| window.remove_window()))))
-            .child(div().h_flex().items_center().rounded_lg().border_1().border_color(rgb(p.border))
-                .bg(rgb(p.control))
+            .child(div().h_flex().items_center().rounded_lg().bg(rgb(p.control))
                 .child(div().flex_1().min_w_0().child(Input::new(&self.search)))
-                .child(div().text_xs().text_color(rgb(p.tertiary)).px_3().child("↵")))
+                .child(div().rounded_md().px_2().py_1().mr_2()
+                    .bg(rgb(p.chip)).text_xs().text_color(rgb(p.tertiary)).child("↵")))
             .child(div().flex_1().min_h_0().overflow_y_scrollbar().child(list))
             .child(div().pt_3().border_t_1().border_color(rgb(p.border))
                 .h_flex().justify_between().items_center()
-                .child(div().text_xs().text_color(rgb(p.secondary)).child(self.status.clone()))
-                .child(div().text_xs().text_color(rgb(p.tertiary)).child("Warp ↗")))
+                .child(div().flex_1().min_w_0().text_xs().text_color(rgb(p.secondary))
+                    .child(self.status.clone()))
+                .child(div().px_2().py_1().rounded_md().bg(rgb(p.chip))
+                    .text_xs().text_color(rgb(p.tertiary)).child("WARP ↗")))
     }
 }
 
 pub fn open_window(cx:&mut App) {
     let opts=WindowOptions {
         titlebar:None,
-        window_bounds:Some(WindowBounds::centered(size(px(460.),px(500.)),cx)),
+        window_bounds:Some(WindowBounds::centered(size(px(500.),px(540.)),cx)),
         kind:WindowKind::Floating,
         is_resizable:false,
         ..WindowOptions::default()
