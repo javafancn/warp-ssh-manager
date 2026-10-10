@@ -32,11 +32,15 @@ enum ViewFilter {
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Feedback { Info, Success, Error, Warning }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DetailTab { Basic, Connection, Tags, Advanced }
+
 struct ManagerView {
     manager: Manager,
     hosts: Vec<Host>,
     groups: Vec<Group>,
     selected: Option<Uuid>,
+    detail_tab: DetailTab,
     filter: ViewFilter,
     editor_group: Option<Uuid>,
     group_picker_open: bool,
@@ -107,7 +111,7 @@ impl ManagerView {
         });
         let first_host = hosts.first().map(|host| host.id);
         let mut view = Self {
-            manager,hosts,groups,selected:None,filter:ViewFilter::All,
+            manager,hosts,groups,selected:None,detail_tab:DetailTab::Basic,filter:ViewFilter::All,
             editor_group:None,group_picker_open:false,actions_open:false,collapsed_groups:HashSet::new(),appearance,search,
             group_input:make_input(window,cx,"新建分组名称"),
             name:make_input(window,cx,"服务器显示名称"),
@@ -145,6 +149,7 @@ impl ManagerView {
     fn select_host(&mut self,id:Uuid,window:&mut Window,cx:&mut Context<Self>) {
         let Some(host)=self.hosts.iter().find(|h|h.id==id).cloned() else {return};
         self.selected=Some(id);
+        self.detail_tab=DetailTab::Basic;
         self.editor_group=host.group_id;
         self.group_picker_open=false;
         self.favorite=host.favorite;
@@ -172,6 +177,7 @@ impl ManagerView {
 
     fn new_host(&mut self,window:&mut Window,cx:&mut Context<Self>) {
         self.selected=None;
+        self.detail_tab=DetailTab::Basic;
         self.favorite=false;
         self.editor_group=match self.filter {ViewFilter::Group(id)=>Some(id),_=>None};
         self.group_picker_open=false;
@@ -286,7 +292,7 @@ impl ManagerView {
     fn connect(&mut self,_:&ClickEvent,_:&mut Window,cx:&mut Context<Self>) {
         let Some(id)=self.selected else {
             self.feedback=Feedback::Warning;
-            self.message="请先保存主机，再点击 Open in Warp。".into();cx.notify();return;
+            self.message="请先保存主机，再点击「在 Warp 中打开」。".into();cx.notify();return;
         };
         match self.manager.connect(id,false,false) {
             Ok(())=>{
@@ -405,8 +411,8 @@ impl ManagerView {
 // macOS chrome stays native. Never draw a second set of traffic-light buttons.
 fn detail_field(label: &'static str, input: &Entity<InputState>, readonly: bool, p: Palette) -> impl IntoElement {
     // The GPUI component input already draws a focus ring and border: avoid double frames.
-    div().h_flex().items_center().gap_3()
-        .child(div().w(px(112.)).text_sm().text_color(rgb(p.secondary)).child(label))
+    div().h_flex().items_center().gap_3().min_h(px(35.))
+        .child(div().w(px(104.)).text_sm().text_color(rgb(p.secondary)).child(label))
         .child(div().flex_1().min_w_0().child(Input::new(input).disabled(readonly)))
 }
 
@@ -559,7 +565,7 @@ impl Render for ManagerView {
 
         let mut group_picker = div().v_flex().gap_1()
             .child(div().h_flex().items_center().gap_3()
-                .child(div().w(px(112.)).text_sm().text_color(rgb(p.secondary)).child("所属分组"))
+                .child(div().w(px(104.)).text_sm().text_color(rgb(p.secondary)).child("所属分组"))
                 .child(div().h_flex().flex_1().min_w_0().items_center().rounded_md().border_1()
                     .border_color(rgb(p.border)).bg(rgb(p.control)).px_3().py_2().cursor_pointer()
                     .child(Icon::new(IconName::Folder))
@@ -605,7 +611,7 @@ impl Render for ManagerView {
                     }))));
         }
         let tags_field = div().h_flex().items_center().gap_3()
-            .child(div().w(px(112.)).text_sm().text_color(rgb(p.secondary)).child("标签"))
+            .child(div().w(px(104.)).text_sm().text_color(rgb(p.secondary)).child("标签"))
             .child(div().v_flex().flex_1().min_w_0().gap_2()
                 .child(Input::new(&self.tags))
                 .when(!raw_tags.trim().is_empty(), |el| el.child(tag_chips)));
@@ -697,7 +703,7 @@ impl Render for ManagerView {
             .when(self.actions_open, |el| el.child(secondary_actions))
             // One continuous three-column layout. Each pane owns its scrolling area.
             .child(div().h_flex().flex_1().min_h_0().items_start()
-                .child(div().w(px(240.)).h_full().v_flex().min_h_0().bg(rgb(p.sidebar))
+                .child(div().w(px(250.)).h_full().v_flex().min_h_0().bg(rgb(p.sidebar))
                     .border_r_1().border_color(rgb(p.border)).p_4().gap_3()
                     .child(div().h_flex().items_center().justify_between()
                         .child(div().text_sm().font_semibold().text_color(rgb(p.primary)).child("文件夹"))
@@ -714,7 +720,7 @@ impl Render for ManagerView {
                             .text_color(rgb(p.accent_foreground)).text_xs().font_semibold()
                             .px_2().py_2().child("创建")
                             .id("main-interaction-020").on_click(cx.listener(Self::add_group)))))
-                .child(div().w(px(382.)).h_full().v_flex().min_h_0().bg(rgb(p.list))
+                .child(div().w(px(445.)).h_full().v_flex().min_h_0().bg(rgb(p.list))
                     .border_r_1().border_color(rgb(p.border)).p_4().gap_3()
                     .child(div().h_flex().items_center().justify_between()
                         .child(div().text_lg().font_semibold().text_color(rgb(p.primary)).child("连接列表"))
@@ -803,7 +809,7 @@ fn main()->Result<()> {
         #[cfg(feature="tray")]
         tray::install(cx);
         let options=WindowOptions {
-            window_bounds:Some(WindowBounds::centered(size(px(1320.),px(810.)),cx)),
+            window_bounds:Some(WindowBounds::centered(size(px(1430.),px(890.)),cx)),
             ..WindowOptions::default()
         };
         cx.open_window(options,|window,cx| {
