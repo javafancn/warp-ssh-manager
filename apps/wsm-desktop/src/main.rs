@@ -478,12 +478,13 @@ impl Render for ManagerView {
         let mut group_list = div().v_flex().gap_1();
         if self.groups.is_empty() {
             group_list = group_list.child(
-                div().v_flex().items_center().gap_2().rounded_lg()
-                    .border_1().border_color(rgb(p.border)).bg(rgb(p.control))
-                    .px_3().py_5()
-                    .child(div().text_lg().text_color(rgb(p.tertiary)).child(Icon::new(IconName::Folder)))
-                    .child(div().text_sm().font_semibold().text_color(rgb(p.secondary)).child("还没有分组"))
-                    .child(div().text_xs().text_color(rgb(p.tertiary)).child("在下方创建分组，整理服务器"))
+                div().v_flex().gap_2().rounded_lg().px_2().py_4()
+                    .child(div().h_flex().items_center().gap_2()
+                        .child(Icon::new(IconName::Folder))
+                        .child(div().text_sm().text_color(rgb(p.secondary))
+                            .child("暂时没有分组")))
+                    .child(div().text_xs().text_color(rgb(p.tertiary))
+                        .child("点击下方「新建分组」开始整理主机"))
             );
         }
         for (group, level) in flat {
@@ -554,14 +555,14 @@ impl Render for ManagerView {
                     .bg(rgb(if active { p.selected } else { p.inspector }))
                     .hover(|style| style.bg(rgb(if active { p.selected } else { p.control })))
                     .child(div().h_flex().items_center().gap_3().px_4().py_3()
-                        .child(div().w(px(53.)).h(px(53.)).rounded_lg()
+                        .child(div().w(px(55.)).h(px(55.)).rounded_lg()
                             .border_1().border_color(rgb(icon_outline))
                             .bg(rgb(if p.app == 0x0D1421 { 0x0D192C } else { 0x172B40 }))
                             .flex().items_center().justify_center()
                             .text_color(rgb(0xF1FAFF))
-                            .child(Icon::new(IconName::SquareTerminal)))
+                            .text_lg().font_semibold().child(">_"))
                         .child(div().flex_1().min_w_0().v_flex().gap_2()
-                            .child(div().text_base().font_semibold()
+                            .child(div().text_lg().font_semibold()
                                 .text_color(rgb(p.primary))
                                 .child(host.name.clone()))
                             .child(div().text_sm().text_color(rgb(p.secondary))
@@ -791,15 +792,16 @@ impl Render for ManagerView {
 
         // Window shell mirrors the reference: persistent branded sidebar,
         // independent toolbar over connection cards and inspector, native macOS chrome.
-        let sidebar = div().w(px(255.)).h_full().v_flex().min_h_0()
+        let sidebar = div().w(px(280.)).h_full().v_flex().min_h_0()
             .bg(rgb(p.sidebar)).border_r_1().border_color(rgb(p.border))
             .child(div().h_flex().items_center().gap_3().px_4().py_5()
-                .child(div().w(px(42.)).h(px(42.)).rounded_lg().bg(rgb(p.accent))
+                .child(div().w(px(54.)).h(px(54.)).rounded_lg()
+                    .bg(rgb(p.accent)).border_1().border_color(rgb(p.selected_border))
                     .flex().items_center().justify_center()
-                    .text_color(rgb(p.accent_foreground))
-                    .child(Icon::new(IconName::SquareTerminal)))
+                    .text_color(rgb(p.accent_foreground)).text_2xl().font_semibold()
+                    .child(">_"))
                 .child(div().v_flex().gap_1()
-                    .child(div().text_sm().font_semibold().text_color(rgb(p.primary))
+                    .child(div().text_base().font_semibold().text_color(rgb(p.primary))
                         .child("Warp SSH 管理器"))
                     .child(div().text_xs().text_color(rgb(p.tertiary))
                         .child("高效管理 · 快速连接"))))
@@ -808,18 +810,36 @@ impl Render for ManagerView {
                 .child(div().h_flex().items_center().justify_between().pt_2()
                     .child(div().text_sm().font_semibold().text_color(rgb(p.secondary))
                         .child("分组"))
-                    .child(div().text_xs().text_color(rgb(p.tertiary))
-                        .child(self.groups.len().to_string())))
+                    .child(div().id("sidebar-group-toggle").cursor_pointer()
+                    .px_2().py_2().text_color(rgb(p.secondary))
+                    .child(if self.creating_group { "×" } else { "+" })
+                    .on_click(cx.listener(|this,_,_,cx| {
+                        this.creating_group=!this.creating_group;
+                        cx.notify();
+                    }))))
                 .child(div().flex_1().min_h_0().overflow_y_scrollbar()
                     .child(group_list)))
-            .child(div().h_flex().items_center().gap_2().px_3().py_3()
+            .when(self.creating_group, |el| el.child(
+                div().h_flex().items_center().gap_2().px_3().py_2()
+                    .child(div().flex_1().min_w_0().child(Input::new(&self.group_input)))
+                    .child(div().id("create-sidebar-group").cursor_pointer()
+                        .rounded_lg().px_3().py_2().bg(rgb(p.accent))
+                        .text_color(rgb(p.accent_foreground)).text_sm().font_semibold()
+                        .child("创建")
+                        .on_click(cx.listener(Self::add_group)))))
+            .child(div().h_flex().items_center().gap_2().px_4().py_3()
                 .border_t_1().border_color(rgb(p.border))
-                .child(div().flex_1().min_w_0().child(Input::new(&self.group_input)))
-                .child(div().id("create-sidebar-group").cursor_pointer().px_3().py_2()
-                    .rounded_lg().bg(rgb(p.accent)).text_color(rgb(p.accent_foreground))
-                    .text_sm().font_semibold().child("+")
-                    .on_click(cx.listener(Self::add_group)))
-                .child(div().id("sidebar-settings").cursor_pointer().px_2().py_2()
+                .child(div().id("show-sidebar-group-form").flex_1()
+                    .cursor_pointer().h_flex().items_center().gap_2()
+                    .rounded_lg().px_2().py_2().bg(rgb(p.control))
+                    .text_sm().text_color(rgb(p.primary))
+                    .child("+")
+                    .child("新建分组")
+                    .on_click(cx.listener(|this,_,_,cx| {
+                        this.creating_group=!this.creating_group;
+                        cx.notify();
+                    })))
+                .child(div().id("sidebar-settings").cursor_pointer().px_3().py_2()
                     .rounded_lg().bg(rgb(p.control)).text_color(rgb(p.secondary))
                     .child(Icon::new(IconName::Settings))
                     .on_click(cx.listener(|this,_,_,cx| {
@@ -861,7 +881,7 @@ impl Render for ManagerView {
                     .child("+ 新建主机")
                     .on_click(cx.listener(|this,_,window,cx| this.new_host(window,cx)))));
 
-        let connections_pane = div().w(px(455.)).h_full().v_flex().min_h_0()
+        let connections_pane = div().w(px(485.)).h_full().v_flex().min_h_0()
             .bg(rgb(p.list)).border_r_1().border_color(rgb(p.border))
             .p_4().gap_3()
             .child(div().h_flex().items_center().justify_between()
