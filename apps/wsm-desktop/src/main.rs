@@ -452,8 +452,8 @@ fn environment(name: &str, p: Palette) -> impl IntoElement {
 
 fn sidebar_row(icon: IconName, text: &'static str, count: usize, active: bool, p: Palette) -> impl IntoElement {
     div().h_flex().items_center().justify_between().rounded_lg().px_3().py_3()
-        .bg(if active { linear_gradient(90., rgb(p.selected), rgb(p.selected_end)) }
-            else {linear_gradient(90., rgb(p.sidebar), rgb(p.sidebar_end))})
+        .bg(if active { linear_gradient(90.,linear_color_stop(rgb(p.selected),0.),linear_color_stop(rgb(p.selected_end),1.)) }
+            else {linear_gradient(90.,linear_color_stop(rgb(p.sidebar),0.),linear_color_stop(rgb(p.sidebar_end),1.))})
         .child(div().h_flex().items_center().gap_3().text_sm().font_semibold()
             .text_color(rgb(if active { p.accent } else { p.primary }))
             .child(Icon::new(icon)).child(text))
@@ -571,14 +571,14 @@ impl Render for ManagerView {
                 div().id(SharedString::from(format!("connection-row-{id}")))
                     .v_flex().rounded_lg().cursor_pointer().overflow_hidden().shadow_sm()
                     .border_1().border_color(rgb(if active { p.accent } else { p.border }))
-                    .bg(if active {linear_gradient(90.,rgb(p.selected),rgb(p.selected_end))}
-                        else {linear_gradient(90.,rgb(p.inspector),rgb(p.card_end))})
+                    .bg(if active {linear_gradient(90.,linear_color_stop(rgb(p.selected),0.),linear_color_stop(rgb(p.selected_end),1.))}
+                        else {linear_gradient(90.,linear_color_stop(rgb(p.inspector),0.),linear_color_stop(rgb(p.card_end),1.))})
                     .hover(|style| style.border_color(rgb(p.selected_border)))
                     .child(div().h_flex().items_center().gap_3().px_4().py_3()
                         .child(div().w(px(55.)).h(px(55.)).rounded_lg()
                             .border_1().border_color(rgb(icon_outline))
                             .shadow_sm()
-                            .bg(linear_gradient(160.,rgb(icon_top),rgb(icon_bottom)))
+                            .bg(linear_gradient(160.,linear_color_stop(rgb(icon_top),0.),linear_color_stop(rgb(icon_bottom),1.)))
                             .flex().items_center().justify_center()
                             .text_color(rgb(0xF1FAFF))
                             .text_lg().font_semibold().child(">_"))
@@ -834,11 +834,11 @@ impl Render for ManagerView {
         // Window shell mirrors the reference: persistent branded sidebar,
         // independent toolbar over connection cards and inspector, native macOS chrome.
         let sidebar = div().w(px(330.)).h_full().v_flex().min_h_0()
-            .bg(linear_gradient(160.,rgb(p.sidebar),rgb(p.sidebar_end)))
+            .bg(linear_gradient(160.,linear_color_stop(rgb(p.sidebar),0.),linear_color_stop(rgb(p.sidebar_end),1.)))
             .border_r_1().border_color(rgb(p.border))
             .child(div().h_flex().items_center().gap_3().px_4().py_5()
                 .child(div().w(px(54.)).h(px(54.)).rounded_lg().shadow_sm()
-                    .bg(linear_gradient(160.,rgb(0x28D8F6),rgb(0x1231E9)))
+                    .bg(linear_gradient(160.,linear_color_stop(rgb(0x28D8F6),0.),linear_color_stop(rgb(0x1231E9),1.)))
                     .border_1().border_color(rgb(p.selected_border))
                     .flex().items_center().justify_center()
                     .text_color(rgb(p.accent_foreground)).text_2xl().font_semibold()
@@ -890,7 +890,7 @@ impl Render for ManagerView {
                     }))));
 
         let toolbar = div().h_flex().items_center().justify_between().px_5().py_3()
-            .bg(linear_gradient(90.,rgb(p.titlebar),rgb(p.titlebar_end)))
+            .bg(linear_gradient(90.,linear_color_stop(rgb(p.titlebar),0.),linear_color_stop(rgb(p.titlebar_end),1.)))
             .border_b_1().border_color(rgb(p.border))
             .child(div().text_xl().font_semibold().text_color(rgb(p.primary))
                 .child("连接列表"))
@@ -919,7 +919,7 @@ impl Render for ManagerView {
                         .on_click(cx.listener(|this,_,window,cx| this.set_theme(Appearance::Light,window,cx)))
                     ))
                 .child(div().id("main-interaction-018").cursor_pointer().rounded_lg().shadow_sm()
-                    .px_4().py_3().bg(linear_gradient(180.,rgb(0x3398FF),rgb(p.accent)))
+                    .px_4().py_3().bg(linear_gradient(180.,linear_color_stop(rgb(0x3398FF),0.),linear_color_stop(rgb(p.accent),1.)))
                     .hover(|style| style.bg(rgb(p.selected_border)))
                     .text_color(rgb(p.accent_foreground)).text_sm().font_semibold()
                     .child("+ 新建主机")
@@ -985,7 +985,7 @@ impl Render for ManagerView {
                 .border_t_1().border_color(rgb(p.border))
                 .child(div().id("main-interaction-022").w(px(210.))
                     .cursor_pointer().rounded_lg().px_3().py_3().shadow_sm()
-                    .bg(linear_gradient(180.,rgb(0x3198FF),rgb(p.accent))).hover(|style| style.bg(rgb(p.selected_border)))
+                    .bg(linear_gradient(180.,linear_color_stop(rgb(0x3198FF),0.),linear_color_stop(rgb(p.accent),1.))).hover(|style| style.bg(rgb(p.selected_border)))
                     .text_color(rgb(p.accent_foreground))
                     .text_sm().font_semibold().flex().items_center().justify_center()
                     .child(div().h_flex().items_center().gap_2()
