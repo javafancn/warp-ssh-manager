@@ -74,7 +74,21 @@ rm -rf "$staging"
 mkdir -p "$staging"
 ditto "$app" "$staging/Warp SSH Manager.app"
 ln -s /Applications "$staging/Applications"
-hdiutil create -volname "Warp SSH Manager (${arch})" -srcfolder "$staging" -ov -format UDZO "$dmg_path" >/dev/null
+# macOS runners occasionally return EBUSY while Spotlight or disk image services
+# briefly access the staging directory. Retry safely before failing the build.
+created=0
+for attempt in 1 2 3 4; do
+  rm -f "$dmg_path"
+  if hdiutil create -volname "Warp SSH Manager (${arch})" \
+      -srcfolder "$staging" -ov -format UDZO "$dmg_path" >/dev/null; then
+    created=1
+    break
+  fi
+  echo "DMG creation attempt ${attempt}/4 failed; retrying..." >&2
+  sleep $((attempt * 3))
+done
+[[ "$created" == 1 && -s "$dmg_path" ]] || { echo "DMG creation failed after 4 attempts" >&2; exit 1; }
+hdiutil imageinfo "$dmg_path" >/dev/null || { echo "DMG validation failed" >&2; exit 1; }
 rm -rf "$staging"
 printf '\nBuild artifacts:\n  %s\n  %s\n\n' "$zip_path" "$dmg_path"
 printf 'This build is AD-HOC signed, NOT APPLE NOTARIZED. Run macOS 12 and SSH integration smoke tests before general use.\n'
