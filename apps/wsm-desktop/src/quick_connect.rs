@@ -5,7 +5,7 @@ use gpui::*;
 use gpui::prelude::*;
 use gpui_component::scroll::ScrollableElement;
 use gpui_component::StyledExt;
-use gpui_component::{input::{Input,InputEvent,InputState}, Root};
+use gpui_component::{input::{Input,InputEvent,InputState}, Icon, IconName, Root};
 use uuid::Uuid;
 use wsm_core::{Host,Manager};
 use super::{environment, theme::{Appearance,Palette}};
@@ -84,7 +84,7 @@ impl Render for QuickConnect {
                 .child(div().w(px(34.)).h(px(34.)).rounded_lg()
                     .bg(rgb(if picked { p.prod_surface } else { p.control }))
                     .flex().items_center().justify_center()
-                    .text_color(rgb(if picked { p.accent } else { p.secondary })).child("▤"))
+                    .text_color(rgb(if picked { p.accent } else { p.secondary })).child(Icon::new(IconName::SquareTerminal)))
                 .child(div().v_flex().gap_1().flex_1().min_w_0()
                     .child(div().text_sm().font_semibold()
                         .text_color(rgb(if picked { p.accent } else { p.primary }))
@@ -113,13 +113,13 @@ impl Render for QuickConnect {
                 .child(div().h_flex().items_center().gap_3()
                     .child(div().w(px(32.)).h(px(32.)).rounded_lg().bg(rgb(p.accent))
                         .flex().items_center().justify_center()
-                        .font_semibold().text_color(rgb(p.accent_foreground)).child(">_"))
+                        .font_semibold().text_color(rgb(p.accent_foreground)).child(Icon::new(IconName::SquareTerminal)))
                     .child(div().v_flex().gap_1()
                         .child(div().text_lg().font_semibold().child("Quick Connect"))
                         .child(div().text_xs().text_color(rgb(p.tertiary))
                             .child("快速查找并在 Warp 中打开 SSH"))))
                 .child(div().cursor_pointer().px_3().py_2().rounded_lg()
-                    .bg(rgb(p.control)).text_color(rgb(p.secondary)).child("✕")
+                    .bg(rgb(p.control)).text_color(rgb(p.secondary)).child(Icon::new(IconName::Close))
                     .id("quick_connect-action-98").on_click(cx.listener(|_, _, window, _| window.remove_window()))))
             .child(div().h_flex().items_center().rounded_lg().bg(rgb(p.control))
                 .child(div().flex_1().min_w_0().child(Input::new(&self.search)))
