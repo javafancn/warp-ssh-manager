@@ -867,7 +867,7 @@ impl Render for ManagerView {
         let sidebar = div().w(px(245.)).h_full().v_flex().min_h_0()
             .bg(linear_gradient(160.,linear_color_stop(rgb(p.sidebar),0.),linear_color_stop(rgb(p.sidebar_end),1.)))
             .border_r_1().border_color(rgb(p.border))
-            .child(div().h_flex().items_center().gap_2().px_3().pt_14().pb_4()
+            .child(div().h_flex().items_center().gap_2().px_3().pt_16().pb_4()
                 .child(div().w(px(42.)).h(px(42.)).rounded_lg().shadow_sm()
                     .bg(linear_gradient(160.,linear_color_stop(rgb(0x28D8F6),0.),linear_color_stop(rgb(0x1231E9),1.)))
                     .border_1().border_color(rgb(p.selected_border))
