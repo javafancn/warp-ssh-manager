@@ -502,14 +502,12 @@ impl Render for ManagerView {
             // was reused for all rows, which broke click targeting.
             connections = connections.child(
                 div().id(SharedString::from(format!("connection-row-{id}")))
-                    .h_flex().items_center().gap_3().rounded_lg()
-                    .px_3().py_2().cursor_pointer()
+                    .h_flex().items_center().gap_2().rounded_lg()
+                    .px_2().py_2().cursor_pointer()
                     .border_1().border_color(rgb(if active { p.selected_border } else { p.list }))
                     .bg(rgb(if active { p.selected } else { p.list }))
                     .hover(|style| style.bg(rgb(if active { p.selected } else { p.chip })))
-                    .child(div().w(px(3.)).h(px(35.)).rounded_full()
-                        .bg(rgb(if active { p.accent } else { p.border })))
-                    .child(div().w(px(36.)).h(px(36.)).rounded_lg()
+                    .child(div().w(px(32.)).h(px(32.)).rounded_md()
                         .bg(rgb(if active { p.prod_surface } else { p.control }))
                         .flex().items_center().justify_center()
                         .text_color(rgb(if active { p.accent } else { p.secondary }))
@@ -519,12 +517,12 @@ impl Render for ManagerView {
                             .text_color(rgb(if active { p.accent } else { p.primary }))
                             .child(host.name.clone()))
                         .child(div().text_xs().text_color(rgb(p.tertiary))
-                            .child(format!("{}  ·  {}", host.hostname, host.username))))
+                            .child(host.hostname.clone())))
                     .child(environment(&label, p))
                     .child(div().id(SharedString::from(format!("connection-star-{id}")))
                         .cursor_pointer().px_2().py_2().rounded_md().text_lg()
                         .text_color(rgb(if starred { 0xEAA830 } else { p.tertiary }))
-                        .child(if starred { "★" } else { "☆" })
+                        .child(Icon::new(if starred { IconName::Star } else { IconName::StarOff }))
                         .on_click(cx.listener(move |this, _, _, cx| {
                             cx.stop_propagation();
                             this.toggle_list_favorite(id, cx);
@@ -547,18 +545,18 @@ impl Render for ManagerView {
 
         let mut group_picker = div().v_flex().gap_1()
             .child(div().h_flex().items_center().gap_3()
-                .child(div().w(px(102.)).text_xs().text_color(rgb(p.secondary)).child("所属分组"))
+                .child(div().w(px(105.)).text_sm().text_color(rgb(p.secondary)).child("所属分组"))
                 .child(div().h_flex().flex_1().min_w_0().items_center().rounded_md().border_1()
                     .border_color(rgb(p.border)).bg(rgb(p.control)).px_3().py_2().cursor_pointer()
+                    .child(Icon::new(IconName::Folder))
                     .child(div().flex_1().text_sm().text_color(rgb(p.primary))
-                        .child(format!("▱   {}", self.group_label(self.editor_group))))
-                    .child(div().text_xs().text_color(rgb(p.secondary))
-                        .child(if self.group_picker_open { "▴" } else { "▾" }))
+                        .child(self.group_label(self.editor_group)))
+                    .child(Icon::new(if self.group_picker_open { IconName::ChevronUp } else { IconName::ChevronDown }))
                     .id("main-interaction-008").on_click(cx.listener(|this, _, _, cx| { this.group_picker_open = !this.group_picker_open; cx.notify(); }))));
         if self.group_picker_open {
             group_picker = group_picker.child(div().cursor_pointer().rounded_md().px_3().py_2()
                 .text_xs().text_color(rgb(p.secondary)).bg(rgb(p.chip))
-                .child("⊘  未分组")
+                .child("未分组")
                 .id("main-interaction-009").on_click(cx.listener(|this, _, _, cx| { this.editor_group = None; this.group_picker_open = false; cx.notify(); })));
             for group in &self.groups {
                 let id = group.id;
@@ -567,7 +565,9 @@ impl Render for ManagerView {
                     div().cursor_pointer().rounded_md().px_3().py_2()
                         .bg(rgb(if selected { p.selected } else { p.control }))
                         .text_xs().text_color(rgb(if selected { p.accent } else { p.secondary }))
-                        .child(format!("{}  {}", if selected { "✓" } else { "·" }, group.name))
+                        .child(div().h_flex().items_center().gap_2()
+                            .child(Icon::new(if selected { IconName::CircleCheck } else { IconName::Folder }))
+                            .child(group.name.clone()))
                         .id(SharedString::from(format!("group-picker-{id}"))).on_click(cx.listener(move |this, _, _, cx| { this.editor_group = Some(id); this.group_picker_open = false; cx.notify(); }))
                 );
             }
@@ -692,7 +692,8 @@ impl Render for ManagerView {
                     .child(div().h_flex().items_center().justify_between()
                         .child(div().text_lg().font_semibold().text_color(rgb(p.primary)).child("Connections"))
                         .child(div().rounded_full().px_2().py_1().bg(rgb(p.chip)).text_xs().text_color(rgb(p.secondary)).child(format!("{} 台", filtered_count))))
-                    .child(div().rounded_lg().bg(rgb(p.control)).child(Input::new(&self.search)))
+                    .child(div().rounded_lg().bg(rgb(p.control))
+                        .child(Input::new(&self.search).prefix(Icon::new(IconName::Search).small())))
                     .child(div().text_xs().text_color(rgb(p.tertiary))
                         .child("单击查看详情   ·   双击在 Warp 中连接"))
                     .child(div().flex_1().min_h_0().overflow_y_scrollbar().child(connections)))
@@ -733,12 +734,11 @@ impl Render for ManagerView {
                                     .id("main-interaction-021").on_click(cx.listener(Self::toggle_favorite))))))
                     .child(div().h_flex().items_center().gap_2().px_5().py_3()
                         .bg(rgb(p.inspector)).border_t_1().border_color(rgb(p.border))
-                        .child(div().w(px(166.)).cursor_pointer().rounded_md().px_3().py_2()
+                        .child(div().w(px(160.)).cursor_pointer().rounded_md().px_3().py_2()
                             .bg(rgb(p.accent)).hover(|style| style.bg(rgb(p.selected_border)))
                             .text_color(rgb(p.accent_foreground))
                             .text_sm().font_semibold().flex().items_center().justify_center()
                             .child("Open in Warp ↗").id("main-interaction-022").on_click(cx.listener(Self::connect)))
-                        .child(div().flex_1())
                         .child(div().cursor_pointer().rounded_md().px_3().py_2()
                             .border_1().border_color(rgb(p.border)).bg(rgb(p.control))
                             .hover(|style| style.bg(rgb(p.chip)))
