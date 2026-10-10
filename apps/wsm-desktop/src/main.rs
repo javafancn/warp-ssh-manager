@@ -451,7 +451,7 @@ fn parse_tags(value: &str) -> Vec<String> {
     result
 }
 
-fn environment(name: &str, p: Palette) -> impl IntoElement {
+fn tag_palette(name: &str, p: Palette) -> (u32, u32) {
     let value = name.to_lowercase();
     let (bg, fg) = if value.contains("database") || value.contains("数据库") {
         (p.danger_surface, p.danger)
@@ -464,7 +464,12 @@ fn environment(name: &str, p: Palette) -> impl IntoElement {
     } else if value.contains("api") {
         (p.prod_surface, p.prod_foreground)
     } else { (p.chip, p.secondary) };
-    div().px_3().py_1().rounded_lg().bg(rgb(bg))
+    (bg, fg)
+}
+
+fn environment(name: &str, p: Palette) -> impl IntoElement {
+    let (bg, fg) = tag_palette(name, p);
+    div().px_2().py_1().rounded_md().bg(rgb(bg))
         .text_xs().font_semibold().text_color(rgb(fg)).child(name.to_owned())
 }
 
@@ -598,13 +603,13 @@ impl Render for ManagerView {
             connections = connections.child(
                 div().id(SharedString::from(format!("connection-row-{id}")))
                     .v_flex().rounded_lg().cursor_pointer().overflow_hidden().shadow_sm()
-                    .border_1().border_color(rgb(if active { p.accent } else { p.border }))
-                    .bg(if active {linear_gradient(90.,linear_color_stop(rgb(p.selected),0.),linear_color_stop(rgb(p.selected_end),1.))}
+                    .border_1().border_color(rgb(if active { p.selected_border } else { p.border }))
+                    .bg(if active {linear_gradient(125.,linear_color_stop(rgb(p.card_selected),0.),linear_color_stop(rgb(p.card_selected_end),1.))}
                         else {linear_gradient(90.,linear_color_stop(rgb(p.inspector),0.),linear_color_stop(rgb(p.card_end),1.))})
                     .hover(|style| style.border_color(rgb(p.selected_border)))
                     .child(div().h_flex().items_center().gap_2().px_3().py_2()
-                        .child(div().w(px(44.)).h(px(44.)).rounded_lg()
-                            .border_1().border_color(rgb(icon_outline))
+                        .child(div().w(px(42.)).h(px(42.)).rounded_lg()
+                            .border_1().border_color(rgb(if active { p.card_selected_muted } else { icon_outline }))
                             .shadow_sm()
                             .bg(linear_gradient(160.,linear_color_stop(rgb(icon_top),0.),linear_color_stop(rgb(icon_bottom),1.)))
                             .flex().items_center().justify_center()
@@ -612,9 +617,10 @@ impl Render for ManagerView {
                             .text_base().font_semibold().child(">_"))
                         .child(div().flex_1().min_w_0().v_flex().gap_1()
                             .child(div().text_sm().font_semibold()
-                                .text_color(rgb(p.primary))
+                                .text_color(rgb(if active { 0xFFFFFF } else { p.primary }))
                                 .child(host.name.clone()))
-                            .child(div().text_xs().text_color(rgb(p.secondary))
+                            .child(div().text_xs()
+                                .text_color(rgb(if active { p.card_selected_muted } else { p.secondary }))
                                 .child(host.hostname.clone()))
                             .child(chips))
                         .child(div().h_flex().items_center().gap_1()
@@ -622,7 +628,7 @@ impl Render for ManagerView {
                                 .cursor_pointer().rounded_lg().px_1().py_2()
                                 .hover(|style| style.bg(rgb(p.chip)))
                                 .text_lg()
-                                .text_color(rgb(if starred { 0xF5AB21 } else { p.secondary }))
+                                .text_color(rgb(if starred { 0xF5AB21 } else if active { p.card_selected_muted } else { p.secondary }))
                                 .child(if starred { "★" } else { "☆" })
                                 .on_click(cx.listener(move |this, _, _, cx| {
                                     cx.stop_propagation();
@@ -638,16 +644,16 @@ impl Render for ManagerView {
                                     this.expanded_card = if this.expanded_card == Some(id) { None } else { Some(id) };
                                     cx.notify();
                                 })))))
-                    .when(expanded, |el| el.child(div().h_flex().items_center().justify_between()
+                    .when(active || expanded, |el| el.child(div().h_flex().items_center().justify_between()
                         .px_4().py_2().border_t_1().border_color(rgb(p.border))
-                        .bg(rgb(p.control))
-                        .child(div().text_xs().text_color(rgb(p.secondary))
-                            .child("连接操作"))
+                        .bg(rgb(if active { p.selected } else { p.control }))
+                        .child(div().text_xs().text_color(rgb(if active { p.accent } else { p.secondary }))
+                            .child("双击在 Warp 中连接"))
                         .child(div().id(SharedString::from(format!("connection-menu-open-{id}")))
                             .cursor_pointer().rounded_md().bg(rgb(p.accent))
                             .px_3().py_2().text_xs().font_semibold()
                             .text_color(rgb(p.accent_foreground))
-                            .child("在 Warp 中打开 ↗")
+                            .child("打开 ↗")
                             .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
                                 cx.stop_propagation();
                                 this.select_host(id, window, cx);

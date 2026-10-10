@@ -73,6 +73,9 @@ pub struct Palette {
     pub titlebar_end: u32,
     pub card_end: u32,
     pub selected_end: u32,
+    pub card_selected: u32,
+    pub card_selected_end: u32,
+    pub card_selected_muted: u32,
     pub input_surface: u32,
     pub input_surface_end: u32,
 }
@@ -93,6 +96,8 @@ impl Palette {
                 warning_surface: 0x51371E, warning_foreground: 0xFFC385,
                 sidebar_end: 0x20283A, titlebar_end: 0x192A42,
                 card_end: 0x192A41, selected_end: 0x234B83,
+                card_selected: 0x153767, card_selected_end: 0x28518A,
+                card_selected_muted: 0xC1D4F0,
                 input_surface: 0x202E45, input_surface_end: 0x273650,
             }
         } else {
@@ -109,6 +114,8 @@ impl Palette {
                 warning_surface: 0xFFF0DD, warning_foreground: 0xA95715,
                 sidebar_end: 0xEFF3FA, titlebar_end: 0xF4F7FC,
                 card_end: 0xFFFFFF, selected_end: 0xF7FAFF,
+                card_selected: 0x153D76, card_selected_end: 0x2B62A7,
+                card_selected_muted: 0xD5E3FF,
                 input_surface: 0xF8FAFD, input_surface_end: 0xFFFFFF,
             }
         }
