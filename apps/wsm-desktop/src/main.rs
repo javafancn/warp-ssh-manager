@@ -708,35 +708,58 @@ impl Render for ManagerView {
 
         // Tag chips are only a visual representation. The same comma-separated value
         // remains editable through the input beneath them, and is persisted to SQLite.
+        // Chips and input are mutually exclusive modes: no duplicated tag textboxes.
+        // The same semantic palette is used by host cards and the inspector.
         let raw_tags = Self::read(&self.tags, cx);
-        let mut tag_chips = div().h_flex().gap_2();
-        for (index,tag_name) in parse_tags(&raw_tags).into_iter().take(4).enumerate() {
+        let parsed_tags = parse_tags(&raw_tags);
+        let mut tag_chips = div().h_flex().items_center().flex_wrap().gap_1();
+        for (index, tag_name) in parsed_tags.iter().take(4).cloned().enumerate() {
+            let (tag_bg, tag_fg) = tag_palette(&tag_name, p);
             tag_chips = tag_chips.child(div().h_flex().items_center().gap_1().rounded_md()
-                .bg(rgb(p.chip)).px_2().py_1()
-                .child(div().text_xs().font_semibold().text_color(rgb(p.secondary))
+                .bg(rgb(tag_bg)).px_2().py_1()
+                .child(div().text_xs().font_semibold().text_color(rgb(tag_fg))
                     .child(tag_name.clone()))
                 .child(div().id(SharedString::from(format!("tag-remove-{index}")))
-                    .cursor_pointer().px_1().text_color(rgb(p.tertiary))
+                    .cursor_pointer().px_1().rounded_sm()
+                    .text_color(rgb(tag_fg))
                     .child(Icon::new(IconName::Close).xsmall())
                     .on_click(cx.listener(move |this, _, window, cx| {
                         this.remove_tag(&tag_name,window,cx);
                     }))));
         }
+        if parsed_tags.len()>4 {
+            tag_chips=tag_chips.child(div().px_2().py_1().rounded_md()
+                .bg(rgb(p.chip)).text_xs().text_color(rgb(p.secondary))
+                .child(format!("+{}",parsed_tags.len()-4)));
+        }
         let tags_field = div().h_flex().items_start().gap_3().min_h(px(36.))
-            .child(div().w(px(101.)).py_2().text_sm().text_color(rgb(p.secondary)).child("标签"))
+            .child(div().w(px(101.)).py_2().text_sm()
+                .text_color(rgb(p.secondary)).child("标签"))
             .child(div().v_flex().flex_1().min_w_0().gap_2()
-                .child(div().h_flex().items_center().gap_2().flex_wrap()
-                    .when(!raw_tags.trim().is_empty(), |el| el.child(tag_chips))
-                    .child(div().id("tag-editor-toggle").cursor_pointer()
-                        .rounded_lg().border_1().border_color(rgb(p.border))
-                        .px_3().py_2().bg(rgb(p.control))
-                        .text_xs().text_color(rgb(p.secondary))
-                        .child(if self.tag_input_open { "完成编辑" } else if raw_tags.trim().is_empty() { "+ 添加标签" } else { "+ 编辑标签" })
-                        .on_click(cx.listener(|this,_,_,cx| {
-                            this.tag_input_open = !this.tag_input_open;
-                            cx.notify();
-                        }))))
-                .when(self.tag_input_open, |el| el.child(Input::new(&self.tags))));
+                .when(!self.tag_input_open, |el| el.child(
+                    div().h_flex().items_center().gap_2().flex_wrap()
+                        .when(!parsed_tags.is_empty(), |el| el.child(tag_chips))
+                        .child(div().id("tag-editor-open").cursor_pointer()
+                            .rounded_md().border_1().border_color(rgb(p.border))
+                            .px_3().py_2().bg(rgb(p.input_surface))
+                            .text_xs().text_color(rgb(p.secondary))
+                            .child(if parsed_tags.is_empty() { "+ 添加标签" } else { "+ 编辑" })
+                            .on_click(cx.listener(|this,_,_,cx| {
+                                this.tag_input_open=true;
+                                cx.notify();
+                            })))))
+                .when(self.tag_input_open, |el| el.child(
+                    div().h_flex().items_center().gap_2()
+                        .child(div().flex_1().min_w_0().rounded_md().border_1()
+                            .border_color(rgb(p.border)).bg(rgb(p.input_surface))
+                            .child(Input::new(&self.tags).appearance(false)))
+                        .child(div().id("tag-editor-close").cursor_pointer()
+                            .rounded_md().px_3().py_2().bg(rgb(p.chip))
+                            .text_xs().text_color(rgb(p.secondary)).child("收起")
+                            .on_click(cx.listener(|this,_,_,cx| {
+                                this.tag_input_open=false;
+                                cx.notify();
+                            }))))));
 
         // Tabs are real controls; each exposes a focused subset of the existing SSH editor.
         let mut detail_tabs = div().h_flex().items_center().gap_2().px_4()
