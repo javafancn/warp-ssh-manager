@@ -523,7 +523,7 @@ impl Render for ManagerView {
                             cx.stop_propagation();
                             this.toggle_list_favorite(id, cx);
                         })))
-                    .on_click(cx.listener(move |this, event, window, cx| {
+                    .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
                         this.select_host(id, window, cx);
                         if event.click_count() >= 2 {
                             this.connect(event, window, cx);
