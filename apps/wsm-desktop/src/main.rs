@@ -532,7 +532,7 @@ impl Render for ManagerView {
                             .child(host.name.clone()))
                         .child(div().text_xs().text_color(rgb(p.tertiary))
                             .child(host.hostname.clone())))
-                    .child(environment(&label, p))
+                    .when(host.group_id.is_some(), |el| el.child(environment(&label, p)))
                     .child(div().id(SharedString::from(format!("connection-star-{id}")))
                         .cursor_pointer().px_2().py_2().rounded_md().text_lg()
                         .text_color(rgb(if starred { 0xEAA830 } else { p.tertiary }))
