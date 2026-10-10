@@ -14,6 +14,7 @@ pub struct QuickConnect {
     manager: Manager,
     search: Entity<InputState>,
     status: String,
+    selected: Option<Uuid>,
     _subscription: Subscription,
 }
 
@@ -30,7 +31,7 @@ impl QuickConnect {
         });
         // Open as a keyboard-first search utility. No mouse click is required.
         search.update(cx,|state,cx|state.focus(window,cx));
-        Self {manager,search,status:"按 Enter 连接第一个结果，或点击主机。".into(),_subscription:sub}
+        Self {manager,search,status:"选择主机后按 Enter，或双击直接连接 Warp。".into(),selected:None,_subscription:sub}
     }
 
     fn hosts(&self,cx:&Context<Self>)->Vec<Host> {
@@ -46,7 +47,7 @@ impl QuickConnect {
     }
 
     fn connect_first(&mut self,window:&mut Window,cx:&mut Context<Self>) {
-        if let Some(host)=self.hosts(cx).first() {self.connect(host.id,window,cx)}
+        if let Some(host)=self.hosts(cx).into_iter().find(|h|Some(h.id)==self.selected).or_else(||self.hosts(cx).into_iter().next()) {self.connect(host.id,window,cx)}
         else {self.status="没有匹配的主机。".into();cx.notify();}
     }
 
@@ -67,11 +68,11 @@ impl Render for QuickConnect {
         let mut list = div().v_flex().gap_1();
         for (index, host) in hosts.iter().enumerate() {
             let id = host.id;
-            let picked = index == 0;
+            let picked = self.selected.map_or(index == 0, |selected| selected == id);
             let label = host.group_id
                 .and_then(|id| groups.iter().find(|g| g.id == id))
                 .map(|group| group.name.as_str()).unwrap_or("未分组");
-            list = list.child(div().h_flex().items_center().gap_2().px_3().py_2().rounded_lg()
+            list = list.child(div().id(SharedString::from(format!("quick-host-{id}"))).h_flex().items_center().gap_2().px_3().py_2().rounded_lg()
                 .bg(rgb(if picked { p.selected } else { p.inspector }))
                 .border_1().border_color(rgb(if picked { p.selected_border } else { p.inspector }))
                 .cursor_pointer()
@@ -84,7 +85,7 @@ impl Render for QuickConnect {
                 .child(environment(label, p))
                 .child(div().text_lg().text_color(rgb(if host.favorite { 0xF4B532 } else { p.tertiary }))
                     .child(if host.favorite { "★" } else { "☆" }))
-                .id("quick_connect-action-86").on_click(cx.listener(move |this, _, window, cx| this.connect(id, window, cx))));
+                .on_click(cx.listener(move |this, event, window, cx| { this.selected=Some(id); if event.click_count() >= 2 { this.connect(id,window,cx); } else { cx.notify(); } })));
         }
         if hosts.is_empty() {
             list = list.child(div().py_8().v_flex().items_center().gap_2()
