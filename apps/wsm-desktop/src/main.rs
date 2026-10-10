@@ -424,15 +424,19 @@ fn detail_field(label: &'static str, input: &Entity<InputState>, readonly: bool,
 }
 
 fn environment(name: &str, p: Palette) -> impl IntoElement {
-    let value = name.to_ascii_lowercase();
-    let (bg, fg) = if value.contains("prod") || value.contains("生产") {
-        (p.prod_surface, p.prod_foreground)
-    } else if value.contains("stag") || value.contains("test") || value.contains("测试") {
-        (p.stage_surface, p.stage_foreground)
+    let value = name.to_lowercase();
+    let (bg, fg) = if value.contains("database") || value.contains("数据库") {
+        (p.danger_surface, p.danger)
+    } else if value.contains("test") || value.contains("测试") || value.contains("stag") {
+        (p.warning_surface, p.warning_foreground)
     } else if value.contains("dev") || value.contains("开发") {
+        (p.stage_surface, p.stage_foreground)
+    } else if value.contains("prod") || value.contains("生产") {
         (p.dev_surface, p.dev_foreground)
+    } else if value.contains("api") {
+        (p.prod_surface, p.prod_foreground)
     } else { (p.chip, p.secondary) };
-    div().px_2().py_1().rounded_md().bg(rgb(bg))
+    div().px_3().py_1().rounded_lg().bg(rgb(bg))
         .text_xs().font_semibold().text_color(rgb(fg)).child(name.to_owned())
 }
 
@@ -801,6 +805,11 @@ impl Render for ManagerView {
                     .hover(|style| style.bg(rgb(p.chip)))
                     .text_xs().child("同步 Warp 标签配置").id("main-interaction-013").on_click(cx.listener(Self::sync)))
                 .child(div().flex_1())
+                .child(div().h_flex().items_center().gap_3()
+                    .child(div().text_xs().text_color(rgb(tab_color))
+                        .child(format!("Warp 标签配置{}", if warp_ready { "已就绪" } else { "未生成" })))
+                    .child(div().text_xs().text_color(rgb(status_color))
+                        .child(format!("SSH 配置{}", if linked { "已接入" } else { "需初始化" }))))
                 .child(div().cursor_pointer().text_xs().text_color(rgb(p.tertiary))
                     .child("关闭 ×")
                     .id("main-interaction-014").on_click(cx.listener(|this, _, _, cx| { this.actions_open = false; cx.notify(); })));
@@ -939,8 +948,6 @@ impl Render for ManagerView {
                     .on_click(cx.listener(|this,_,_,cx| {
                         this.filter=ViewFilter::Recent; this.filter_menu_open=false;cx.notify();
                     })))))
-            .child(div().text_xs().text_color(rgb(p.tertiary))
-                .child("单击查看详情  ·  双击在 Warp 中连接"))
             .child(div().flex_1().min_h_0().overflow_y_scrollbar()
                 .child(connections));
 
@@ -994,16 +1001,7 @@ impl Render for ManagerView {
             .child(div().h_flex().flex_1().min_h_0().items_start()
                 .child(sidebar)
                 .child(workspace))
-            .child(div().h_flex().items_center().gap_4().px_4().py_2()
-                .bg(rgb(p.titlebar)).border_t_1().border_color(rgb(p.border))
-                .child(div().text_xs().text_color(rgb(tab_color))
-                    .child(format!("Warp 标签配置{}", if warp_ready { "已就绪" } else { "未生成" })))
-                .child(div().text_xs().text_color(rgb(status_color))
-                    .child(format!("SSH 配置{}", if linked { "已接入" } else { "需初始化" })))
-                .child(div().text_xs().text_color(rgb(p.tertiary))
-                    .child(format!("{} 台主机  ·  {} 个分组", host_count, self.groups.len())))
-                .child(div().flex_1().min_w_0().text_xs().text_color(rgb(p.tertiary))
-                    .overflow_hidden().child("SSH 连接通过 Warp / OpenSSH 发起")))
+
 
     }
 }

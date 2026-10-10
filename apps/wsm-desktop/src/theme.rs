@@ -67,6 +67,8 @@ pub struct Palette {
     pub stage_foreground: u32,
     pub dev_surface: u32,
     pub dev_foreground: u32,
+    pub warning_surface: u32,
+    pub warning_foreground: u32,
 }
 
 impl Palette {
@@ -82,6 +84,7 @@ impl Palette {
                 prod_surface: 0x223F71, prod_foreground: 0x91BBFF,
                 stage_surface: 0x3B275A, stage_foreground: 0xCDB0FE,
                 dev_surface: 0x173E32, dev_foreground: 0x80DDAB,
+                warning_surface: 0x51371E, warning_foreground: 0xFFC385,
             }
         } else {
             Self {
@@ -94,6 +97,7 @@ impl Palette {
                 prod_surface: 0xE5EEFF, prod_foreground: 0x235ECB,
                 stage_surface: 0xF0E5FF, stage_foreground: 0x8C4ACA,
                 dev_surface: 0xE0F5E9, dev_foreground: 0x208451,
+                warning_surface: 0xFFF0DD, warning_foreground: 0xA95715,
             }
         }
     }
