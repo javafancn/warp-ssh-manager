@@ -85,7 +85,7 @@ impl Render for QuickConnect {
                 .child(environment(label, p))
                 .child(div().text_lg().text_color(rgb(if host.favorite { 0xF4B532 } else { p.tertiary }))
                     .child(if host.favorite { "★" } else { "☆" }))
-                .on_click(cx.listener(move |this, event, window, cx| { this.selected=Some(id); if event.click_count() >= 2 { this.connect(id,window,cx); } else { cx.notify(); } })));
+                .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| { this.selected=Some(id); if event.click_count() >= 2 { this.connect(id,window,cx); } else { cx.notify(); } })));
         }
         if hosts.is_empty() {
             list = list.child(div().py_8().v_flex().items_center().gap_2()
