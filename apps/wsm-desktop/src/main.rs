@@ -256,7 +256,8 @@ impl ManagerView {
             Ok(id)=>{
                 let tags=Self::read(&self.tags,cx);
                 let notes=Self::read(&self.notes,cx);
-                match self.manager.db.save_annotations(id,tags.trim(),notes.trim()) {
+                let normalized=parse_tags(&tags).join(", ");
+                match self.manager.db.save_annotations(id,&normalized,notes.trim()) {
                     Ok(())=>{self.feedback=Feedback::Success;self.message="主机资料已保存，配置已同步。".into()},
                     Err(err)=>{self.feedback=Feedback::Warning;self.message=format!("主机已保存，但标签/备注保存失败：{err:#}")},
                 }
@@ -359,12 +360,8 @@ impl ManagerView {
 
     fn remove_tag(&mut self, tag_to_remove: &str, window: &mut Window, cx: &mut Context<Self>) {
         let values=Self::read(&self.tags,cx);
-        let mut removed=false;
-        let result=values.split(',').map(str::trim)
-            .filter(|item| !item.is_empty())
-            .filter(|item| {
-                if !removed && *item == tag_to_remove { removed=true; false } else { true }
-            })
+        let result=parse_tags(&values).into_iter()
+            .filter(|item| item != tag_to_remove)
             .collect::<Vec<_>>().join(", ");
         Self::set_input(&self.tags,&result,window,cx);
         cx.notify();
@@ -435,6 +432,19 @@ fn detail_field(label: &'static str, input: &Entity<InputState>, readonly: bool,
                 .text_base().text_color(rgb(p.primary))
                 .child(display_value.clone())))
             .when(!readonly, |el| el.child(Input::new(input).appearance(false))))
+}
+
+
+// A shared tag parser handles English and Chinese separators and removes duplicates.
+fn parse_tags(value: &str) -> Vec<String> {
+    let mut result: Vec<String> = Vec::new();
+    for candidate in value.split(|ch| matches!(ch, ',' | '，' | ';' | '；' | '\n')) {
+        let tag = candidate.trim();
+        if !tag.is_empty() && !result.iter().any(|old| old.eq_ignore_ascii_case(tag)) {
+            result.push(tag.to_string());
+        }
+    }
+    result
 }
 
 fn environment(name: &str, p: Palette) -> impl IntoElement {
@@ -543,25 +553,35 @@ impl Render for ManagerView {
         // Reference design: independent server tiles, without imaginary online/offline indicators.
         // Native-feeling compact tiles. Colors denote annotations/categories, never
         // unverified host availability. Annotations are loaded from the real database.
-        let mut connections = div().v_flex().gap_3();
+        let mut connections = div().v_flex().gap_2();
         for host in filtered {
             let id = host.id;
             let active = self.selected == Some(id);
             let starred = host.favorite;
             let expanded = self.expanded_card == Some(id);
-            let label = self.group_label(host.group_id);
-            let (tags, _) = self.manager.db.host_annotations(id).unwrap_or_default();
-            let mut chips = div().h_flex().items_center().gap_2();
-            let mut has_tags = false;
-            for tag in tags.split(',').map(str::trim).filter(|value| !value.is_empty()).take(3) {
-                has_tags = true;
+            // The selected tile mirrors unsaved editor tags; other tiles use SQLite.
+            let visible_group = if active { self.editor_group } else { host.group_id };
+            let label = self.group_label(visible_group);
+            let tags = if active { Self::read(&self.tags,cx) } else {
+                self.manager.db.host_annotations(id).map(|(tags,_)|tags).unwrap_or_default()
+            };
+            let parsed = parse_tags(&tags);
+            let mut chips = div().h_flex().items_center().gap_1();
+            for tag in parsed.iter().take(2) {
                 chips = chips.child(environment(tag, p));
             }
-            if !has_tags {
-                chips = chips.child(div().px_2().py_1().rounded_md().bg(rgb(p.chip))
-                    .text_xs().font_semibold().text_color(rgb(p.secondary)).child("SSH"));
-                if host.group_id.is_some() {
-                    chips = chips.child(environment(&label, p));
+            if parsed.len()>2 {
+                chips = chips.child(div().px_2().py_1().rounded_md()
+                    .bg(rgb(p.chip)).text_xs().text_color(rgb(p.secondary))
+                    .child(format!("+{}",parsed.len()-2)));
+            }
+            if parsed.is_empty() {
+                if visible_group.is_some() {
+                    chips = chips.child(environment(&label,p));
+                } else {
+                    chips = chips.child(div().px_2().py_1().rounded_md()
+                        .bg(rgb(p.chip)).text_xs().text_color(rgb(p.tertiary))
+                        .child("SSH"));
                 }
             }
             let (icon_top,icon_bottom,icon_outline) = if tags.contains("database") || host.name.contains("db-") {
@@ -578,24 +598,24 @@ impl Render for ManagerView {
                     .bg(if active {linear_gradient(90.,linear_color_stop(rgb(p.selected),0.),linear_color_stop(rgb(p.selected_end),1.))}
                         else {linear_gradient(90.,linear_color_stop(rgb(p.inspector),0.),linear_color_stop(rgb(p.card_end),1.))})
                     .hover(|style| style.border_color(rgb(p.selected_border)))
-                    .child(div().h_flex().items_center().gap_3().px_4().py_3()
-                        .child(div().w(px(55.)).h(px(55.)).rounded_lg()
+                    .child(div().h_flex().items_center().gap_2().px_3().py_2()
+                        .child(div().w(px(44.)).h(px(44.)).rounded_lg()
                             .border_1().border_color(rgb(icon_outline))
                             .shadow_sm()
                             .bg(linear_gradient(160.,linear_color_stop(rgb(icon_top),0.),linear_color_stop(rgb(icon_bottom),1.)))
                             .flex().items_center().justify_center()
                             .text_color(rgb(0xF1FAFF))
-                            .text_lg().font_semibold().child(">_"))
-                        .child(div().flex_1().min_w_0().v_flex().gap_2()
-                            .child(div().text_lg().font_semibold()
+                            .text_base().font_semibold().child(">_"))
+                        .child(div().flex_1().min_w_0().v_flex().gap_1()
+                            .child(div().text_sm().font_semibold()
                                 .text_color(rgb(p.primary))
                                 .child(host.name.clone()))
-                            .child(div().text_sm().text_color(rgb(p.secondary))
+                            .child(div().text_xs().text_color(rgb(p.secondary))
                                 .child(host.hostname.clone()))
                             .child(chips))
                         .child(div().h_flex().items_center().gap_1()
                             .child(div().id(SharedString::from(format!("connection-star-{id}")))
-                                .cursor_pointer().rounded_lg().px_2().py_2()
+                                .cursor_pointer().rounded_lg().px_1().py_2()
                                 .hover(|style| style.bg(rgb(p.chip)))
                                 .text_lg()
                                 .text_color(rgb(if starred { 0xF5AB21 } else { p.secondary }))
@@ -605,7 +625,7 @@ impl Render for ManagerView {
                                     this.toggle_list_favorite(id, cx);
                                 })))
                             .child(div().id(SharedString::from(format!("connection-menu-{id}")))
-                                .cursor_pointer().rounded_lg().px_2().py_2()
+                                .cursor_pointer().rounded_lg().px_1().py_2()
                                 .hover(|style| style.bg(rgb(p.chip)))
                                 .text_sm().font_semibold().text_color(rgb(p.secondary))
                                 .child("···")
@@ -683,8 +703,7 @@ impl Render for ManagerView {
         // remains editable through the input beneath them, and is persisted to SQLite.
         let raw_tags = Self::read(&self.tags, cx);
         let mut tag_chips = div().h_flex().gap_2();
-        for (index,tag) in raw_tags.split(',').map(str::trim).filter(|tag| !tag.is_empty()).take(4).enumerate() {
-            let tag_name=tag.to_owned();
+        for (index,tag_name) in parse_tags(&raw_tags).into_iter().take(4).enumerate() {
             tag_chips = tag_chips.child(div().h_flex().items_center().gap_1().rounded_md()
                 .bg(rgb(p.chip)).px_2().py_1()
                 .child(div().text_xs().font_semibold().text_color(rgb(p.secondary))
@@ -847,7 +866,7 @@ impl Render for ManagerView {
 
         // Window shell mirrors the reference: persistent branded sidebar,
         // independent toolbar over connection cards and inspector, native macOS chrome.
-        let sidebar = div().w(px(330.)).h_full().v_flex().min_h_0()
+        let sidebar = div().w(px(245.)).h_full().v_flex().min_h_0()
             .bg(linear_gradient(160.,linear_color_stop(rgb(p.sidebar),0.),linear_color_stop(rgb(p.sidebar_end),1.)))
             .border_r_1().border_color(rgb(p.border))
             .child(div().h_flex().items_center().gap_3().px_4().pt_16().pb_5()
@@ -903,7 +922,7 @@ impl Render for ManagerView {
                         this.actions_open=!this.actions_open; cx.notify();
                     }))));
 
-        let toolbar = div().h_flex().h(px(76.)).items_center().justify_between().px_5()
+        let toolbar = div().h_flex().h(px(66.)).items_center().justify_between().px_4()
             .bg(linear_gradient(90.,linear_color_stop(rgb(p.titlebar),0.),linear_color_stop(rgb(p.titlebar_end),1.)))
             .border_b_1().border_color(rgb(p.border))
             .child(div().text_xl().font_semibold().text_color(rgb(p.primary))
@@ -939,7 +958,7 @@ impl Render for ManagerView {
                     .child("+ 新建主机")
                     .on_click(cx.listener(|this,_,window,cx| this.new_host(window,cx)))));
 
-        let connections_pane = div().w(px(560.)).h_full().v_flex().min_h_0()
+        let connections_pane = div().w(px(365.)).h_full().v_flex().min_h_0()
             .bg(rgb(p.list)).border_r_1().border_color(rgb(p.border))
             .p_4().gap_3()
             .child(div().h_flex().items_center().gap_2()
@@ -1045,8 +1064,8 @@ fn main()->Result<()> {
         #[cfg(feature="tray")]
         tray::install(cx);
         let options=WindowOptions {
-            window_bounds:Some(WindowBounds::centered(size(px(1480.),px(900.)),cx)),
-            window_min_size:Some(size(px(1300.),px(720.))),
+            window_bounds:Some(WindowBounds::centered(size(px(1200.),px(780.)),cx)),
+            window_min_size:Some(size(px(1040.),px(660.))),
             titlebar:Some(TitlebarOptions {
                 title:None,
                 appears_transparent:true,
