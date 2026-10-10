@@ -91,7 +91,7 @@ impl Render for QuickConnect {
                         .text_color(rgb(if picked { p.accent } else { p.primary }))
                         .child(host.name.clone()))
                     .child(div().text_xs().text_color(rgb(p.tertiary)).child(host.hostname.clone())))
-                .child(environment(label, p))
+                .when(host.group_id.is_some(), |el| el.child(environment(label, p)))
                 .child(div().text_lg().text_color(rgb(if host.favorite { 0xF4B532 } else { p.tertiary }))
                     .child(Icon::new(if host.favorite { IconName::Star } else { IconName::StarOff })))
                  .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
