@@ -46,6 +46,8 @@ struct ManagerView {
     group_picker_open: bool,
     actions_open: bool,
     filter_menu_open: bool,
+    creating_group: bool,
+    expanded_card: Option<Uuid>,
     collapsed_groups: HashSet<Uuid>,
     appearance: Appearance,
     search: Entity<InputState>,
@@ -113,7 +115,7 @@ impl ManagerView {
         let first_host = hosts.first().map(|host| host.id);
         let mut view = Self {
             manager,hosts,groups,selected:None,detail_tab:DetailTab::Basic,filter:ViewFilter::All,
-            editor_group:None,group_picker_open:false,actions_open:false,filter_menu_open:false,collapsed_groups:HashSet::new(),appearance,search,
+            editor_group:None,group_picker_open:false,actions_open:false,filter_menu_open:false,creating_group:false,expanded_card:None,collapsed_groups:HashSet::new(),appearance,search,
             group_input:make_input(window,cx,"新建分组名称"),
             name:make_input(window,cx,"服务器显示名称"),
             alias:make_input(window,cx,"prod-api-01"),
@@ -340,6 +342,7 @@ impl ManagerView {
         match self.manager.group_add(name.trim(),parent) {
             Ok(group)=>{
                 self.filter=ViewFilter::Group(group.id);
+                self.creating_group=false;
                 self.message=format!("已创建分组「{}」。",group.name);
                 self.refresh(cx);
             },
@@ -514,11 +517,14 @@ impl Render for ManagerView {
         if current_filter == ViewFilter::Recent { filtered.sort_by(|a, b| b.last_connected.cmp(&a.last_connected)); }
         let filtered_count = filtered.len();
         // Reference design: independent server tiles, without imaginary online/offline indicators.
+        // Native-feeling compact tiles. Colors denote annotations/categories, never
+        // unverified host availability. Annotations are loaded from the real database.
         let mut connections = div().v_flex().gap_3();
         for host in filtered {
             let id = host.id;
             let active = self.selected == Some(id);
             let starred = host.favorite;
+            let expanded = self.expanded_card == Some(id);
             let label = self.group_label(host.group_id);
             let (tags, _) = self.manager.db.host_annotations(id).unwrap_or_default();
             let mut chips = div().h_flex().items_center().gap_2();
@@ -528,44 +534,73 @@ impl Render for ManagerView {
                 chips = chips.child(environment(tag, p));
             }
             if !has_tags {
+                chips = chips.child(div().px_2().py_1().rounded_md().bg(rgb(p.chip))
+                    .text_xs().font_semibold().text_color(rgb(p.secondary)).child("SSH"));
                 if host.group_id.is_some() {
                     chips = chips.child(environment(&label, p));
-                } else {
-                    chips = chips.child(div().text_xs().text_color(rgb(p.tertiary))
-                        .child(format!("SSH  ·  {}", host.alias)));
                 }
             }
+            let icon_outline = if tags.contains("database") || host.name.contains("db-") {
+                p.danger
+            } else if tags.contains("dev") || label.contains("开发") {
+                p.stage_foreground
+            } else if tags.contains("prod") || label.contains("生产") {
+                p.accent
+            } else {p.selected_border};
             connections = connections.child(
                 div().id(SharedString::from(format!("connection-row-{id}")))
                     .v_flex().rounded_lg().cursor_pointer().overflow_hidden()
-                    .border_1().border_color(rgb(if active { p.selected_border } else { p.border }))
-                    .bg(rgb(if active { p.selected } else { p.list }))
+                    .border_1().border_color(rgb(if active { p.accent } else { p.border }))
+                    .bg(rgb(if active { p.selected } else { p.inspector }))
                     .hover(|style| style.bg(rgb(if active { p.selected } else { p.control })))
-                    .child(div().h_flex().items_center().gap_3().px_3().py_3()
-                        .child(div().w(px(42.)).h(px(42.)).rounded_lg()
-                            .bg(rgb(if active { p.accent } else { p.control }))
+                    .child(div().h_flex().items_center().gap_3().px_4().py_3()
+                        .child(div().w(px(53.)).h(px(53.)).rounded_lg()
+                            .border_1().border_color(rgb(icon_outline))
+                            .bg(rgb(if p.app == 0x0D1421 { 0x0D192C } else { 0x172B40 }))
                             .flex().items_center().justify_center()
-                            .text_color(rgb(if active { p.accent_foreground } else { p.secondary }))
+                            .text_color(rgb(0xF1FAFF))
                             .child(Icon::new(IconName::SquareTerminal)))
                         .child(div().flex_1().min_w_0().v_flex().gap_2()
-                            .child(div().text_sm().font_semibold()
-                                .text_color(rgb(if active { p.accent } else { p.primary }))
+                            .child(div().text_base().font_semibold()
+                                .text_color(rgb(p.primary))
                                 .child(host.name.clone()))
-                            .child(div().text_xs().text_color(rgb(p.secondary))
+                            .child(div().text_sm().text_color(rgb(p.secondary))
                                 .child(host.hostname.clone()))
                             .child(chips))
-                        .child(div().id(SharedString::from(format!("connection-star-{id}")))
-                            .cursor_pointer().rounded_md().px_2().py_2()
-                            .text_color(rgb(if starred { 0xF3B63C } else { p.tertiary }))
-                            .child(Icon::new(IconName::Star))
-                            .on_click(cx.listener(move |this, _, _, cx| {
+                        .child(div().h_flex().items_center().gap_1()
+                            .child(div().id(SharedString::from(format!("connection-star-{id}")))
+                                .cursor_pointer().rounded_lg().px_2().py_2()
+                                .text_lg()
+                                .text_color(rgb(if starred { 0xF5AB21 } else { p.secondary }))
+                                .child(if starred { "★" } else { "☆" })
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    cx.stop_propagation();
+                                    this.toggle_list_favorite(id, cx);
+                                })))
+                            .child(div().id(SharedString::from(format!("connection-menu-{id}")))
+                                .cursor_pointer().rounded_lg().px_2().py_2()
+                                .text_sm().font_semibold().text_color(rgb(p.secondary))
+                                .child("···")
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    cx.stop_propagation();
+                                    this.expanded_card = if this.expanded_card == Some(id) { None } else { Some(id) };
+                                    cx.notify();
+                                })))))
+                    .when(expanded, |el| el.child(div().h_flex().items_center().justify_between()
+                        .px_4().py_2().border_t_1().border_color(rgb(p.border))
+                        .bg(rgb(p.control))
+                        .child(div().text_xs().text_color(rgb(p.secondary))
+                            .child("连接操作"))
+                        .child(div().id(SharedString::from(format!("connection-menu-open-{id}")))
+                            .cursor_pointer().rounded_md().bg(rgb(p.accent))
+                            .px_3().py_2().text_xs().font_semibold()
+                            .text_color(rgb(p.accent_foreground))
+                            .child("在 Warp 中打开 ↗")
+                            .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
                                 cx.stop_propagation();
-                                this.toggle_list_favorite(id, cx);
-                            }))))
-                    .when(active, |el| el.child(div().h_flex().justify_center().px_3().py_2()
-                        .bg(rgb(p.chip)).border_t_1().border_color(rgb(p.border))
-                        .text_xs().text_color(rgb(p.secondary))
-                        .child("双击在 Warp 中连接")))
+                                this.select_host(id, window, cx);
+                                this.connect(event, window, cx);
+                            })))))
                     .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
                         this.select_host(id, window, cx);
                         if event.click_count() >= 2 {
