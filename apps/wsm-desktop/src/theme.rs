@@ -73,23 +73,23 @@ impl Palette {
     pub fn new(dark: bool) -> Self {
         if dark {
             Self {
-                app: 0x101722, titlebar: 0x18212E, sidebar: 0x1B2432,
-                list: 0x131B27, inspector: 0x18212E, control: 0x263242,
-                border: 0x303C4D, primary: 0xF1F5FC, secondary: 0xA1B0C4,
-                tertiary: 0x728197, accent: 0x3079F5, accent_foreground: 0xFFFFFF,
-                selected: 0x1A3D75, selected_border: 0x367AF1, chip: 0x303B4B,
-                danger: 0xF08C8C, danger_surface: 0x542F38, success: 0x4FDA8A,
+                app: 0x0E1520, titlebar: 0x162131, sidebar: 0x182333,
+                list: 0x121B29, inspector: 0x172131, control: 0x223044,
+                border: 0x303F52, primary: 0xF2F6FF, secondary: 0xA7B7CC,
+                tertiary: 0x8292A8, accent: 0x2876F3, accent_foreground: 0xFFFFFF,
+                selected: 0x1E3B69, selected_border: 0x4F8DFA, chip: 0x283649,
+                danger: 0xFF9BA5, danger_surface: 0x4A2B35, success: 0x4BD899,
                 prod_surface: 0x223F71, prod_foreground: 0x91BBFF,
                 stage_surface: 0x3B275A, stage_foreground: 0xCDB0FE,
                 dev_surface: 0x173E32, dev_foreground: 0x80DDAB,
             }
         } else {
             Self {
-                app: 0xF7F9FC, titlebar: 0xF8FAFD, sidebar: 0xF0F3F8,
-                list: 0xFFFFFF, inspector: 0xFFFFFF, control: 0xF3F5F9,
-                border: 0xE0E6EF, primary: 0x192638, secondary: 0x57677D,
-                tertiary: 0x8B98AB, accent: 0x246DF2, accent_foreground: 0xFFFFFF,
-                selected: 0xE6EFFF, selected_border: 0x427EF3, chip: 0xEBEFF5,
+                app: 0xF6F8FC, titlebar: 0xFAFBFE, sidebar: 0xF2F5FA,
+                list: 0xFFFFFF, inspector: 0xFFFFFF, control: 0xF5F7FB,
+                border: 0xE1E8F1, primary: 0x172336, secondary: 0x566A82,
+                tertiary: 0x899BB0, accent: 0x246EF2, accent_foreground: 0xFFFFFF,
+                selected: 0xE7F0FF, selected_border: 0x4B89FF, chip: 0xEDF2F9,
                 danger: 0xC53A49, danger_surface: 0xFCE7E8, success: 0x209E59,
                 prod_surface: 0xE5EEFF, prod_foreground: 0x235ECB,
                 stage_surface: 0xF0E5FF, stage_foreground: 0x8C4ACA,
