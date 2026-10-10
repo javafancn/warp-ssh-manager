@@ -8,7 +8,7 @@ use gpui_component::scroll::ScrollableElement;
 use gpui_component::{
     input::{Input, InputEvent, InputState},
     theme::Theme,
-    Icon, IconName, Root, StyledExt,
+    Icon, IconName, Root, Sizable, StyledExt,
 };
 use std::collections::HashSet;
 use uuid::Uuid;
