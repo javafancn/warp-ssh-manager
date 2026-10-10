@@ -565,7 +565,7 @@ impl Render for ManagerView {
             } else {p.selected_border};
             connections = connections.child(
                 div().id(SharedString::from(format!("connection-row-{id}")))
-                    .v_flex().rounded_lg().cursor_pointer().overflow_hidden()
+                    .v_flex().rounded_lg().cursor_pointer().overflow_hidden().shadow_sm()
                     .border_1().border_color(rgb(if active { p.accent } else { p.border }))
                     .bg(rgb(if active { p.selected } else { p.inspector }))
                     .hover(|style| style.bg(rgb(if active { p.selected } else { p.control })))
@@ -586,6 +586,7 @@ impl Render for ManagerView {
                         .child(div().h_flex().items_center().gap_1()
                             .child(div().id(SharedString::from(format!("connection-star-{id}")))
                                 .cursor_pointer().rounded_lg().px_2().py_2()
+                                .hover(|style| style.bg(rgb(p.chip)))
                                 .text_lg()
                                 .text_color(rgb(if starred { 0xF5AB21 } else { p.secondary }))
                                 .child(if starred { "★" } else { "☆" })
@@ -595,6 +596,7 @@ impl Render for ManagerView {
                                 })))
                             .child(div().id(SharedString::from(format!("connection-menu-{id}")))
                                 .cursor_pointer().rounded_lg().px_2().py_2()
+                                .hover(|style| style.bg(rgb(p.chip)))
                                 .text_sm().font_semibold().text_color(rgb(p.secondary))
                                 .child("···")
                                 .on_click(cx.listener(move |this, _, _, cx| {
@@ -825,10 +827,10 @@ impl Render for ManagerView {
 
         // Window shell mirrors the reference: persistent branded sidebar,
         // independent toolbar over connection cards and inspector, native macOS chrome.
-        let sidebar = div().w(px(280.)).h_full().v_flex().min_h_0()
+        let sidebar = div().w(px(300.)).h_full().v_flex().min_h_0()
             .bg(rgb(p.sidebar)).border_r_1().border_color(rgb(p.border))
             .child(div().h_flex().items_center().gap_3().px_4().py_5()
-                .child(div().w(px(54.)).h(px(54.)).rounded_lg()
+                .child(div().w(px(54.)).h(px(54.)).rounded_lg().shadow_sm()
                     .bg(rgb(p.accent)).border_1().border_color(rgb(p.selected_border))
                     .flex().items_center().justify_center()
                     .text_color(rgb(p.accent_foreground)).text_2xl().font_semibold()
@@ -907,14 +909,14 @@ impl Render for ManagerView {
                         .text_xs().font_semibold().child("浅色")
                         .on_click(cx.listener(|this,_,window,cx| this.set_theme(Appearance::Light,window,cx)))
                     ))
-                .child(div().id("main-interaction-018").cursor_pointer().rounded_lg()
+                .child(div().id("main-interaction-018").cursor_pointer().rounded_lg().shadow_sm()
                     .px_4().py_3().bg(rgb(p.accent))
                     .hover(|style| style.bg(rgb(p.selected_border)))
                     .text_color(rgb(p.accent_foreground)).text_sm().font_semibold()
                     .child("+ 新建主机")
                     .on_click(cx.listener(|this,_,window,cx| this.new_host(window,cx)))));
 
-        let connections_pane = div().w(px(485.)).h_full().v_flex().min_h_0()
+        let connections_pane = div().w(px(510.)).h_full().v_flex().min_h_0()
             .bg(rgb(p.list)).border_r_1().border_color(rgb(p.border))
             .p_4().gap_3()
             .child(div().h_flex().items_center().justify_between()
@@ -979,7 +981,7 @@ impl Render for ManagerView {
             .child(div().h_flex().items_center().gap_2().px_4().py_3()
                 .border_t_1().border_color(rgb(p.border))
                 .child(div().id("main-interaction-022").w(px(210.))
-                    .cursor_pointer().rounded_lg().px_3().py_3()
+                    .cursor_pointer().rounded_lg().px_3().py_3().shadow_sm()
                     .bg(rgb(p.accent)).hover(|style| style.bg(rgb(p.selected_border)))
                     .text_color(rgb(p.accent_foreground))
                     .text_sm().font_semibold().flex().items_center().justify_center()
@@ -1026,7 +1028,7 @@ fn main()->Result<()> {
         #[cfg(feature="tray")]
         tray::install(cx);
         let options=WindowOptions {
-            window_bounds:Some(WindowBounds::centered(size(px(1430.),px(890.)),cx)),
+            window_bounds:Some(WindowBounds::centered(size(px(1480.),px(900.)),cx)),
             ..WindowOptions::default()
         };
         cx.open_window(options,|window,cx| {
