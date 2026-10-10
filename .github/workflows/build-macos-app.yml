@@ -1,12 +1,10 @@
-name: Build macOS App (Universal 2)
+name: 构建 macOS 安装包（Intel / Apple 芯片分开）
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*'
+    branches: [main]
+    tags: ['v*']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,24 +14,26 @@ permissions:
   contents: read
 
 jobs:
-  native-build:
-    name: Build ${{ matrix.arch }}
+  package:
+    name: ${{ matrix.name }} 安装包
     strategy:
       fail-fast: false
       matrix:
         include:
-          - arch: arm64
+          - name: Apple Silicon
             runner: macos-15
             rust_target: aarch64-apple-darwin
-          - arch: intel
+            arch: apple-silicon
+          - name: Intel
             runner: macos-15-intel
             rust_target: x86_64-apple-darwin
+            arch: intel
     runs-on: ${{ matrix.runner }}
     env:
       MACOSX_DEPLOYMENT_TARGET: '12.0'
     steps:
       - uses: actions/checkout@v4
-      - name: Report architecture and toolchain
+      - name: Show architecture and SDK
         run: |
           sw_vers
           uname -m
@@ -44,52 +44,37 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.arch }}
-      - name: Test business core
+      - name: Test SSH core
         run: cargo test -p wsm-core
-      - name: Build GPUI desktop program
-        run: cargo build --release -p wsm-desktop --features tray --target '${{ matrix.rust_target }}'
-      - name: Verify executable deployment metadata
-        run: bash scripts/verify-macos-binary.sh "target/${{ matrix.rust_target }}/release/warp-ssh-manager"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: native-${{ matrix.arch }}
-          path: target/${{ matrix.rust_target }}/release/warp-ssh-manager
-          if-no-files-found: error
-          retention-days: 14
-
-  package-universal:
-    name: Package downloadable macOS app
-    needs: native-build
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: native-arm64
-          path: staging/arm64
-      - uses: actions/download-artifact@v4
-        with:
-          name: native-intel
-          path: staging/intel
-      - name: Build .app / .dmg / .zip
+      - name: Build macOS desktop
         shell: bash
         run: |
           set -o pipefail
-          bash scripts/package-macos-app.sh --universal \
-            staging/arm64/warp-ssh-manager \
-            staging/intel/warp-ssh-manager 2>&1 | tee package-macos.log
-      - name: Upload packaging diagnostics on failure
+          cargo build -p wsm-desktop --release --features tray --target ${{ matrix.rust_target }} 2>&1 | tee build.log
+      - name: Save build errors
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: dmg-packaging-diagnostics
-          path: package-macos.log
+          name: 编译诊断-${{ matrix.arch }}
+          path: build.log
           if-no-files-found: warn
-      - uses: actions/upload-artifact@v4
+      - name: Package installable DMG with Applications shortcut
+        shell: bash
+        run: |
+          set -o pipefail
+          bash scripts/package-macos-app.sh --single \
+            target/${{ matrix.rust_target }}/release/warp-ssh-manager ${{ matrix.arch }} 2>&1 | tee package.log
+      - name: Save packaging errors
+        if: failure()
+        uses: actions/upload-artifact@v4
         with:
-          name: WarpSSHManager-Universal2-macOS12-plus
-          path: |
-            dist/*.dmg
-            dist/*.app.zip
+          name: 打包诊断-${{ matrix.arch }}
+          path: package.log
+          if-no-files-found: warn
+      - name: Upload separate DMG installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: WarpSSHManager-DMG-${{ matrix.arch }}-macOS12
+          path: dist/WarpSSHManager-0.3.2-${{ matrix.arch }}.dmg
           if-no-files-found: error
           retention-days: 30

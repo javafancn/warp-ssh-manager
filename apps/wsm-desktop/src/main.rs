@@ -95,7 +95,7 @@ impl ManagerView {
         let hosts=manager.db.list_hosts().unwrap_or_default();
         let groups=manager.db.list_groups().unwrap_or_default();
         let appearance=Appearance::read(&manager.paths.data_dir);
-        let search=make_input(window,cx,"搜索名称、IP 或 SSH 别名...");
+        let search=make_input(window,cx,"搜索名称、IP 或 SSH 别名…");
         let subscription=cx.subscribe_in(&search,window,|_,_,event:&InputEvent,_,cx| {
             if matches!(event,InputEvent::Change) {cx.notify();}
         });
@@ -118,9 +118,9 @@ impl ManagerView {
             identity:make_input(window,cx,"~/.ssh/id_ed25519"),
             jump:make_input(window,cx,"可选跳板机别名"),
             tags:make_input(window,cx,"api, production"),
-            notes:cx.new(|cx| InputState::new(window,cx).placeholder("添加服务器备注...").multi_line(true)),
+            notes:cx.new(|cx| InputState::new(window,cx).placeholder("添加主机备注…").multi_line(true)),
             favorite:false,confirm_delete:false,
-            message:"请选择服务器；新建自管主机前需先初始化 SSH 集成。".into(),
+            message:"请选择一台主机；新增自管主机前请先初始化 SSH 集成。".into(),
             feedback:Feedback::Info,
             _subscription:subscription,_appearance_subscription:appearance_subscription,
         };
@@ -194,7 +194,7 @@ impl ManagerView {
         let problem=if name.trim().is_empty() {Some("请填写显示名称。")}
             else if alias.trim().is_empty() {Some("请填写 SSH 别名，例如 prod-api-01；灰色文字仅是示例。")}
             else if wsm_core::ssh::validate_alias(alias.trim()).is_err() {
-                Some("SSH 别名必须以字母或数字开头，仅可包含字母、数字、点、下划线和连字符。")
+                Some("SSH 别名必须以字母或数字开头，只能包含字母、数字、点、下划线和连字符。")
             } else if host.trim().is_empty() {Some("请填写主机名或 IP 地址。")}
             else if user.trim().is_empty() {Some("请填写 SSH 登录用户名。")}
             else {None};
@@ -244,7 +244,7 @@ impl ManagerView {
                 let tags=Self::read(&self.tags,cx);
                 let notes=Self::read(&self.notes,cx);
                 match self.manager.db.save_annotations(id,tags.trim(),notes.trim()) {
-                    Ok(())=>{self.feedback=Feedback::Success;self.message="主机及备注已保存，配置已同步。".into()},
+                    Ok(())=>{self.feedback=Feedback::Success;self.message="主机资料已保存，配置已同步。".into()},
                     Err(err)=>{self.feedback=Feedback::Warning;self.message=format!("主机已保存，但标签/备注保存失败：{err:#}")},
                 }
                 self.selected=Some(id);
@@ -275,7 +275,7 @@ impl ManagerView {
             Ok(())=>{
                 self.new_host(window,cx);
                 self.feedback=Feedback::Success;
-                self.message="主机已删除。导入的用户 SSH 配置文件没有被修改。".into();
+                self.message="主机已删除，原始 SSH 配置文件保持不变。".into();
                 self.refresh(cx);
             },
             Err(err)=>{self.feedback=Feedback::Error;self.message=format!("删除失败：{err:#}")},
@@ -291,7 +291,7 @@ impl ManagerView {
         match self.manager.connect(id,false,false) {
             Ok(())=>{
                 self.feedback=Feedback::Success;
-                self.message="已请求 Warp 打开标签页；SSH 认证由 Warp/OpenSSH 负责。".into();
+                self.message="已请求 Warp 打开标签页；SSH 认证由 Warp / OpenSSH 负责。".into();
                 self.refresh(cx);
             },
             Err(err)=>{self.feedback=Feedback::Error;self.message=format!("启动连接失败：{err:#}")},
@@ -310,7 +310,7 @@ impl ManagerView {
 
     fn init(&mut self,_:&ClickEvent,_:&mut Window,cx:&mut Context<Self>) {
         match self.manager.initialize_ssh() {
-            Ok(true)=>self.message="已启用 SSH 集成，并备份现有 SSH Config。".into(),
+            Ok(true)=>self.message="已启用 SSH 集成，并备份现有 SSH 配置。".into(),
             Ok(false)=>self.message="SSH 集成已经启用。".into(),
             Err(err)=>self.message=format!("初始化失败：{err:#}"),
         }
@@ -320,7 +320,7 @@ impl ManagerView {
 
     fn sync(&mut self,_:&ClickEvent,_:&mut Window,cx:&mut Context<Self>) {
         match self.manager.sync_existing_tabs() {
-            Ok(count)=>self.message=format!("已同步 {count} 条已生成或收藏的 Warp Tab Config。"),
+            Ok(count)=>self.message=format!("已同步 {count} 条已生成或收藏的 Warp 标签配置。"),
             Err(err)=>self.message=format!("同步失败：{err:#}"),
         }
         self.feedback=if self.message.starts_with("同步失败") {Feedback::Error} else {Feedback::Success};
@@ -406,7 +406,7 @@ impl ManagerView {
 fn detail_field(label: &'static str, input: &Entity<InputState>, readonly: bool, p: Palette) -> impl IntoElement {
     // The GPUI component input already draws a focus ring and border: avoid double frames.
     div().h_flex().items_center().gap_3()
-        .child(div().w(px(105.)).text_sm().text_color(rgb(p.secondary)).child(label))
+        .child(div().w(px(112.)).text_sm().text_color(rgb(p.secondary)).child(label))
         .child(div().flex_1().min_w_0().child(Input::new(input).disabled(readonly)))
 }
 
@@ -424,9 +424,9 @@ fn environment(name: &str, p: Palette) -> impl IntoElement {
 }
 
 fn sidebar_row(icon: IconName, text: &'static str, count: usize, active: bool, p: Palette) -> impl IntoElement {
-    div().h_flex().items_center().justify_between().rounded_lg().px_3().py_3()
+    div().h_flex().items_center().justify_between().rounded_lg().px_3().py_2()
         .bg(rgb(if active { p.selected } else { p.sidebar }))
-        .child(div().h_flex().items_center().gap_2().text_sm().font_semibold()
+        .child(div().h_flex().items_center().gap_3().text_sm().font_semibold()
             .text_color(rgb(if active { p.accent } else { p.primary }))
             .child(Icon::new(icon)).child(text))
         .child(div().px_2().py_1().rounded_full()
@@ -450,13 +450,13 @@ impl Render for ManagerView {
         let mut folder_items = div().v_flex().gap_1();
         folder_items = folder_items
             .child(div().cursor_pointer()
-                .child(sidebar_row(IconName::SquareTerminal, "All Servers", host_count, current_filter == ViewFilter::All, p))
+                .child(sidebar_row(IconName::SquareTerminal, "全部主机", host_count, current_filter == ViewFilter::All, p))
                 .id("main-interaction-001").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::All; cx.notify(); })))
             .child(div().cursor_pointer()
-                .child(sidebar_row(IconName::Star, "Favorites", favorite_count, current_filter == ViewFilter::Favorites, p))
+                .child(sidebar_row(IconName::Star, "收藏", favorite_count, current_filter == ViewFilter::Favorites, p))
                 .id("main-interaction-002").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::Favorites; cx.notify(); })))
             .child(div().cursor_pointer()
-                .child(sidebar_row(IconName::Calendar, "Recent", recent_count, current_filter == ViewFilter::Recent, p))
+                .child(sidebar_row(IconName::Calendar, "最近连接", recent_count, current_filter == ViewFilter::Recent, p))
                 .id("main-interaction-003").on_click(cx.listener(|this, _, _, cx| { this.filter = ViewFilter::Recent; cx.notify(); })));
 
         let mut flat = Vec::new();
@@ -516,12 +516,12 @@ impl Render for ManagerView {
             // was reused for all rows, which broke click targeting.
             connections = connections.child(
                 div().id(SharedString::from(format!("connection-row-{id}")))
-                    .h_flex().items_center().gap_2().rounded_lg()
-                    .px_2().py_2().cursor_pointer()
+                    .h_flex().items_center().gap_3().rounded_lg()
+                    .px_3().py_2().cursor_pointer()
                     .border_1().border_color(rgb(if active { p.selected_border } else { p.list }))
                     .bg(rgb(if active { p.selected } else { p.list }))
                     .hover(|style| style.bg(rgb(if active { p.selected } else { p.chip })))
-                    .child(div().w(px(32.)).h(px(32.)).rounded_md()
+                    .child(div().w(px(35.)).h(px(35.)).rounded_lg()
                         .bg(rgb(if active { p.prod_surface } else { p.control }))
                         .flex().items_center().justify_center()
                         .text_color(rgb(if active { p.accent } else { p.secondary }))
@@ -536,7 +536,7 @@ impl Render for ManagerView {
                     .child(div().id(SharedString::from(format!("connection-star-{id}")))
                         .cursor_pointer().px_2().py_2().rounded_md().text_lg()
                         .text_color(rgb(if starred { 0xEAA830 } else { p.tertiary }))
-                        .child(Icon::new(if starred { IconName::Star } else { IconName::StarOff }))
+                        .child(Icon::new(IconName::Star))
                         .on_click(cx.listener(move |this, _, _, cx| {
                             cx.stop_propagation();
                             this.toggle_list_favorite(id, cx);
@@ -552,14 +552,14 @@ impl Render for ManagerView {
         if filtered_count == 0 {
             connections = connections.child(div().py_8().v_flex().items_center().gap_2()
                 .child(div().text_2xl().text_color(rgb(p.tertiary)).child("⌕"))
-                .child(div().text_sm().text_color(rgb(p.secondary)).child("没有找到匹配的服务器"))
+                .child(div().text_sm().text_color(rgb(p.secondary)).child("未找到匹配的主机"))
                 .child(div().text_xs().text_color(rgb(p.tertiary))
                     .child("试试其他关键词，或点击右上角「新建主机」")));
         }
 
         let mut group_picker = div().v_flex().gap_1()
             .child(div().h_flex().items_center().gap_3()
-                .child(div().w(px(105.)).text_sm().text_color(rgb(p.secondary)).child("所属分组"))
+                .child(div().w(px(112.)).text_sm().text_color(rgb(p.secondary)).child("所属分组"))
                 .child(div().h_flex().flex_1().min_w_0().items_center().rounded_md().border_1()
                     .border_color(rgb(p.border)).bg(rgb(p.control)).px_3().py_2().cursor_pointer()
                     .child(Icon::new(IconName::Folder))
@@ -605,7 +605,7 @@ impl Render for ManagerView {
                     }))));
         }
         let tags_field = div().h_flex().items_center().gap_3()
-            .child(div().w(px(105.)).text_sm().text_color(rgb(p.secondary)).child("标签"))
+            .child(div().w(px(112.)).text_sm().text_color(rgb(p.secondary)).child("标签"))
             .child(div().v_flex().flex_1().min_w_0().gap_2()
                 .child(Input::new(&self.tags))
                 .when(!raw_tags.trim().is_empty(), |el| el.child(tag_chips)));
@@ -619,7 +619,7 @@ impl Render for ManagerView {
             Feedback::Success => (p.dev_surface,p.dev_foreground,"✓","操作成功"),
             Feedback::Info => (p.chip,p.secondary,"i","提示"),
         };
-        let banner=div().h_flex().items_center().gap_2().mx_4().mt_3().px_3().py_2()
+        let banner=div().h_flex().items_center().gap_2().mx_4().mt_3().px_3().py_3()
             .rounded_lg().border_1().border_color(rgb(banner_fg)).bg(rgb(banner_bg))
             .child(div().w(px(20.)).h(px(20.)).rounded_full().bg(rgb(banner_fg))
                 .text_color(rgb(p.inspector)).font_semibold().flex().items_center().justify_center()
@@ -644,10 +644,10 @@ impl Render for ManagerView {
                     .text_xs().child("初始化 SSH").id("main-interaction-011").on_click(cx.listener(Self::init)))
                 .child(div().cursor_pointer().rounded_md().px_3().py_2().bg(rgb(p.control))
                     .hover(|style| style.bg(rgb(p.chip)))
-                    .text_xs().child("导入 SSH Config").id("main-interaction-012").on_click(cx.listener(Self::import)))
+                    .text_xs().child("导入 SSH 配置").id("main-interaction-012").on_click(cx.listener(Self::import)))
                 .child(div().cursor_pointer().rounded_md().px_3().py_2().bg(rgb(p.control))
                     .hover(|style| style.bg(rgb(p.chip)))
-                    .text_xs().child("同步 Tab Configs").id("main-interaction-013").on_click(cx.listener(Self::sync)))
+                    .text_xs().child("同步 Warp 标签配置").id("main-interaction-013").on_click(cx.listener(Self::sync)))
                 .child(div().flex_1())
                 .child(div().cursor_pointer().text_xs().text_color(rgb(p.tertiary))
                     .child("关闭 ×")
@@ -664,8 +664,8 @@ impl Render for ManagerView {
                         .flex().items_center().justify_center()
                         .text_color(rgb(p.accent_foreground)).font_semibold().child(Icon::new(IconName::SquareTerminal)))
                     .child(div().v_flex().gap_1()
-                        .child(div().text_sm().font_semibold().child("Warp SSH Manager"))
-                        .child(div().text_xs().text_color(rgb(p.tertiary)).child("SSH Workspace"))))
+                        .child(div().text_sm().font_semibold().child("Warp SSH 管理器"))
+                        .child(div().text_xs().text_color(rgb(p.tertiary)).child("SSH 工作区"))))
                 .child(div().h_flex().items_center().gap_2()
                     .child(div().h_flex().gap_1().p_1().rounded_lg()
                         .bg(rgb(p.control)).border_1().border_color(rgb(p.border))
@@ -697,14 +697,14 @@ impl Render for ManagerView {
             .when(self.actions_open, |el| el.child(secondary_actions))
             // One continuous three-column layout. Each pane owns its scrolling area.
             .child(div().h_flex().flex_1().min_h_0().items_start()
-                .child(div().w(px(246.)).h_full().v_flex().min_h_0().bg(rgb(p.sidebar))
+                .child(div().w(px(240.)).h_full().v_flex().min_h_0().bg(rgb(p.sidebar))
                     .border_r_1().border_color(rgb(p.border)).p_4().gap_3()
                     .child(div().h_flex().items_center().justify_between()
-                        .child(div().text_sm().font_semibold().text_color(rgb(p.primary)).child("Folders"))
-                        .child(div().text_xs().text_color(rgb(p.tertiary)).child("WORKSPACE")))
+                        .child(div().text_sm().font_semibold().text_color(rgb(p.primary)).child("文件夹"))
+                        .child(div().text_xs().text_color(rgb(p.tertiary)).child("工作区")))
                     .child(folder_items)
                     .child(div().mt_3().mb_1().h_flex().items_center().justify_between()
-                        .child(div().text_xs().font_semibold().text_color(rgb(p.tertiary)).child("GROUPS"))
+                        .child(div().text_xs().font_semibold().text_color(rgb(p.tertiary)).child("分组"))
                         .child(div().text_xs().text_color(rgb(p.tertiary)).child(self.groups.len().to_string())))
                     .child(div().flex_1().overflow_y_scrollbar().child(group_list))
                     .child(div().h_flex().items_center().gap_2()
@@ -714,12 +714,12 @@ impl Render for ManagerView {
                             .text_color(rgb(p.accent_foreground)).text_xs().font_semibold()
                             .px_2().py_2().child("创建")
                             .id("main-interaction-020").on_click(cx.listener(Self::add_group)))))
-                .child(div().w(px(408.)).h_full().v_flex().min_h_0().bg(rgb(p.list))
+                .child(div().w(px(382.)).h_full().v_flex().min_h_0().bg(rgb(p.list))
                     .border_r_1().border_color(rgb(p.border)).p_4().gap_3()
                     .child(div().h_flex().items_center().justify_between()
-                        .child(div().text_lg().font_semibold().text_color(rgb(p.primary)).child("Connections"))
+                        .child(div().text_lg().font_semibold().text_color(rgb(p.primary)).child("连接列表"))
                         .child(div().rounded_full().px_2().py_1().bg(rgb(p.chip)).text_xs().text_color(rgb(p.secondary)).child(format!("{} 台", filtered_count))))
-                    .child(div().rounded_lg().bg(rgb(p.control))
+                    .child(div().rounded_lg().border_1().border_color(rgb(p.border)).bg(rgb(p.control))
                         .child(Input::new(&self.search).prefix(Icon::new(IconName::Search).small())))
                     .child(div().text_xs().text_color(rgb(p.tertiary))
                         .child("单击查看详情   ·   双击在 Warp 中连接"))
@@ -729,18 +729,18 @@ impl Render for ManagerView {
                         .border_b_1().border_color(rgb(p.border))
                         .child(div().v_flex().gap_1()
                             .child(div().text_lg().font_semibold()
-                                .child(if selected_is_host { "Server Details" } else { "New Server" }))
+                                .child(if selected_is_host { "主机详情" } else { "新建主机" }))
                             .child(div().text_xs().text_color(rgb(p.tertiary))
-                                .child(if imported { "Imported · 连接字段只读" } else { "Managed · OpenSSH" })))
+                                .child(if imported { "已导入 · 连接字段只读" } else { "自管主机 · OpenSSH" })))
                         .child(div().text_xs().text_color(rgb(if self.favorite { 0xF4B532 } else { p.tertiary }))
                             .child(if self.favorite { "★ 已收藏" } else { "☆ 未收藏" })))
                     .when(self.feedback != Feedback::Info, |el| el.child(banner))
-                    .child(div().flex_1().min_h_0().overflow_y_scrollbar().px_5().py_3()
+                    .child(div().flex_1().min_h_0().overflow_y_scrollbar().px_4().py_3()
                         .child(div().v_flex().gap_2()
                             .child(div().h_flex().items_center().gap_2().py_2()
                                 .child(div().w(px(3.)).h(px(14.)).rounded_full().bg(rgb(p.accent)))
-                                .child(div().text_xs().font_semibold().text_color(rgb(p.tertiary))
-                                    .child("CONNECTION SETTINGS")))
+                                .child(div().text_xs().font_semibold().text_color(rgb(p.secondary))
+                                    .child("连接配置")))
                             .child(detail_field("显示名称", &self.name, false, p))
                             .child(detail_field("SSH 别名", &self.alias, imported, p))
                             .child(detail_field("主机名 / IP", &self.hostname, imported, p))
@@ -749,7 +749,7 @@ impl Render for ManagerView {
                             .child(detail_field("身份文件", &self.identity, imported, p))
                             .child(group_picker)
                             .child(tags_field)
-                            .child(detail_field("ProxyJump", &self.jump, imported, p))
+                            .child(detail_field("跳板机", &self.jump, imported, p))
                             .child(detail_field("备注", &self.notes, false, p))
                             .child(div().h_flex().items_center().justify_between().px_1().py_2()
                                 .child(div().text_sm().text_color(rgb(p.secondary)).child("设为收藏"))
@@ -761,33 +761,33 @@ impl Render for ManagerView {
                                         .bg(rgb(p.accent_foreground)))
                                     .when(!self.favorite, |el| el.child(div().flex_1()))
                                     .id("main-interaction-021").on_click(cx.listener(Self::toggle_favorite))))))
-                    .child(div().h_flex().items_center().gap_2().px_5().py_3()
+                    .child(div().h_flex().items_center().gap_2().px_4().py_3()
                         .bg(rgb(p.inspector)).border_t_1().border_color(rgb(p.border))
-                        .child(div().w(px(160.)).cursor_pointer().rounded_md().px_3().py_2()
+                        .child(div().w(px(170.)).cursor_pointer().rounded_md().px_3().py_2()
                             .bg(rgb(p.accent)).hover(|style| style.bg(rgb(p.selected_border)))
                             .text_color(rgb(p.accent_foreground))
                             .text_sm().font_semibold().flex().items_center().justify_center()
-                            .child("Open in Warp ↗").id("main-interaction-022").on_click(cx.listener(Self::connect)))
+                            .child("在 Warp 中打开 ↗").id("main-interaction-022").on_click(cx.listener(Self::connect)))
                         .child(div().cursor_pointer().rounded_md().px_3().py_2()
                             .border_1().border_color(rgb(p.border)).bg(rgb(p.control))
                             .hover(|style| style.bg(rgb(p.chip)))
-                            .text_sm().child("Save Changes").id("main-interaction-023").on_click(cx.listener(Self::save)))
+                            .text_sm().child("保存更改").id("main-interaction-023").on_click(cx.listener(Self::save)))
                         .child(div().cursor_pointer().rounded_md().px_3().py_2()
                             .bg(rgb(p.danger_surface)).hover(|style| style.bg(rgb(p.chip)))
                             .text_color(rgb(p.danger)).text_sm()
-                            .child(if self.confirm_delete { "确认删除" } else { "Delete" })
+                            .child(if self.confirm_delete { "确认删除" } else { "删除" })
                             .id("main-interaction-024").on_click(cx.listener(Self::remove))))))
             // Never equate generated configuration status with a successful SSH login.
-            .child(div().h_flex().items_center().gap_4().px_4().py_2()
+            .child(div().h_flex().items_center().gap_3().px_4().py_2()
                 .bg(rgb(p.titlebar)).border_t_1().border_color(rgb(p.border))
                 .child(div().text_xs().text_color(rgb(tab_color))
-                    .child(format!("●  Warp Tab Configs {}", if warp_ready { "ready" } else { "not created" })))
+                    .child(format!("●  Warp 标签配置{}", if warp_ready { "已就绪" } else { "未生成" })))
                 .child(div().text_xs().text_color(rgb(status_color))
-                    .child(format!("●  SSH Config {}", if linked { "linked" } else { "setup needed" })))
+                    .child(format!("●  SSH 配置{}", if linked { "已接入" } else { "需初始化" })))
                 .child(div().text_xs().text_color(rgb(p.tertiary))
-                    .child(format!("{} servers  ·  {} groups", host_count, self.groups.len())))
+                    .child(format!("{} 台主机  ·  {} 个分组", host_count, self.groups.len())))
                 .child(div().flex_1().min_w_0().text_xs().text_color(rgb(p.tertiary))
-                    .overflow_hidden().child("SSH 连接由 Warp / OpenSSH 执行")))
+                    .overflow_hidden().child("SSH 连接通过 Warp / OpenSSH 发起")))
     }
 }
 

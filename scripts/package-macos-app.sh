@@ -3,12 +3,17 @@
 # The output is ad-hoc signed for local testing, NOT notarized for general distribution.
 set -euo pipefail
 [[ "$(uname -s)" == 'Darwin' ]] || { echo 'Requires macOS and Apple developer tools.' >&2; exit 1; }
-[[ $# == 2 || $# == 3 ]] || { echo 'Usage: bash scripts/package-macos-app.sh --single <binary> | --universal <arm64-binary> <x86_64-binary>' >&2; exit 2; }
+[[ $# == 3 ]] || { echo 'Usage: bash scripts/package-macos-app.sh --single <binary> <apple-silicon|intel>' >&2; exit 2; }
 mode="$1"
 case "$mode" in
-  --single) [[ $# == 2 ]] || exit 2 ;;
-  --universal) [[ $# == 3 ]] || exit 2 ;;
-  *) echo 'Unknown mode' >&2; exit 2 ;;
+  --single) ;;
+  *) echo 'Only separate architecture installers are supported.' >&2; exit 2 ;;
+esac
+arch="$3"
+case "$arch" in
+  apple-silicon) expected_arch=arm64 ;;
+  intel) expected_arch=x86_64 ;;
+  *) echo "Unknown architecture: $arch" >&2; exit 2 ;;
 esac
 for tool in lipo codesign ditto hdiutil sips iconutil plutil; do
   command -v "$tool" >/dev/null || { echo "Missing $tool (install Xcode Command Line Tools)" >&2; exit 1; }
@@ -20,13 +25,10 @@ app='dist/Warp SSH Manager.app'
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 exe="$app/Contents/MacOS/warp-ssh-manager"
-if [[ "$mode" == '--single' ]]; then
-  [[ -s "$2" ]] || { echo "Executable not found: $2" >&2; exit 1; }
-  cp "$2" "$exe"
-else
-  [[ -s "$2" && -s "$3" ]] || { echo 'Both built executables are required.' >&2; exit 1; }
-  lipo -create "$2" "$3" -output "$exe"
-fi
+[[ -s "$2" ]] || { echo "Executable not found: $2" >&2; exit 1; }
+cp "$2" "$exe"
+found_archs="$(lipo -archs "$exe")"
+[[ "$found_archs" == "$expected_arch" ]] || { echo "Architecture mismatch: wanted $expected_arch, got $found_archs" >&2; exit 1; }
 chmod 755 "$exe"
 cat > "$app/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -36,11 +38,11 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleExecutable</key><string>warp-ssh-manager</string>
 <key>CFBundleIdentifier</key><string>dev.warpsshmanager.app</string>
 <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
-<key>CFBundleName</key><string>Warp SSH Manager</string>
-<key>CFBundleDisplayName</key><string>Warp SSH Manager</string>
+<key>CFBundleName</key><string>Warp SSH 管理器</string>
+<key>CFBundleDisplayName</key><string>Warp SSH 管理器</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.3.1</string>
-<key>CFBundleVersion</key><string>4</string>
+<key>CFBundleShortVersionString</key><string>0.3.2</string>
+<key>CFBundleVersion</key><string>5</string>
 <key>CFBundleIconFile</key><string>WarpSSHManager</string>
 <key>LSMinimumSystemVersion</key><string>12.0</string>
 <key>NSHighResolutionCapable</key><true/>
@@ -61,13 +63,18 @@ rm -rf "$iconset"
 # Ad-hoc signing is appropriate for local test builds; it is not Developer ID notarization.
 codesign --force --sign - --timestamp=none "$app"
 codesign --verify --verbose=2 "$app"
-verify=("$app")
-[[ "$mode" == '--universal' ]] && verify+=(--universal)
-bash scripts/verify-macos-binary.sh "${verify[@]}"
-zip_path='dist/WarpSSHManager-0.3.1-macOS.app.zip'
-dmg_path='dist/WarpSSHManager-0.3.1-macOS.dmg'
+bash scripts/verify-macos-binary.sh "$app"
+zip_path="dist/WarpSSHManager-0.3.2-${arch}.app.zip"
+dmg_path="dist/WarpSSHManager-0.3.2-${arch}.dmg"
 rm -f "$zip_path" "$dmg_path"
 ditto -c -k --sequesterRsrc --keepParent "$app" "$zip_path"
-hdiutil create -volname 'Warp SSH Manager' -srcfolder "$app" -ov -format UDZO "$dmg_path" >/dev/null
+# Finder-style drag-to-Applications installer instead of a raw .app disk image.
+staging="dist/dmg-${arch}"
+rm -rf "$staging"
+mkdir -p "$staging"
+ditto "$app" "$staging/Warp SSH Manager.app"
+ln -s /Applications "$staging/Applications"
+hdiutil create -volname "Warp SSH Manager (${arch})" -srcfolder "$staging" -ov -format UDZO "$dmg_path" >/dev/null
+rm -rf "$staging"
 printf '\nBuild artifacts:\n  %s\n  %s\n\n' "$zip_path" "$dmg_path"
 printf 'This build is AD-HOC signed, NOT APPLE NOTARIZED. Run macOS 12 and SSH integration smoke tests before general use.\n'

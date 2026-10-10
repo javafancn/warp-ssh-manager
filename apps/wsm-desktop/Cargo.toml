@@ -22,8 +22,8 @@ gpui-component-assets = "=0.5.1"
 tray-icon = { version = "0.21", optional = true }
 
 [package.metadata.bundle]
-name = "Warp SSH Manager"
+name = "Warp SSH 管理器"
 identifier = "dev.warpsshmanager.app"
 category = "Developer Tool"
-short_description = "Native SSH connection manager for Warp Terminal"
+short_description = "基于 Warp 终端的原生 SSH 连接管理器"
 minimum_system_version = "12.0"

@@ -21,7 +21,7 @@ pub struct QuickConnect {
 impl QuickConnect {
     fn new(window:&mut Window,cx:&mut Context<Self>)->Self {
         let manager=Manager::discover().expect("unable to open SSH Manager database");
-        let search=cx.new(|cx|InputState::new(window,cx).placeholder("搜索服务器名称、IP、别名..."));
+        let search=cx.new(|cx|InputState::new(window,cx).placeholder("搜索名称、IP 或 SSH 别名…"));
         let sub=cx.subscribe_in(&search,window,|this,_,event:&InputEvent,window,cx| {
             match event {
                 InputEvent::Change => cx.notify(),
@@ -31,7 +31,7 @@ impl QuickConnect {
         });
         // Open as a keyboard-first search utility. No mouse click is required.
         search.update(cx,|state,cx|state.focus(window,cx));
-        Self {manager,search,status:"单击选择 · 双击连接 · Enter 打开当前主机".into(),selected:None,_subscription:sub}
+        Self {manager,search,status:"单击选择 · 双击连接 · 回车打开".into(),selected:None,_subscription:sub}
     }
 
     fn hosts(&self,cx:&Context<Self>)->Vec<Host> {
@@ -68,7 +68,7 @@ impl Render for QuickConnect {
         let failed = self.status.starts_with("连接请求失败");
         let mut list = div().v_flex().gap_2()
             .child(div().px_2().py_2().text_xs().font_semibold().text_color(rgb(p.tertiary))
-                .child(format!("AVAILABLE CONNECTIONS  ·  {}", hosts.len())));
+                .child(format!("可用连接 · {} 台", hosts.len())));
         for (index, host) in hosts.iter().enumerate() {
             let id = host.id;
             let host_name = host.name.clone();
@@ -93,12 +93,12 @@ impl Render for QuickConnect {
                     .child(div().text_xs().text_color(rgb(p.tertiary)).child(host.hostname.clone())))
                 .when(host.group_id.is_some(), |el| el.child(environment(label, p)))
                 .child(div().text_lg().text_color(rgb(if host.favorite { 0xF4B532 } else { p.tertiary }))
-                    .child(Icon::new(if host.favorite { IconName::Star } else { IconName::StarOff })))
+                    .child(Icon::new(IconName::Star)))
                  .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
                     this.selected=Some(id);
                     if event.click_count() >= 2 { this.connect(id,window,cx); }
                     else {
-                        this.status=format!("已选择 {host_name} · 按 Enter 连接");
+                        this.status=format!("已选择 {host_name} · 按回车连接");
                         cx.notify();
                     }
                 })));
@@ -106,7 +106,7 @@ impl Render for QuickConnect {
         if hosts.is_empty() {
             list = list.child(div().py_8().v_flex().items_center().gap_2()
                 .child(div().text_2xl().text_color(rgb(p.tertiary)).child("⌕"))
-                .child(div().text_sm().text_color(rgb(p.secondary)).child("没有找到匹配的服务器")));
+                .child(div().text_sm().text_color(rgb(p.secondary)).child("没有找到匹配的主机")));
         }
         div().size_full().v_flex().p_4().gap_3()
             .bg(rgb(p.inspector)).text_color(rgb(p.primary))
@@ -116,7 +116,7 @@ impl Render for QuickConnect {
                         .flex().items_center().justify_center()
                         .font_semibold().text_color(rgb(p.accent_foreground)).child(Icon::new(IconName::SquareTerminal)))
                     .child(div().v_flex().gap_1()
-                        .child(div().text_lg().font_semibold().child("Quick Connect"))
+                        .child(div().text_lg().font_semibold().child("快速连接"))
                         .child(div().text_xs().text_color(rgb(p.tertiary))
                             .child("快速查找并在 Warp 中打开 SSH"))))
                 .child(div().cursor_pointer().px_3().py_2().rounded_lg()
@@ -134,14 +134,14 @@ impl Render for QuickConnect {
                     .text_color(rgb(if failed { p.danger } else { p.secondary }))
                     .child(self.status.clone()))
                 .child(div().px_2().py_1().rounded_md().bg(rgb(p.chip))
-                    .text_xs().text_color(rgb(p.tertiary)).child("WARP ↗")))
+                    .text_xs().text_color(rgb(p.tertiary)).child("在 Warp 中打开 ↗")))
     }
 }
 
 pub fn open_window(cx:&mut App) {
     let opts=WindowOptions {
         titlebar:None,
-        window_bounds:Some(WindowBounds::centered(size(px(460.),px(425.)),cx)),
+        window_bounds:Some(WindowBounds::centered(size(px(480.),px(460.)),cx)),
         kind:WindowKind::Floating,
         is_resizable:false,
         ..WindowOptions::default()

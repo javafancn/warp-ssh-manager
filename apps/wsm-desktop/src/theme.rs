@@ -73,11 +73,11 @@ impl Palette {
     pub fn new(dark: bool) -> Self {
         if dark {
             Self {
-                app: 0x0E1520, titlebar: 0x162131, sidebar: 0x182333,
-                list: 0x121B29, inspector: 0x172131, control: 0x223044,
-                border: 0x303F52, primary: 0xF2F6FF, secondary: 0xA7B7CC,
-                tertiary: 0x8292A8, accent: 0x2876F3, accent_foreground: 0xFFFFFF,
-                selected: 0x1E3B69, selected_border: 0x4F8DFA, chip: 0x283649,
+                app: 0x0D1420, titlebar: 0x131F30, sidebar: 0x152132,
+                list: 0x101A2A, inspector: 0x142033, control: 0x223044,
+                border: 0x2A3A50, primary: 0xF1F6FF, secondary: 0xA9B9D0,
+                tertiary: 0x8194AC, accent: 0x2478FC, accent_foreground: 0xFFFFFF,
+                selected: 0x173D71, selected_border: 0x3485FF, chip: 0x223248,
                 danger: 0xFF9BA5, danger_surface: 0x4A2B35, success: 0x4BD899,
                 prod_surface: 0x223F71, prod_foreground: 0x91BBFF,
                 stage_surface: 0x3B275A, stage_foreground: 0xCDB0FE,
@@ -85,11 +85,11 @@ impl Palette {
             }
         } else {
             Self {
-                app: 0xF6F8FC, titlebar: 0xFAFBFE, sidebar: 0xF2F5FA,
+                app: 0xF4F7FC, titlebar: 0xFBFCFF, sidebar: 0xF0F5FB,
                 list: 0xFFFFFF, inspector: 0xFFFFFF, control: 0xF5F7FB,
-                border: 0xE1E8F1, primary: 0x172336, secondary: 0x566A82,
+                border: 0xDDE6F1, primary: 0x17243A, secondary: 0x59708B,
                 tertiary: 0x899BB0, accent: 0x246EF2, accent_foreground: 0xFFFFFF,
-                selected: 0xE7F0FF, selected_border: 0x4B89FF, chip: 0xEDF2F9,
+                selected: 0xE7F0FF, selected_border: 0x3884FF, chip: 0xEEF3F9,
                 danger: 0xC53A49, danger_surface: 0xFCE7E8, success: 0x209E59,
                 prod_surface: 0xE5EEFF, prod_foreground: 0x235ECB,
                 stage_surface: 0xF0E5FF, stage_foreground: 0x8C4ACA,
