@@ -68,10 +68,19 @@ jobs:
           name: native-intel
           path: staging/intel
       - name: Build .app / .dmg / .zip
+        shell: bash
         run: |
+          set -o pipefail
           bash scripts/package-macos-app.sh --universal \
             staging/arm64/warp-ssh-manager \
-            staging/intel/warp-ssh-manager
+            staging/intel/warp-ssh-manager 2>&1 | tee package-macos.log
+      - name: Upload packaging diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dmg-packaging-diagnostics
+          path: package-macos.log
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:
           name: WarpSSHManager-Universal2-macOS12-plus
