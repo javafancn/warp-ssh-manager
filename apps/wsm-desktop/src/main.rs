@@ -47,6 +47,7 @@ struct ManagerView {
     actions_open: bool,
     filter_menu_open: bool,
     creating_group: bool,
+    tag_input_open: bool,
     expanded_card: Option<Uuid>,
     collapsed_groups: HashSet<Uuid>,
     appearance: Appearance,
@@ -115,7 +116,7 @@ impl ManagerView {
         let first_host = hosts.first().map(|host| host.id);
         let mut view = Self {
             manager,hosts,groups,selected:None,detail_tab:DetailTab::Basic,filter:ViewFilter::All,
-            editor_group:None,group_picker_open:false,actions_open:false,filter_menu_open:false,creating_group:false,expanded_card:None,collapsed_groups:HashSet::new(),appearance,search,
+            editor_group:None,group_picker_open:false,actions_open:false,filter_menu_open:false,creating_group:false,tag_input_open:false,expanded_card:None,collapsed_groups:HashSet::new(),appearance,search,
             group_input:make_input(window,cx,"新建分组名称"),
             name:make_input(window,cx,"服务器显示名称"),
             alias:make_input(window,cx,"prod-api-01"),
@@ -155,6 +156,7 @@ impl ManagerView {
         self.detail_tab=DetailTab::Basic;
         self.editor_group=host.group_id;
         self.group_picker_open=false;
+        self.tag_input_open=false;
         self.favorite=host.favorite;
         self.confirm_delete=false;
         self.feedback=Feedback::Info;
@@ -184,6 +186,7 @@ impl ManagerView {
         self.favorite=false;
         self.editor_group=match self.filter {ViewFilter::Group(id)=>Some(id),_=>None};
         self.group_picker_open=false;
+        self.tag_input_open=true;
         self.confirm_delete=false;
         self.feedback=Feedback::Info;
         for input in [&self.name,&self.alias,&self.hostname,&self.username,&self.identity,&self.jump,&self.tags,&self.notes] {
@@ -415,9 +418,9 @@ impl ManagerView {
 // macOS chrome stays native. Never draw a second set of traffic-light buttons.
 fn detail_field(label: &'static str, input: &Entity<InputState>, readonly: bool, p: Palette) -> impl IntoElement {
     // The GPUI component input already draws a focus ring and border: avoid double frames.
-    div().h_flex().items_center().gap_3().min_h(px(35.))
+    div().h_flex().items_center().gap_3().min_h(px(44.))
         .child(div().w(px(104.)).text_sm().text_color(rgb(p.secondary)).child(label))
-        .child(div().flex_1().min_w_0().child(Input::new(input).disabled(readonly)))
+        .child(div().flex_1().min_w_0().child(Input::new(input).readonly(readonly)))
 }
 
 fn environment(name: &str, p: Palette) -> impl IntoElement {
@@ -665,11 +668,21 @@ impl Render for ManagerView {
                         this.remove_tag(&tag_name,window,cx);
                     }))));
         }
-        let tags_field = div().h_flex().items_center().gap_3()
-            .child(div().w(px(104.)).text_sm().text_color(rgb(p.secondary)).child("标签"))
+        let tags_field = div().h_flex().items_start().gap_3().min_h(px(44.))
+            .child(div().w(px(104.)).py_2().text_sm().text_color(rgb(p.secondary)).child("标签"))
             .child(div().v_flex().flex_1().min_w_0().gap_2()
-                .child(Input::new(&self.tags))
-                .when(!raw_tags.trim().is_empty(), |el| el.child(tag_chips)));
+                .child(div().h_flex().items_center().gap_2().flex_wrap()
+                    .when(!raw_tags.trim().is_empty(), |el| el.child(tag_chips))
+                    .child(div().id("tag-editor-toggle").cursor_pointer()
+                        .rounded_lg().border_1().border_color(rgb(p.border))
+                        .px_3().py_2().bg(rgb(p.control))
+                        .text_xs().text_color(rgb(p.secondary))
+                        .child(if self.tag_input_open { "完成编辑" } else if raw_tags.trim().is_empty() { "+ 添加标签" } else { "+ 编辑标签" })
+                        .on_click(cx.listener(|this,_,_,cx| {
+                            this.tag_input_open = !this.tag_input_open;
+                            cx.notify();
+                        }))))
+                .when(self.tag_input_open, |el| el.child(Input::new(&self.tags))));
 
         // Tabs are real controls; each exposes a focused subset of the existing SSH editor.
         let mut detail_tabs = div().h_flex().items_center().gap_4().px_4()
@@ -696,6 +709,9 @@ impl Render for ManagerView {
                     }))
             );
         }
+        let notes_field = div().h_flex().items_start().gap_3()
+            .child(div().w(px(104.)).py_2().text_sm().text_color(rgb(p.secondary)).child("备注"))
+            .child(div().flex_1().min_w_0().child(Input::new(&self.notes).h(px(92.))));
         let favorite_switch = div().h_flex().items_center().justify_between().px_1().py_3()
             .child(div().h_flex().items_center().gap_2()
                 .child(Icon::new(IconName::Star))
@@ -709,7 +725,7 @@ impl Render for ManagerView {
                 .when(!self.favorite, |el| el.child(div().flex_1()))
                 .on_click(cx.listener(Self::toggle_favorite)));
         let detail_panel = match self.detail_tab {
-            DetailTab::Basic => div().v_flex().gap_3()
+            DetailTab::Basic => div().v_flex().gap_4()
                 .child(detail_field("显示名称", &self.name, false, p))
                 .child(detail_field("SSH 别名", &self.alias, imported, p))
                 .child(detail_field("主机名 / IP", &self.hostname, imported, p))
@@ -718,7 +734,7 @@ impl Render for ManagerView {
                 .child(detail_field("身份文件", &self.identity, imported, p))
                 .child(group_picker)
                 .child(tags_field)
-                .child(detail_field("备注", &self.notes, false, p))
+                .child(notes_field)
                 .child(favorite_switch),
             DetailTab::Connection => div().v_flex().gap_3()
                 .child(div().text_sm().font_semibold().text_color(rgb(p.primary))
@@ -736,7 +752,7 @@ impl Render for ManagerView {
                     .child("分类与备注"))
                 .child(group_picker)
                 .child(tags_field)
-                .child(detail_field("备注", &self.notes, false, p)),
+                .child(notes_field),
             DetailTab::Advanced => div().v_flex().gap_4()
                 .child(div().text_sm().font_semibold().text_color(rgb(p.primary))
                     .child("高级连接选项"))
@@ -943,16 +959,18 @@ impl Render for ManagerView {
                     .on_click(cx.listener(Self::toggle_favorite))))
             .child(detail_tabs)
             .when(self.feedback != Feedback::Info, |el| el.child(banner))
-            .child(div().flex_1().min_h_0().overflow_y_scrollbar().px_5().py_4()
+            .child(div().flex_1().min_h_0().overflow_y_scrollbar().px_5().py_5()
                 .child(detail_panel))
             .child(div().h_flex().items_center().gap_2().px_4().py_3()
                 .border_t_1().border_color(rgb(p.border))
-                .child(div().id("main-interaction-022").w(px(172.))
+                .child(div().id("main-interaction-022").w(px(210.))
                     .cursor_pointer().rounded_lg().px_3().py_3()
                     .bg(rgb(p.accent)).hover(|style| style.bg(rgb(p.selected_border)))
                     .text_color(rgb(p.accent_foreground))
                     .text_sm().font_semibold().flex().items_center().justify_center()
-                    .child("在 Warp 中打开 ↗")
+                    .child(div().h_flex().items_center().gap_2()
+                        .child(Icon::new(IconName::SquareTerminal))
+                        .child("在 Warp 中打开"))
                     .on_click(cx.listener(Self::connect)))
                 .child(div().id("main-interaction-023").cursor_pointer().rounded_lg()
                     .px_3().py_3().border_1().border_color(rgb(p.border))
