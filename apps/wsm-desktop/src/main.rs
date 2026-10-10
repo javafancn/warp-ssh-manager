@@ -836,7 +836,7 @@ impl Render for ManagerView {
         let sidebar = div().w(px(330.)).h_full().v_flex().min_h_0()
             .bg(linear_gradient(160.,linear_color_stop(rgb(p.sidebar),0.),linear_color_stop(rgb(p.sidebar_end),1.)))
             .border_r_1().border_color(rgb(p.border))
-            .child(div().h_flex().items_center().gap_3().px_4().py_5()
+            .child(div().h_flex().items_center().gap_3().px_4().pt_16().pb_5()
                 .child(div().w(px(54.)).h(px(54.)).rounded_lg().shadow_sm()
                     .bg(linear_gradient(160.,linear_color_stop(rgb(0x28D8F6),0.),linear_color_stop(rgb(0x1231E9),1.)))
                     .border_1().border_color(rgb(p.selected_border))
@@ -889,7 +889,7 @@ impl Render for ManagerView {
                         this.actions_open=!this.actions_open; cx.notify();
                     }))));
 
-        let toolbar = div().h_flex().items_center().justify_between().px_5().py_3()
+        let toolbar = div().h_flex().h(px(76.)).items_center().justify_between().px_5()
             .bg(linear_gradient(90.,linear_color_stop(rgb(p.titlebar),0.),linear_color_stop(rgb(p.titlebar_end),1.)))
             .border_b_1().border_color(rgb(p.border))
             .child(div().text_xl().font_semibold().text_color(rgb(p.primary))
@@ -1032,6 +1032,12 @@ fn main()->Result<()> {
         tray::install(cx);
         let options=WindowOptions {
             window_bounds:Some(WindowBounds::centered(size(px(1480.),px(900.)),cx)),
+            window_min_size:Some(size(px(1300.),px(720.))),
+            titlebar:Some(TitlebarOptions {
+                title:None,
+                appears_transparent:true,
+                traffic_light_position:Some(point(px(18.),px(18.))),
+            }),
             ..WindowOptions::default()
         };
         cx.open_window(options,|window,cx| {
