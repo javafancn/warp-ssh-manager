@@ -416,11 +416,19 @@ impl ManagerView {
 
 // Reusable, semantic styles keep Dark, Light and System modes visually identical.
 // macOS chrome stays native. Never draw a second set of traffic-light buttons.
-fn detail_field(label: &'static str, input: &Entity<InputState>, readonly: bool, p: Palette) -> impl IntoElement {
-    // The GPUI component input already draws a focus ring and border: avoid double frames.
+fn detail_field(label: &'static str, input: &Entity<InputState>, readonly: bool, p: Palette, cx: &Context<ManagerView>) -> impl IntoElement {
+    // gpui-component 0.5.1 lacks Input::readonly. Preserve copy-friendly-looking
+    // normal surfaces for imported SSH data without accidentally permitting edits.
+    let display_value = input.read(cx).value().to_string();
     div().h_flex().items_center().gap_3().min_h(px(44.))
         .child(div().w(px(104.)).text_sm().text_color(rgb(p.secondary)).child(label))
-        .child(div().flex_1().min_w_0().child(Input::new(input).readonly(readonly)))
+        .child(div().flex_1().min_w_0()
+            .when(readonly, |el| el.child(div().rounded_lg().border_1()
+                .border_color(rgb(p.border)).bg(rgb(p.inspector))
+                .px_3().py_2().min_h(px(37.))
+                .text_sm().text_color(rgb(p.primary))
+                .child(display_value.clone())))
+            .when(!readonly, |el| el.child(Input::new(input))))
 }
 
 fn environment(name: &str, p: Palette) -> impl IntoElement {
@@ -730,12 +738,12 @@ impl Render for ManagerView {
                 .on_click(cx.listener(Self::toggle_favorite)));
         let detail_panel = match self.detail_tab {
             DetailTab::Basic => div().v_flex().gap_4()
-                .child(detail_field("显示名称", &self.name, false, p))
-                .child(detail_field("SSH 别名", &self.alias, imported, p))
-                .child(detail_field("主机名 / IP", &self.hostname, imported, p))
-                .child(detail_field("用户名", &self.username, imported, p))
-                .child(detail_field("端口", &self.port, imported, p))
-                .child(detail_field("身份文件", &self.identity, imported, p))
+                .child(detail_field("显示名称", &self.name, false, p, cx))
+                .child(detail_field("SSH 别名", &self.alias, imported, p, cx))
+                .child(detail_field("主机名 / IP", &self.hostname, imported, p, cx))
+                .child(detail_field("用户名", &self.username, imported, p, cx))
+                .child(detail_field("端口", &self.port, imported, p, cx))
+                .child(detail_field("身份文件", &self.identity, imported, p, cx))
                 .child(group_picker)
                 .child(tags_field)
                 .child(notes_field)
@@ -745,12 +753,12 @@ impl Render for ManagerView {
                     .child("SSH 连接参数"))
                 .child(div().text_xs().text_color(rgb(p.tertiary))
                     .child("由 Warp 使用系统 OpenSSH 发起连接"))
-                .child(detail_field("SSH 别名", &self.alias, imported, p))
-                .child(detail_field("主机名 / IP", &self.hostname, imported, p))
-                .child(detail_field("用户名", &self.username, imported, p))
-                .child(detail_field("端口", &self.port, imported, p))
-                .child(detail_field("身份文件", &self.identity, imported, p))
-                .child(detail_field("跳板机", &self.jump, imported, p)),
+                .child(detail_field("SSH 别名", &self.alias, imported, p, cx))
+                .child(detail_field("主机名 / IP", &self.hostname, imported, p, cx))
+                .child(detail_field("用户名", &self.username, imported, p, cx))
+                .child(detail_field("端口", &self.port, imported, p, cx))
+                .child(detail_field("身份文件", &self.identity, imported, p, cx))
+                .child(detail_field("跳板机", &self.jump, imported, p, cx)),
             DetailTab::Tags => div().v_flex().gap_4()
                 .child(div().text_sm().font_semibold().text_color(rgb(p.primary))
                     .child("分类与备注"))
@@ -760,7 +768,7 @@ impl Render for ManagerView {
             DetailTab::Advanced => div().v_flex().gap_4()
                 .child(div().text_sm().font_semibold().text_color(rgb(p.primary))
                     .child("高级连接选项"))
-                .child(detail_field("跳板机", &self.jump, imported, p))
+                .child(detail_field("跳板机", &self.jump, imported, p, cx))
                 .child(favorite_switch)
                 .child(div().rounded_lg().px_3().py_3().bg(rgb(p.control))
                     .text_xs().text_color(rgb(p.secondary))
