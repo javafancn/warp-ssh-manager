@@ -1123,7 +1123,7 @@ impl Render for ManagerView {
                         .rounded_lg().px_3().py_3().bg(rgb(p.danger_surface))
                         .text_color(rgb(p.danger)).text_sm()
                         .child(if self.confirm_delete { "确认删除" } else { "删除" })
-                        .on_click(cx.listener(Self::remove)))))
+                        .on_click(cx.listener(Self::remove)))));
 
         // No host selected means "welcome/select a host", NOT "new host editor".
         // New host editing is an explicit action and does not fabricate a host.
