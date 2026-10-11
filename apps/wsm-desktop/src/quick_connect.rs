@@ -110,7 +110,7 @@ impl Render for QuickConnect {
         }
         div().size_full().v_flex().p_4().gap_3()
             .bg(linear_gradient(145.,
-                linear_color_stop(rgb(p.canvas_start),0.),
+                linear_color_stop(rgba(p.canvas_start),0.),
                 linear_color_stop(rgb(p.canvas_end),1.)))
             .text_color(rgb(p.primary))
             .child(div().h_flex().justify_between().items_center().py_2()
@@ -145,6 +145,7 @@ pub fn open_window(cx:&mut App) {
         window_bounds:Some(WindowBounds::centered(size(px(480.),px(460.)),cx)),
         kind:WindowKind::Floating,
         is_resizable:false,
+        window_background: WindowBackgroundAppearance::Blurred,
         ..WindowOptions::default()
     };
     if let Err(err)=cx.open_window(opts,|window,cx| {
