@@ -49,17 +49,29 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 </dict></plist>
 PLIST
 plutil -lint "$app/Contents/Info.plist"
-# Convert the bundled PNG icon into an Apple .icns using macOS tools.
+# Render the approved scalable app icon into a 1024px bitmap, preserving gradients
+# for Finder, Dock and Launchpad. Keep the separate mark in app resources for GPUI.
+# The librsvg renderer is a build-time dependency only; installed users do not need it.
+if ! command -v rsvg-convert >/dev/null 2>&1; then
+  command -v brew >/dev/null || { echo 'Missing rsvg-convert; install with brew install librsvg' >&2; exit 1; }
+  brew install librsvg
+fi
+[[ -s assets/brand-app-icon.svg && -s assets/brand-mark.svg ]] || { echo 'Brand SVG resources are missing.' >&2; exit 1; }
+rsvg-convert -w 1024 -h 1024 assets/brand-app-icon.svg -o dist/brand-app-icon-1024.png
+cp assets/brand-mark.svg "$app/Contents/Resources/brand-mark.svg"
+[[ -s dist/brand-app-icon-1024.png && -s "$app/Contents/Resources/brand-mark.svg" ]] || { echo 'Brand resources failed validation.' >&2; exit 1; }
+# Convert the generated artwork into an Apple .icns using macOS tools.
 iconset='dist/WarpSSHManager.iconset'
 rm -rf "$iconset"
 mkdir -p "$iconset"
 for n in 16 32 128 256 512; do
-  sips -s format png -z "$n" "$n" assets/app-icon-1024.png --out "$iconset/icon_${n}x${n}.png" >/dev/null
+  sips -s format png -z "$n" "$n" dist/brand-app-icon-1024.png --out "$iconset/icon_${n}x${n}.png" >/dev/null
   size=$((n*2))
-  sips -s format png -z "$size" "$size" assets/app-icon-1024.png --out "$iconset/icon_${n}x${n}@2x.png" >/dev/null
+  sips -s format png -z "$size" "$size" dist/brand-app-icon-1024.png --out "$iconset/icon_${n}x${n}@2x.png" >/dev/null
 done
 iconutil -c icns "$iconset" -o "$app/Contents/Resources/WarpSSHManager.icns"
 rm -rf "$iconset"
+[[ -s "$app/Contents/Resources/WarpSSHManager.icns" ]] || { echo 'Brand .icns generation failed.' >&2; exit 1; }
 # Ad-hoc signing is appropriate for local test builds; it is not Developer ID notarization.
 codesign --force --sign - --timestamp=none "$app"
 codesign --verify --verbose=2 "$app"
