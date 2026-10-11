@@ -37,7 +37,7 @@ pub fn install(cx: &mut gpui::App) {
             let yy=y as f32;
             let center=15.5f32;
             let distance=(yy-center).abs();
-            let arm=(distance*0.82).min(12.0);
+            let arm=(12.0-distance*0.82).max(0.0);
             xx >= 1.0+arm && xx <= 7.0+arm && (yy>=4.0 && yy<=28.0)
         };
         let a=glyph(1.0) || glyph(12.0);
