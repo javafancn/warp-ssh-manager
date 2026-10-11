@@ -78,6 +78,18 @@ pub struct Palette {
     pub card_selected_muted: u32,
     pub input_surface: u32,
     pub input_surface_end: u32,
+    // Eight-digit RGBA colors for actual translucent panes over the gradient canvas.
+    pub canvas_start: u32,
+    pub canvas_end: u32,
+    pub glass_sidebar: u32,
+    pub glass_toolbar: u32,
+    pub glass_list: u32,
+    pub glass_inspector: u32,
+    pub glass_card: u32,
+    pub glass_selected: u32,
+    pub glass_control: u32,
+    pub glass_input: u32,
+    pub glass_border: u32,
 }
 
 impl Palette {
@@ -99,6 +111,12 @@ impl Palette {
                 card_selected: 0x153767, card_selected_end: 0x28518A,
                 card_selected_muted: 0xC1D4F0,
                 input_surface: 0x202E45, input_surface_end: 0x273650,
+                canvas_start: 0x0B1628, canvas_end: 0x242039,
+                glass_sidebar: 0x19253BDC, glass_toolbar: 0x14243BC8,
+                glass_list: 0x15243ABD, glass_inspector: 0x17243AD9,
+                glass_card: 0x2A3857D6, glass_selected: 0x224F86D9,
+                glass_control: 0x34425BAD, glass_input: 0x273750BB,
+                glass_border: 0xA9C4ED29,
             }
         } else {
             Self {
@@ -117,6 +135,12 @@ impl Palette {
                 card_selected: 0xDFEDFF, card_selected_end: 0xF3F8FF,
                 card_selected_muted: 0x58718F,
                 input_surface: 0xFBFCFE, input_surface_end: 0xFFFFFF,
+                canvas_start: 0xDCEAF8, canvas_end: 0xEEE2F0,
+                glass_sidebar: 0xF7FAFFD1, glass_toolbar: 0xFFFFFFBF,
+                glass_list: 0xF8FBFFB3, glass_inspector: 0xFFFFFFD9,
+                glass_card: 0xFFFFFFE0, glass_selected: 0xE0ECFFD9,
+                glass_control: 0xFFFFFFA8, glass_input: 0xFFFFFFC4,
+                glass_border: 0x7189AF39,
             }
         }
     }
@@ -131,6 +155,8 @@ mod tests {
         let light=Palette::new(false);
         assert_ne!(dark.app,light.app);
         assert_ne!(dark.selected,light.selected);
+        assert_ne!(dark.glass_sidebar, light.glass_sidebar);
+        assert_eq!(light.glass_card & 0xff, 0xE0);
     }
     #[test]
     fn explicit_override_is_independent_of_system() {
