@@ -78,9 +78,9 @@ impl Render for QuickConnect {
                 .map(|group| group.name.as_str()).unwrap_or("未分组");
             list = list.child(div().id(SharedString::from(format!("quick-host-{id}")))
                 .h_flex().items_center().gap_3().px_3().py_3().rounded_lg()
-                .bg(rgb(if picked { p.selected } else { p.inspector }))
+                .bg(rgba(if picked { p.glass_selected } else { p.glass_card }))
                 .border_1().border_color(rgb(if picked { p.selected_border } else { p.border }))
-                .hover(|style| style.bg(rgb(if picked { p.selected } else { p.chip })))
+                .hover(|style| style.border_color(rgb(p.selected_border)))
                 .cursor_pointer()
                 .child(div().w(px(34.)).h(px(34.)).rounded_lg()
                     .bg(rgb(if picked { p.prod_surface } else { p.control }))
@@ -109,7 +109,10 @@ impl Render for QuickConnect {
                 .child(div().text_sm().text_color(rgb(p.secondary)).child("没有找到匹配的主机")));
         }
         div().size_full().v_flex().p_4().gap_3()
-            .bg(rgb(p.inspector)).text_color(rgb(p.primary))
+            .bg(linear_gradient(145.,
+                linear_color_stop(rgb(p.canvas_start),0.),
+                linear_color_stop(rgb(p.canvas_end),1.)))
+            .text_color(rgb(p.primary))
             .child(div().h_flex().justify_between().items_center().py_2()
                 .child(div().h_flex().items_center().gap_3()
                     .child(img(brand_mark_path()).w(px(45.)).h(px(32.)).object_fit(ObjectFit::Contain))
@@ -118,20 +121,20 @@ impl Render for QuickConnect {
                         .child(div().text_xs().text_color(rgb(p.tertiary))
                             .child("快速查找并在 Warp 中打开 SSH"))))
                 .child(div().cursor_pointer().px_3().py_2().rounded_lg()
-                    .bg(rgb(p.control)).text_color(rgb(p.secondary)).child(Icon::new(IconName::Close))
+                    .bg(rgba(p.glass_control)).text_color(rgb(p.secondary)).child(Icon::new(IconName::Close))
                     .id("quick_connect-action-98").on_click(cx.listener(|_, _, window, _| window.remove_window()))))
-            .child(div().h_flex().items_center().rounded_lg().bg(rgb(p.control))
+            .child(div().h_flex().items_center().rounded_lg().bg(rgba(p.glass_control))
                 .child(div().flex_1().min_w_0()
                     .child(Input::new(&self.search).prefix(Icon::new(IconName::Search).small())))
                 .child(div().rounded_md().px_2().py_1().mr_2()
-                    .bg(rgb(p.chip)).text_xs().text_color(rgb(p.tertiary)).child("↵")))
+                    .bg(rgba(p.glass_control)).text_xs().text_color(rgb(p.tertiary)).child("↵")))
             .child(div().flex_1().min_h_0().overflow_y_scrollbar().child(list))
             .child(div().pt_3().border_t_1().border_color(rgb(p.border))
                 .h_flex().justify_between().items_center()
                 .child(div().flex_1().min_w_0().text_xs()
                     .text_color(rgb(if failed { p.danger } else { p.secondary }))
                     .child(self.status.clone()))
-                .child(div().px_2().py_1().rounded_md().bg(rgb(p.chip))
+                .child(div().px_2().py_1().rounded_md().bg(rgba(p.glass_control))
                     .text_xs().text_color(rgb(p.tertiary)).child("在 Warp 中打开 ↗")))
     }
 }
