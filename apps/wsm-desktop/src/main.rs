@@ -16,6 +16,20 @@ use wsm_core::{AppPaths, Group, Host, HostInput, HostSource, Manager};
 
 mod theme;
 mod quick_connect;
+
+// Load the multicolor approved brand mark as a real image (not a tinted SVG mask).
+// The packaged application uses Contents/Resources; cargo run uses the source asset.
+fn brand_mark_path() -> std::path::PathBuf {
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(contents) = exe.parent().and_then(|macos| macos.parent()) {
+            let bundled = contents.join("Resources").join("brand-mark.svg");
+            if bundled.is_file() { return bundled; }
+        }
+    }
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../assets/brand-mark.svg")
+}
+
 use theme::{Appearance, Palette};
 
 #[cfg(feature = "tray")]
@@ -957,12 +971,8 @@ impl Render for ManagerView {
             .bg(linear_gradient(160.,linear_color_stop(rgb(p.sidebar),0.),linear_color_stop(rgb(p.sidebar_end),1.)))
             .border_r_1().border_color(rgb(p.border))
             .child(div().h_flex().items_center().gap_2().px_3().pt_16().pb_4()
-                .child(div().w(px(46.)).h(px(46.)).rounded_lg().shadow_sm()
-                    .bg(linear_gradient(160.,linear_color_stop(rgb(0x24BCFC),0.),linear_color_stop(rgb(0x153BF1),1.)))
-                    .border_1().border_color(rgb(p.selected_border))
-                    .flex().items_center().justify_center()
-                    .text_color(rgb(p.accent_foreground)).text_lg().font_semibold()
-                    .child(">_"))
+                .child(img(brand_mark_path()).w(px(56.)).h(px(46.))
+                    .object_fit(ObjectFit::Contain))
                 .child(div().v_flex().gap_1()
                     .child(div().text_base().font_semibold().text_color(rgb(p.primary))
                         .child("Warp SSH 管理器"))
@@ -1209,7 +1219,7 @@ fn main()->Result<()> {
             titlebar:Some(TitlebarOptions {
                 title:None,
                 appears_transparent:true,
-                traffic_light_position:Some(point(px(18.),px(18.))),
+                traffic_light_position:Some(point(px(9.),px(9.))),
             }),
             ..WindowOptions::default()
         };
