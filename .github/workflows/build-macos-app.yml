@@ -75,6 +75,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: WarpSSHManager-DMG-${{ matrix.arch }}-macOS12
-          path: dist/WarpSSHManager-0.3.2-${{ matrix.arch }}.dmg
+          path: dist/WarpSSHManager-0.3.3-${{ matrix.arch }}.dmg
           if-no-files-found: error
           retention-days: 30
