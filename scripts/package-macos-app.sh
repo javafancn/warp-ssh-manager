@@ -41,8 +41,8 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleName</key><string>Warp SSH 管理器</string>
 <key>CFBundleDisplayName</key><string>Warp SSH 管理器</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.3.2</string>
-<key>CFBundleVersion</key><string>5</string>
+<key>CFBundleShortVersionString</key><string>0.3.3</string>
+<key>CFBundleVersion</key><string>6</string>
 <key>CFBundleIconFile</key><string>WarpSSHManager</string>
 <key>LSMinimumSystemVersion</key><string>12.0</string>
 <key>NSHighResolutionCapable</key><true/>
@@ -68,12 +68,16 @@ done
 iconutil -c icns "$iconset" -o "$app/Contents/Resources/WarpSSHManager.icns"
 rm -rf "$iconset"
 [[ -s "$app/Contents/Resources/WarpSSHManager.icns" ]] || { echo 'Brand .icns generation failed.' >&2; exit 1; }
+# Fail CI before distributing an app whose Dock or internal logo failed to bundle.
+[[ -s "$app/Contents/Resources/brand-mark.png" ]] || { echo 'Internal brand PNG not bundled.' >&2; exit 1; }
+sips -g pixelWidth -g pixelHeight "$app/Contents/Resources/brand-mark.png" >/dev/null
+sips -g pixelWidth -g pixelHeight "$app/Contents/Resources/WarpSSHManager.icns" >/dev/null
 # Ad-hoc signing is appropriate for local test builds; it is not Developer ID notarization.
 codesign --force --sign - --timestamp=none "$app"
 codesign --verify --verbose=2 "$app"
 bash scripts/verify-macos-binary.sh "$app"
-zip_path="dist/WarpSSHManager-0.3.2-${arch}.app.zip"
-dmg_path="dist/WarpSSHManager-0.3.2-${arch}.dmg"
+zip_path="dist/WarpSSHManager-0.3.3-${arch}.app.zip"
+dmg_path="dist/WarpSSHManager-0.3.3-${arch}.dmg"
 rm -f "$zip_path" "$dmg_path"
 ditto -c -k --sequesterRsrc --keepParent "$app" "$zip_path"
 # Finder-style drag-to-Applications installer instead of a raw .app disk image.
