@@ -965,11 +965,11 @@ impl Render for ManagerView {
 
         // Window shell mirrors the reference: persistent branded sidebar,
         // independent toolbar over connection cards and inspector, native macOS chrome.
-        let sidebar = div().w(px(266.)).h_full().v_flex().min_h_0()
+        let sidebar = div().w(px(278.)).h_full().v_flex().min_h_0()
             .bg(rgba(p.glass_sidebar))
             .border_r_1().border_color(rgba(p.glass_border))
             .child(div().h_flex().items_center().px_4().pt_16().pb_4()
-                .child(img(brand_mark_path()).w(px(91.)).h(px(58.))
+                .child(img(brand_mark_path()).w(px(108.)).h(px(62.))
                     .object_fit(ObjectFit::Contain)))
             .child(div().v_flex().flex_1().min_h_0().px_3().py_2().gap_3()
                 .child(folder_items)
@@ -1048,7 +1048,7 @@ impl Render for ManagerView {
                     .child("+ 新建主机")
                     .on_click(cx.listener(|this,_,window,cx| this.new_host(window,cx)))));
 
-        let connections_pane = div().w(px(446.)).h_full().v_flex().min_h_0()
+        let connections_pane = div().w(px(438.)).h_full().v_flex().min_h_0()
             .bg(rgba(p.glass_list)).border_r_1().border_color(rgba(p.glass_border))
             .p_3().gap_2()
             .child(div().h_flex().items_center().gap_2()
@@ -1188,9 +1188,8 @@ impl Render for ManagerView {
                 .child(inspector_pane));
 
         div().size_full().v_flex()
-            .bg(linear_gradient(145.,
-                linear_color_stop(rgb(p.canvas_start),0.),
-                linear_color_stop(rgb(p.canvas_end),1.)))
+            .font_family(".AppleSystemUIFont")
+            .bg(rgba(if self.appearance.dark(window.appearance()) { 0x0B1628A6 } else { 0xE6EEF780 }))
             .text_color(rgb(p.primary))
             .child(div().h_flex().flex_1().min_h_0().items_start()
                 .child(sidebar)
@@ -1219,6 +1218,7 @@ fn main()->Result<()> {
                 appears_transparent:true,
                 traffic_light_position:Some(point(px(9.),px(9.))),
             }),
+            window_background: WindowBackgroundAppearance::Blurred,
             ..WindowOptions::default()
         };
         cx.open_window(options,|window,cx| {
