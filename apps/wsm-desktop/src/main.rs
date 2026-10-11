@@ -41,6 +41,7 @@ struct ManagerView {
     hosts: Vec<Host>,
     groups: Vec<Group>,
     selected: Option<Uuid>,
+    editing_new: bool,
     detail_tab: DetailTab,
     filter: ViewFilter,
     editor_group: Option<Uuid>,
@@ -102,8 +103,16 @@ fn is_descendant(groups: &[Group], id: Option<Uuid>, target: Uuid) -> bool {
 impl ManagerView {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let manager=Manager::discover().expect("unable to open local database");
-        let hosts=manager.db.list_hosts().unwrap_or_default();
-        let groups=manager.db.list_groups().unwrap_or_default();
+        // Do not turn a database error into an apparently empty library.
+        let (hosts,host_error)=match manager.db.list_hosts() {
+            Ok(hosts)=>(hosts,None),
+            Err(err)=>(Vec::new(),Some(format!("读取主机数据库失败：{err:#}"))),
+        };
+        let (groups,group_error)=match manager.db.list_groups() {
+            Ok(groups)=>(groups,None),
+            Err(err)=>(Vec::new(),Some(format!("读取分组失败：{err:#}"))),
+        };
+        let load_error=host_error.or(group_error);
         let appearance=Appearance::read(&manager.paths.data_dir);
         let search=make_input(window,cx,"搜索名称、IP 或 SSH 别名…");
         let subscription=cx.subscribe_in(&search,window,|_,_,event:&InputEvent,_,cx| {
@@ -121,7 +130,8 @@ impl ManagerView {
         });
         let first_host = hosts.first().map(|host| host.id);
         let mut view = Self {
-            manager,hosts,groups,selected:None,detail_tab:DetailTab::Basic,filter:ViewFilter::All,
+            manager,hosts,groups,selected:None,editing_new:false,
+            detail_tab:DetailTab::Basic,filter:ViewFilter::All,
             editor_group:None,group_picker_open:false,actions_open:false,filter_menu_open:false,creating_group:false,tag_input_open:false,expanded_card:None,collapsed_groups:HashSet::new(),appearance,search,
             group_input:make_input(window,cx,"新建分组名称"),
             name:make_input(window,cx,"服务器显示名称"),
@@ -134,8 +144,8 @@ impl ManagerView {
             tags,
             notes:cx.new(|cx| InputState::new(window,cx).placeholder("添加主机备注…").multi_line(true)),
             favorite:false,confirm_delete:false,
-            message:"请选择一台主机；新增自管主机前请先初始化 SSH 集成。".into(),
-            feedback:Feedback::Info,
+            message:load_error.clone().unwrap_or_else(||"请选择主机或导入现有 SSH 配置。".into()),
+            feedback:if load_error.is_some(){Feedback::Error}else{Feedback::Info},
             _subscription:subscription,_tags_subscription:tags_subscription,
             _appearance_subscription:appearance_subscription,
         };
@@ -160,6 +170,7 @@ impl ManagerView {
     fn select_host(&mut self,id:Uuid,window:&mut Window,cx:&mut Context<Self>) {
         let Some(host)=self.hosts.iter().find(|h|h.id==id).cloned() else {return};
         self.selected=Some(id);
+        self.editing_new=false;
         self.detail_tab=DetailTab::Basic;
         self.editor_group=host.group_id;
         self.group_picker_open=false;
@@ -189,6 +200,7 @@ impl ManagerView {
 
     fn new_host(&mut self,window:&mut Window,cx:&mut Context<Self>) {
         self.selected=None;
+        self.editing_new=true;
         self.detail_tab=DetailTab::Basic;
         self.favorite=false;
         self.editor_group=match self.filter {ViewFilter::Group(id)=>Some(id),_=>None};
@@ -268,6 +280,7 @@ impl ManagerView {
                     Err(err)=>{self.feedback=Feedback::Warning;self.message=format!("主机已保存，但标签/备注保存失败：{err:#}")},
                 }
                 self.selected=Some(id);
+                self.editing_new=false;
                 self.refresh(cx);
             },
             Err(err)=>{
