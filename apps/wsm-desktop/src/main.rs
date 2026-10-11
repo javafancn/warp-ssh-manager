@@ -22,12 +22,12 @@ mod quick_connect;
 fn brand_mark_path() -> std::path::PathBuf {
     if let Ok(exe) = std::env::current_exe() {
         if let Some(contents) = exe.parent().and_then(|macos| macos.parent()) {
-            let bundled = contents.join("Resources").join("brand-mark.svg");
+            let bundled = contents.join("Resources").join("brand-mark.png");
             if bundled.is_file() { return bundled; }
         }
     }
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../assets/brand-mark.svg")
+        .join("../../assets/brand-mark.png")
 }
 
 use theme::{Appearance, Palette};
