@@ -8,7 +8,7 @@ use gpui_component::StyledExt;
 use gpui_component::{input::{Input,InputEvent,InputState}, Icon, IconName, Root, Sizable};
 use uuid::Uuid;
 use wsm_core::{Host,Manager};
-use super::{environment, theme::{Appearance,Palette}};
+use super::{environment, brand_mark_path, theme::{Appearance,Palette}};
 
 pub struct QuickConnect {
     manager: Manager,
@@ -112,9 +112,7 @@ impl Render for QuickConnect {
             .bg(rgb(p.inspector)).text_color(rgb(p.primary))
             .child(div().h_flex().justify_between().items_center().py_2()
                 .child(div().h_flex().items_center().gap_3()
-                    .child(div().w(px(32.)).h(px(32.)).rounded_lg().bg(rgb(p.accent))
-                        .flex().items_center().justify_center()
-                        .font_semibold().text_color(rgb(p.accent_foreground)).child(Icon::new(IconName::SquareTerminal)))
+                    .child(img(brand_mark_path()).w(px(45.)).h(px(32.)).object_fit(ObjectFit::Contain))
                     .child(div().v_flex().gap_1()
                         .child(div().text_lg().font_semibold().child("快速连接"))
                         .child(div().text_xs().text_color(rgb(p.tertiary))
