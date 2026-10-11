@@ -456,8 +456,8 @@ fn detail_field(label: &'static str, input: &Entity<InputState>, readonly: bool,
         .child(div().w(px(104.)).text_sm().text_color(rgb(p.primary)).child(label))
         .child(div().flex_1().min_w_0()
             .when(label=="端口", |el| el.max_w(px(105.)))
-            .rounded_lg().border_1().border_color(rgb(p.border))
-            .bg(rgb(p.input_surface))
+            .rounded_lg().border_1().border_color(rgba(p.glass_border))
+            .bg(rgba(p.glass_input))
             .min_h(px(38.)).px_1()
             .when(readonly, |el| el.child(div().px_2().py_2().min_h(px(32.))
                 .text_sm().text_color(rgb(p.primary))
@@ -502,8 +502,7 @@ fn environment(name: &str, p: Palette) -> impl IntoElement {
 
 fn sidebar_row(icon: IconName, text: &'static str, count: usize, active: bool, p: Palette) -> impl IntoElement {
     div().h_flex().items_center().justify_between().rounded_lg().px_3().py_3()
-        .bg(if active { linear_gradient(90.,linear_color_stop(rgb(p.selected),0.),linear_color_stop(rgb(p.selected_end),1.)) }
-            else {linear_gradient(90.,linear_color_stop(rgb(p.sidebar),0.),linear_color_stop(rgb(p.sidebar_end),1.))})
+        .bg(rgba(if active { p.glass_selected } else { 0xFFFFFF00 }))
         .child(div().h_flex().items_center().gap_3().text_sm().font_semibold()
             .text_color(rgb(if active { p.accent } else { p.primary }))
             .child(Icon::new(icon)).child(text))
@@ -631,8 +630,7 @@ impl Render for ManagerView {
                 div().id(SharedString::from(format!("connection-row-{id}")))
                     .v_flex().rounded_lg().cursor_pointer().overflow_hidden().shadow_sm()
                     .border_1().border_color(rgb(if active { p.selected_border } else { p.border }))
-                    .bg(if active {linear_gradient(125.,linear_color_stop(rgb(p.card_selected),0.),linear_color_stop(rgb(p.card_selected_end),1.))}
-                        else {linear_gradient(90.,linear_color_stop(rgb(p.inspector),0.),linear_color_stop(rgb(p.card_end),1.))})
+                    .bg(rgba(if active { p.glass_selected } else { p.glass_card }))
                     .hover(|style| style.border_color(rgb(p.selected_border)))
                     .child(div().h_flex().items_center().gap_3().px_3().py_3()
                         .child(div().w(px(46.)).h(px(46.)).rounded_lg()
@@ -672,7 +670,7 @@ impl Render for ManagerView {
                                     cx.notify();
                                 })))))
                     .when(expanded, |el| el.child(div().h_flex().items_center().justify_between()
-                        .px_4().py_2().border_t_1().border_color(rgb(p.border))
+                        .px_4().py_2().border_t_1().border_color(rgba(p.glass_border))
                         .bg(rgb(if active { p.selected } else { p.control }))
                         .child(div().text_xs().text_color(rgb(if active { p.accent } else { p.secondary }))
                             .child("双击在 Warp 中连接"))
@@ -700,10 +698,10 @@ impl Render for ManagerView {
             if self.hosts.is_empty() && !library_error {
                 connections=connections.child(
                     div().v_flex().items_center().gap_3().px_4().py_8()
-                        .rounded_lg().bg(rgb(p.inspector)).border_1()
-                        .border_color(rgb(p.border)).shadow_sm()
+                        .rounded_lg().bg(rgba(p.glass_inspector)).border_1()
+                        .border_color(rgba(p.glass_border)).shadow_sm()
                         .child(div().w(px(64.)).h(px(64.)).rounded_lg()
-                            .bg(rgb(p.selected)).border_1().border_color(rgb(p.border))
+                            .bg(rgb(p.selected)).border_1().border_color(rgba(p.glass_border))
                             .flex().items_center().justify_center()
                             .text_color(rgb(p.accent))
                             .child(Icon::new(IconName::SquareTerminal)))
@@ -723,8 +721,8 @@ impl Render for ManagerView {
                                 .on_click(cx.listener(Self::import)))
                             .child(div().id("empty-create").cursor_pointer()
                                 .h_flex().items_center().justify_center().gap_2()
-                                .rounded_lg().border_1().border_color(rgb(p.border))
-                                .bg(rgb(p.inspector)).px_3().py_3()
+                                .rounded_lg().border_1().border_color(rgba(p.glass_border))
+                                .bg(rgba(p.glass_inspector)).px_3().py_3()
                                 .text_sm().text_color(rgb(p.primary))
                                 .child("+ 新建主机")
                                 .on_click(cx.listener(|this,_,window,cx| this.new_host(window,cx)))))
@@ -736,7 +734,7 @@ impl Render for ManagerView {
                 connections=connections.child(
                     div().v_flex().items_center().gap_3().pt_16().px_4()
                         .child(div().w(px(48.)).h(px(48.)).rounded_lg()
-                            .bg(rgb(p.control)).flex().items_center().justify_center()
+                            .bg(rgba(p.glass_control)).flex().items_center().justify_center()
                             .text_color(rgb(p.tertiary))
                             .child(Icon::new(IconName::Search)))
                         .child(div().text_sm().font_semibold().text_color(rgb(p.primary))
@@ -753,7 +751,7 @@ impl Render for ManagerView {
             .child(div().h_flex().items_center().gap_3()
                 .child(div().w(px(101.)).text_sm().text_color(rgb(p.secondary)).child("所属分组"))
                 .child(div().h_flex().flex_1().min_w_0().items_center().rounded_md().border_1()
-                    .border_color(rgb(p.border)).bg(rgb(p.input_surface))
+                    .border_color(rgba(p.glass_border)).bg(rgba(p.glass_input))
                     .min_h(px(36.)).px_3().py_2().cursor_pointer()
                     .child(Icon::new(IconName::Folder))
                     .child(div().flex_1().text_sm().text_color(rgb(p.primary))
@@ -814,8 +812,8 @@ impl Render for ManagerView {
                     div().h_flex().items_center().gap_2().flex_wrap()
                         .when(!parsed_tags.is_empty(), |el| el.child(tag_chips))
                         .child(div().id("tag-editor-open").cursor_pointer()
-                            .rounded_md().border_1().border_color(rgb(p.border))
-                            .px_3().py_2().bg(rgb(p.input_surface))
+                            .rounded_md().border_1().border_color(rgba(p.glass_border))
+                            .px_3().py_2().bg(rgba(p.glass_input))
                             .text_xs().text_color(rgb(p.secondary))
                             .child(if parsed_tags.is_empty() { "+ 添加标签" } else { "+ 编辑" })
                             .on_click(cx.listener(|this,_,_,cx| {
@@ -825,7 +823,7 @@ impl Render for ManagerView {
                 .when(self.tag_input_open, |el| el.child(
                     div().h_flex().items_center().gap_2()
                         .child(div().flex_1().min_w_0().rounded_md().border_1()
-                            .border_color(rgb(p.border)).bg(rgb(p.input_surface))
+                            .border_color(rgba(p.glass_border)).bg(rgba(p.glass_input))
                             .child(Input::new(&self.tags).appearance(false)))
                         .child(div().id("tag-editor-close").cursor_pointer()
                             .rounded_md().px_3().py_2().bg(rgb(p.chip))
@@ -837,7 +835,7 @@ impl Render for ManagerView {
 
         // Tabs are real controls; each exposes a focused subset of the existing SSH editor.
         let mut detail_tabs = div().h_flex().items_center().gap_2().px_4()
-            .border_b_1().border_color(rgb(p.border));
+            .border_b_1().border_color(rgba(p.glass_border));
         for (index, (tab, title)) in [
             (DetailTab::Basic, "基本信息"),
             (DetailTab::Connection, "连接配置"),
@@ -863,7 +861,7 @@ impl Render for ManagerView {
         let notes_field = div().h_flex().items_start().gap_3()
             .child(div().w(px(101.)).py_2().text_sm().text_color(rgb(p.secondary)).child("备注"))
             .child(div().flex_1().min_w_0().rounded_md().border_1()
-                .border_color(rgb(p.border)).bg(rgb(p.input_surface))
+                .border_color(rgba(p.glass_border)).bg(rgba(p.glass_input))
                 .px_2().py_1()
                 .child(Input::new(&self.notes).appearance(false).h(px(72.))));
         let favorite_switch = div().h_flex().items_center().justify_between().px_1().py_1()
@@ -912,7 +910,7 @@ impl Render for ManagerView {
                     .child("高级连接选项"))
                 .child(detail_field("跳板机", &self.jump, imported, p, cx))
                 .child(favorite_switch)
-                .child(div().rounded_lg().px_3().py_3().bg(rgb(p.control))
+                .child(div().rounded_lg().px_3().py_3().bg(rgba(p.glass_control))
                     .text_xs().text_color(rgb(p.secondary))
                     .child("连接配置由 OpenSSH 管理。导入的主机连接字段保持只读；可以修改备注、收藏和分组。")),
         };
@@ -941,17 +939,17 @@ impl Render for ManagerView {
         let tab_color = if warp_ready { p.success } else { p.tertiary };
 
         let mut secondary_actions = div().h_flex().items_center().gap_2().px_4().py_2()
-            .bg(rgb(p.titlebar)).border_b_1().border_color(rgb(p.border));
+            .bg(rgb(p.titlebar)).border_b_1().border_color(rgba(p.glass_border));
         if self.actions_open {
             secondary_actions = secondary_actions
                 .child(div().text_xs().text_color(rgb(p.secondary)).mr_3().child("配置管理"))
-                .child(div().cursor_pointer().rounded_md().px_3().py_2().bg(rgb(p.control))
+                .child(div().cursor_pointer().rounded_md().px_3().py_2().bg(rgba(p.glass_control))
                     .hover(|style| style.bg(rgb(p.chip)))
                     .text_xs().child("初始化 SSH").id("main-interaction-011").on_click(cx.listener(Self::init)))
-                .child(div().cursor_pointer().rounded_md().px_3().py_2().bg(rgb(p.control))
+                .child(div().cursor_pointer().rounded_md().px_3().py_2().bg(rgba(p.glass_control))
                     .hover(|style| style.bg(rgb(p.chip)))
                     .text_xs().child("导入 SSH 配置").id("main-interaction-012").on_click(cx.listener(Self::import)))
-                .child(div().cursor_pointer().rounded_md().px_3().py_2().bg(rgb(p.control))
+                .child(div().cursor_pointer().rounded_md().px_3().py_2().bg(rgba(p.glass_control))
                     .hover(|style| style.bg(rgb(p.chip)))
                     .text_xs().child("同步 Warp 标签配置").id("main-interaction-013").on_click(cx.listener(Self::sync)))
                 .child(div().flex_1())
@@ -968,16 +966,11 @@ impl Render for ManagerView {
         // Window shell mirrors the reference: persistent branded sidebar,
         // independent toolbar over connection cards and inspector, native macOS chrome.
         let sidebar = div().w(px(266.)).h_full().v_flex().min_h_0()
-            .bg(linear_gradient(160.,linear_color_stop(rgb(p.sidebar),0.),linear_color_stop(rgb(p.sidebar_end),1.)))
-            .border_r_1().border_color(rgb(p.border))
-            .child(div().h_flex().items_center().gap_2().px_3().pt_16().pb_4()
-                .child(img(brand_mark_path()).w(px(56.)).h(px(46.))
-                    .object_fit(ObjectFit::Contain))
-                .child(div().v_flex().gap_1()
-                    .child(div().text_base().font_semibold().text_color(rgb(p.primary))
-                        .child("Warp SSH 管理器"))
-                    .child(div().text_xs().text_color(rgb(p.tertiary))
-                        .child("高效管理 · 快速连接"))))
+            .bg(rgba(p.glass_sidebar))
+            .border_r_1().border_color(rgba(p.glass_border))
+            .child(div().h_flex().items_center().px_4().pt_16().pb_4()
+                .child(img(brand_mark_path()).w(px(91.)).h(px(58.))
+                    .object_fit(ObjectFit::Contain)))
             .child(div().v_flex().flex_1().min_h_0().px_3().py_2().gap_3()
                 .child(folder_items)
                 .child(div().h_flex().items_center().justify_between().pt_2()
@@ -1001,10 +994,10 @@ impl Render for ManagerView {
                         .child("创建")
                         .on_click(cx.listener(Self::add_group)))))
             .child(div().h_flex().items_center().gap_2().px_4().py_3()
-                .border_t_1().border_color(rgb(p.border))
+                .border_t_1().border_color(rgba(p.glass_border))
                 .child(div().id("show-sidebar-group-form").flex_1()
                     .cursor_pointer().h_flex().items_center().gap_2()
-                    .rounded_lg().px_2().py_2().bg(rgb(p.control))
+                    .rounded_lg().px_2().py_2().bg(rgba(p.glass_control))
                     .text_sm().text_color(rgb(p.primary))
                     .child("+")
                     .child("新建分组")
@@ -1013,20 +1006,20 @@ impl Render for ManagerView {
                         cx.notify();
                     })))
                 .child(div().id("sidebar-settings").cursor_pointer().px_3().py_2()
-                    .rounded_lg().bg(rgb(p.control)).text_color(rgb(p.secondary))
+                    .rounded_lg().bg(rgba(p.glass_control)).text_color(rgb(p.secondary))
                     .child(Icon::new(IconName::Settings))
                     .on_click(cx.listener(|this,_,_,cx| {
                         this.actions_open=!this.actions_open; cx.notify();
                     }))));
 
         let toolbar = div().h_flex().h(px(66.)).items_center().justify_between().px_4()
-            .bg(linear_gradient(90.,linear_color_stop(rgb(p.titlebar),0.),linear_color_stop(rgb(p.titlebar_end),1.)))
-            .border_b_1().border_color(rgb(p.border))
+            .bg(rgba(p.glass_toolbar))
+            .border_b_1().border_color(rgba(p.glass_border))
             .child(div().text_xl().font_semibold().text_color(rgb(p.primary))
                 .child("连接列表"))
             .child(div().h_flex().items_center().gap_3()
                 .child(div().h_flex().items_center().gap_1().p_1().rounded_lg()
-                    .bg(rgb(p.control)).border_1().border_color(rgb(p.border))
+                    .bg(rgba(p.glass_control)).border_1().border_color(rgba(p.glass_border))
                     .child(div().id("main-interaction-015").cursor_pointer().rounded_md()
                         .px_3().py_2()
                         .bg(rgb(if self.appearance == Appearance::System { p.inspector } else { p.control }))
@@ -1056,15 +1049,15 @@ impl Render for ManagerView {
                     .on_click(cx.listener(|this,_,window,cx| this.new_host(window,cx)))));
 
         let connections_pane = div().w(px(446.)).h_full().v_flex().min_h_0()
-            .bg(rgb(p.list)).border_r_1().border_color(rgb(p.border))
+            .bg(rgba(p.glass_list)).border_r_1().border_color(rgba(p.glass_border))
             .p_3().gap_2()
             .child(div().h_flex().items_center().gap_2()
                 .child(div().flex_1().min_w_0().rounded_lg().border_1()
-                    .border_color(rgb(p.border)).bg(rgb(p.control))
+                    .border_color(rgba(p.glass_border)).bg(rgba(p.glass_control))
                     .child(Input::new(&self.search)
                         .prefix(Icon::new(IconName::Search).small())))
                 .child(div().id("list-filter-menu-toggle").cursor_pointer().rounded_lg()
-                    .border_1().border_color(rgb(p.border)).px_3().py_2()
+                    .border_1().border_color(rgba(p.glass_border)).px_3().py_2()
                     .bg(rgb(if self.filter_menu_open { p.selected } else { p.control }))
                     .text_color(rgb(p.secondary))
                     .child(Icon::new(IconName::Settings))
@@ -1095,7 +1088,7 @@ impl Render for ManagerView {
                 .child(connections));
 
         let inspector_editor = div().size_full().v_flex().min_h_0()
-            .bg(rgb(p.inspector))
+            .bg(rgba(p.glass_inspector))
             .child(div().h_flex().items_center().justify_between().px_4().py_2()
                 .child(div().v_flex().gap_1()
                     .child(div().text_xl().font_semibold().text_color(rgb(p.primary))
@@ -1112,8 +1105,8 @@ impl Render for ManagerView {
             .child(div().flex_1().min_h_0().overflow_y_scrollbar().px_4().py_3()
                 .child(detail_panel))
             .child(div().h_flex().items_center().gap_2().px_4().py_3()
-                .border_t_1().border_color(rgb(p.border))
-                .bg(rgb(p.inspector))
+                .border_t_1().border_color(rgba(p.glass_border))
+                .bg(rgba(p.glass_inspector))
                 .when(selected_is_host, |el| el.child(
                     div().id("main-interaction-022").cursor_pointer()
                         .rounded_lg().px_4().py_3().shadow_sm()
@@ -1141,11 +1134,11 @@ impl Render for ManagerView {
         // New host editing is an explicit action and does not fabricate a host.
         let no_selection = self.selected.is_none() && !self.editing_new;
         let inspector_pane = div().flex_1().min_w_0().h_full().v_flex().min_h_0()
-            .bg(rgb(p.inspector))
+            .bg(rgba(p.glass_inspector))
             .when(!no_selection, |el| el.child(inspector_editor))
             .when(no_selection, |el| el.child(
                 div().size_full().v_flex()
-                    .child(div().px_5().py_5().border_b_1().border_color(rgb(p.border))
+                    .child(div().px_5().py_5().border_b_1().border_color(rgba(p.glass_border))
                         .child(div().text_xl().font_semibold().text_color(rgb(p.primary))
                             .child(if library_error { "数据读取异常" } else { "主机工作台" }))
                         .child(div().pt_2().text_sm().text_color(rgb(p.secondary))
@@ -1155,7 +1148,7 @@ impl Render for ManagerView {
                     .child(div().flex_1().v_flex().items_center().justify_center()
                         .px_6().gap_4()
                         .child(div().w(px(72.)).h(px(72.)).rounded_lg()
-                            .bg(rgb(p.selected)).border_1().border_color(rgb(p.border))
+                            .bg(rgb(p.selected)).border_1().border_color(rgba(p.glass_border))
                             .flex().items_center().justify_center()
                             .text_color(rgb(p.accent))
                             .child(Icon::new(IconName::SquareTerminal)))
@@ -1178,7 +1171,7 @@ impl Render for ManagerView {
                                     .text_color(rgb(p.tertiary))
                                     .child("左侧可以导入已有 SSH 配置，或创建新的主机连接"))))
                         .child(div().px_4().py_3().rounded_lg()
-                            .bg(rgb(p.control)).text_xs().text_color(rgb(p.tertiary))
+                            .bg(rgba(p.glass_control)).text_xs().text_color(rgb(p.tertiary))
                             .child(if library_error {
                                 self.message.clone()
                             } else {
@@ -1193,7 +1186,11 @@ impl Render for ManagerView {
                 .child(connections_pane)
                 .child(inspector_pane));
 
-        div().size_full().v_flex().bg(rgb(p.app)).text_color(rgb(p.primary))
+        div().size_full().v_flex()
+            .bg(linear_gradient(145.,
+                linear_color_stop(rgb(p.canvas_start),0.),
+                linear_color_stop(rgb(p.canvas_end),1.)))
+            .text_color(rgb(p.primary))
             .child(div().h_flex().flex_1().min_h_0().items_start()
                 .child(sidebar)
                 .child(workspace))
