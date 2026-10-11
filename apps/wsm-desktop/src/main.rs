@@ -438,13 +438,13 @@ fn detail_field(label: &'static str, input: &Entity<InputState>, readonly: bool,
     // gpui-component 0.5.1 lacks Input::readonly, so imported connection
     // values are shown in a non-editable surface matching the editable input.
     let display_value = input.read(cx).value().to_string();
-    div().h_flex().items_center().gap_3().min_h(px(38.))
-        .child(div().w(px(101.)).text_sm().text_color(rgb(p.secondary)).child(label))
+    div().h_flex().items_center().gap_3().min_h(px(40.))
+        .child(div().w(px(104.)).text_sm().text_color(rgb(p.primary)).child(label))
         .child(div().flex_1().min_w_0()
             .when(label=="端口", |el| el.max_w(px(105.)))
-            .rounded_md().border_1().border_color(rgb(p.border))
+            .rounded_lg().border_1().border_color(rgb(p.border))
             .bg(rgb(p.input_surface))
-            .min_h(px(36.)).px_1()
+            .min_h(px(38.)).px_1()
             .when(readonly, |el| el.child(div().px_2().py_2().min_h(px(32.))
                 .text_sm().text_color(rgb(p.primary))
                 .child(display_value.clone())))
@@ -620,20 +620,20 @@ impl Render for ManagerView {
                     .bg(if active {linear_gradient(125.,linear_color_stop(rgb(p.card_selected),0.),linear_color_stop(rgb(p.card_selected_end),1.))}
                         else {linear_gradient(90.,linear_color_stop(rgb(p.inspector),0.),linear_color_stop(rgb(p.card_end),1.))})
                     .hover(|style| style.border_color(rgb(p.selected_border)))
-                    .child(div().h_flex().items_center().gap_2().px_3().py_2()
-                        .child(div().w(px(42.)).h(px(42.)).rounded_lg()
-                            .border_1().border_color(rgb(if active { p.card_selected_muted } else { icon_outline }))
+                    .child(div().h_flex().items_center().gap_3().px_3().py_3()
+                        .child(div().w(px(46.)).h(px(46.)).rounded_lg()
+                            .border_1().border_color(rgb(icon_outline))
                             .shadow_sm()
                             .bg(linear_gradient(160.,linear_color_stop(rgb(icon_top),0.),linear_color_stop(rgb(icon_bottom),1.)))
                             .flex().items_center().justify_center()
                             .text_color(rgb(0xF1FAFF))
                             .text_base().font_semibold().child(">_"))
-                        .child(div().flex_1().min_w_0().v_flex().gap_1()
+                        .child(div().flex_1().min_w_0().v_flex().gap_2()
                             .child(div().text_sm().font_semibold()
-                                .text_color(rgb(if active { 0xFFFFFF } else { p.primary }))
+                                .text_color(rgb(p.primary))
                                 .child(host.name.clone()))
                             .child(div().text_xs()
-                                .text_color(rgb(if active { p.card_selected_muted } else { p.secondary }))
+                                .text_color(rgb(p.secondary))
                                 .child(host.hostname.clone()))
                             .child(chips))
                         .child(div().h_flex().items_center().gap_1()
@@ -641,7 +641,7 @@ impl Render for ManagerView {
                                 .cursor_pointer().rounded_lg().px_1().py_2()
                                 .hover(|style| style.bg(rgb(p.chip)))
                                 .text_lg()
-                                .text_color(rgb(if starred { 0xF5AB21 } else if active { p.card_selected_muted } else { p.secondary }))
+                                .text_color(rgb(if starred { 0xECAA36 } else { p.secondary }))
                                 .child(if starred { "★" } else { "☆" })
                                 .on_click(cx.listener(move |this, _, _, cx| {
                                     cx.stop_propagation();
@@ -657,7 +657,7 @@ impl Render for ManagerView {
                                     this.expanded_card = if this.expanded_card == Some(id) { None } else { Some(id) };
                                     cx.notify();
                                 })))))
-                    .when(active || expanded, |el| el.child(div().h_flex().items_center().justify_between()
+                    .when(expanded, |el| el.child(div().h_flex().items_center().justify_between()
                         .px_4().py_2().border_t_1().border_color(rgb(p.border))
                         .bg(rgb(if active { p.selected } else { p.control }))
                         .child(div().text_xs().text_color(rgb(if active { p.accent } else { p.secondary }))
@@ -951,12 +951,12 @@ impl Render for ManagerView {
 
         // Window shell mirrors the reference: persistent branded sidebar,
         // independent toolbar over connection cards and inspector, native macOS chrome.
-        let sidebar = div().w(px(245.)).h_full().v_flex().min_h_0()
+        let sidebar = div().w(px(266.)).h_full().v_flex().min_h_0()
             .bg(linear_gradient(160.,linear_color_stop(rgb(p.sidebar),0.),linear_color_stop(rgb(p.sidebar_end),1.)))
             .border_r_1().border_color(rgb(p.border))
             .child(div().h_flex().items_center().gap_2().px_3().pt_16().pb_4()
-                .child(div().w(px(42.)).h(px(42.)).rounded_lg().shadow_sm()
-                    .bg(linear_gradient(160.,linear_color_stop(rgb(0x28D8F6),0.),linear_color_stop(rgb(0x1231E9),1.)))
+                .child(div().w(px(46.)).h(px(46.)).rounded_lg().shadow_sm()
+                    .bg(linear_gradient(160.,linear_color_stop(rgb(0x24BCFC),0.),linear_color_stop(rgb(0x153BF1),1.)))
                     .border_1().border_color(rgb(p.selected_border))
                     .flex().items_center().justify_center()
                     .text_color(rgb(p.accent_foreground)).text_lg().font_semibold()
@@ -1043,7 +1043,7 @@ impl Render for ManagerView {
                     .child("+ 新建主机")
                     .on_click(cx.listener(|this,_,window,cx| this.new_host(window,cx)))));
 
-        let connections_pane = div().w(px(365.)).h_full().v_flex().min_h_0()
+        let connections_pane = div().w(px(446.)).h_full().v_flex().min_h_0()
             .bg(rgb(p.list)).border_r_1().border_color(rgb(p.border))
             .p_3().gap_2()
             .child(div().h_flex().items_center().gap_2()
