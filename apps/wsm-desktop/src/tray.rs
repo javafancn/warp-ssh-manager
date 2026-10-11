@@ -47,7 +47,7 @@ pub fn install(cx: &mut gpui::App) {
         }
     }}
     let icon=match Icon::from_rgba(rgba,32,32) {Ok(icon)=>icon,Err(_)=>return};
-    let tray=match TrayIconBuilder::new().with_icon(icon).with_tooltip("Warp SSH 管理器")
+    let tray=match TrayIconBuilder::new().with_icon(icon).with_icon_as_template(true).with_tooltip("Warp SSH 管理器")
         .with_menu(Box::new(menu)).build() {Ok(tray)=>tray,Err(error)=>{eprintln!("tray failed: {error}");return}};
     cx.spawn(async move |cx| {
         // Keep the native status item alive for the lifetime of the async task.
