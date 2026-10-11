@@ -9,9 +9,9 @@ pub fn install(cx: &mut gpui::App) {
     use wsm_core::Manager;
 
     let menu=Menu::new();
-    let show=MenuItem::new("Open SSH Manager",true,None);
-    let quick=MenuItem::new("Quick Connect…",true,None);
-    let quit=MenuItem::new("Quit Warp SSH Manager",true,None);
+    let show=MenuItem::new("打开 SSH 管理器",true,None);
+    let quick=MenuItem::new("快速连接…",true,None);
+    let quit=MenuItem::new("退出 Warp SSH 管理器",true,None);
     let show_id=show.id().clone();
     let quick_id=quick.id().clone();
     let quit_id=quit.id().clone();
@@ -21,24 +21,33 @@ pub fn install(cx: &mut gpui::App) {
     if let Ok(manager)=Manager::discover() {
         if let Ok(hosts)=manager.db.list_hosts() {
             for host in hosts.into_iter().filter(|h|h.favorite).take(15) {
-                let item=MenuItem::new(format!("Connect: {}",host.name),true,None);
+                let item=MenuItem::new(format!("连接：{}",host.name),true,None);
                 favorites.push((item.id().clone(),host.id));
                 let _=menu.append(&item);
             }
         }
     }
     let _=menu.append(&quit);
-    // A simple 16x16 status icon with a transparent background.
-    let mut rgba=vec![0u8;16*16*4];
-    for y in 0..16 {for x in 0..16 {
-        let i=(y*16+x)*4;
-        if (x>=2 && x<=13) && (y>=3 && y<=12) {
-            let bright=(x>=4&&x<=11)&&(y==5||y==6||y==9||y==10);
-            rgba[i..i+4].copy_from_slice(if bright{&[255,255,255,255]}else{&[49,133,201,255]});
+    // A small double-chevron silhouette is recognizable in the macOS menu bar.
+    // Use a neutral status-item glyph rather than the full-color Dock artwork.
+    let mut rgba=vec![0u8;32*32*4];
+    for y in 0..32usize {for x in 0..32usize {
+        let glyph = |shift: f32| {
+            let xx=x as f32-shift;
+            let yy=y as f32;
+            let center=15.5f32;
+            let distance=(yy-center).abs();
+            let arm=(distance*0.82).min(12.0);
+            xx >= 1.0+arm && xx <= 7.0+arm && (yy>=4.0 && yy<=28.0)
+        };
+        let a=glyph(1.0) || glyph(12.0);
+        if a {
+            let i=(y*32+x)*4;
+            rgba[i..i+4].copy_from_slice(&[25,39,63,255]);
         }
     }}
-    let icon=match Icon::from_rgba(rgba,16,16) {Ok(icon)=>icon,Err(_)=>return};
-    let tray=match TrayIconBuilder::new().with_icon(icon).with_tooltip("Warp SSH Manager")
+    let icon=match Icon::from_rgba(rgba,32,32) {Ok(icon)=>icon,Err(_)=>return};
+    let tray=match TrayIconBuilder::new().with_icon(icon).with_tooltip("Warp SSH 管理器")
         .with_menu(Box::new(menu)).build() {Ok(tray)=>tray,Err(error)=>{eprintln!("tray failed: {error}");return}};
     cx.spawn(async move |cx| {
         // Keep the native status item alive for the lifetime of the async task.
