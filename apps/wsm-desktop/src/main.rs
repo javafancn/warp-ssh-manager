@@ -680,12 +680,57 @@ impl Render for ManagerView {
                     }))
             );
         }
+        let library_error = self.feedback == Feedback::Error
+            && self.message.starts_with("读取");
         if filtered_count == 0 {
-            connections = connections.child(div().py_8().v_flex().items_center().gap_2()
-                .child(div().text_2xl().text_color(rgb(p.tertiary)).child("⌕"))
-                .child(div().text_sm().text_color(rgb(p.secondary)).child("未找到匹配的主机"))
-                .child(div().text_xs().text_color(rgb(p.tertiary))
-                    .child("试试其他关键词，或点击右上角「新建主机」")));
+            if self.hosts.is_empty() && !library_error {
+                connections=connections.child(
+                    div().v_flex().items_center().gap_3().px_3().pt_16()
+                        .child(div().w(px(64.)).h(px(64.)).rounded_lg()
+                            .bg(rgb(p.selected)).border_1().border_color(rgb(p.border))
+                            .flex().items_center().justify_center()
+                            .text_color(rgb(p.accent))
+                            .child(Icon::new(IconName::SquareTerminal)))
+                        .child(div().text_base().font_semibold()
+                            .text_color(rgb(p.primary)).child("还没有保存的 SSH 主机"))
+                        .child(div().text_sm().text_center()
+                            .text_color(rgb(p.secondary))
+                            .child("导入现有 SSH 配置，或从零添加第一台主机"))
+                        .child(div().v_flex().gap_2().w_full().pt_3()
+                            .child(div().id("empty-import").cursor_pointer()
+                                .h_flex().items_center().justify_center().gap_2()
+                                .rounded_lg().px_3().py_3()
+                                .bg(rgb(p.accent)).text_color(rgb(p.accent_foreground))
+                                .text_sm().font_semibold()
+                                .child(Icon::new(IconName::Folder))
+                                .child("导入现有 SSH 配置")
+                                .on_click(cx.listener(Self::import)))
+                            .child(div().id("empty-create").cursor_pointer()
+                                .h_flex().items_center().justify_center().gap_2()
+                                .rounded_lg().border_1().border_color(rgb(p.border))
+                                .bg(rgb(p.inspector)).px_3().py_3()
+                                .text_sm().text_color(rgb(p.primary))
+                                .child("+ 新建主机")
+                                .on_click(cx.listener(|this,_,window,cx| this.new_host(window,cx)))))
+                        .child(div().text_xs().text_color(rgb(p.tertiary))
+                            .text_center().pt_2()
+                            .child("导入只读取本机 SSH 配置，不会修改原文件"))
+                );
+            } else {
+                connections=connections.child(
+                    div().v_flex().items_center().gap_3().pt_16().px_4()
+                        .child(div().w(px(48.)).h(px(48.)).rounded_lg()
+                            .bg(rgb(p.control)).flex().items_center().justify_center()
+                            .text_color(rgb(p.tertiary))
+                            .child(Icon::new(IconName::Search)))
+                        .child(div().text_sm().font_semibold().text_color(rgb(p.primary))
+                            .child(if library_error { "无法读取主机数据" } else { "没有匹配的主机" }))
+                        .child(div().text_xs().text_center().text_color(rgb(p.secondary))
+                            .child(if library_error {
+                                "请检查本地数据库及访问权限，不会自动清空或覆盖数据"
+                            } else { "可以调整搜索关键词，或切换左侧筛选条件" }))
+                );
+            }
         }
 
         let mut group_picker = div().v_flex().gap_1()
