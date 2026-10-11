@@ -564,7 +564,7 @@ impl Render for ManagerView {
             group_list = group_list.child(
                 div().h_flex().items_center().rounded_md().px_2().py_2()
                     .ml(px(level as f32 * 12.))
-                    .bg(rgb(if active { p.selected } else { p.sidebar }))
+                    .bg(rgba(if active { p.glass_selected } else { 0xFFFFFF00 }))
                     .child(div().w(px(18.)).text_xs().text_color(rgb(p.secondary)).cursor_pointer()
                         .child(if children { if expanded { "▾" } else { "▸" } } else { "·" })
                         .id(SharedString::from(format!("group-collapse-{id}"))).on_click(cx.listener(move |this, _, _, cx| {
@@ -577,7 +577,7 @@ impl Render for ManagerView {
                             .child(Icon::new(IconName::Folder))
                             .child(group.name.clone()))
                         .id(SharedString::from(format!("group-select-{id}"))).on_click(cx.listener(move |this, _, _, cx| { this.filter = ViewFilter::Group(id); cx.notify(); })))
-                    .child(div().rounded_full().bg(rgb(p.chip)).px_2().py_1()
+                    .child(div().rounded_full().bg(rgba(p.glass_control)).px_2().py_1()
                         .text_xs().text_color(rgb(p.secondary)).child(count.to_string()))
             );
         }
@@ -768,7 +768,7 @@ impl Render for ManagerView {
                 let selected = self.editor_group == Some(id);
                 group_picker = group_picker.child(
                     div().cursor_pointer().rounded_md().px_3().py_2()
-                        .bg(rgb(if selected { p.selected } else { p.control }))
+                        .bg(rgba(if selected { p.glass_selected } else { p.glass_control }))
                         .text_xs().text_color(rgb(if selected { p.accent } else { p.secondary }))
                         .child(div().h_flex().items_center().gap_2()
                             .child(Icon::new(if selected { IconName::CircleCheck } else { IconName::Folder }))
@@ -939,7 +939,7 @@ impl Render for ManagerView {
         let tab_color = if warp_ready { p.success } else { p.tertiary };
 
         let mut secondary_actions = div().h_flex().items_center().gap_2().px_4().py_2()
-            .bg(rgb(p.titlebar)).border_b_1().border_color(rgba(p.glass_border));
+            .bg(rgba(p.glass_toolbar)).border_b_1().border_color(rgba(p.glass_border));
         if self.actions_open {
             secondary_actions = secondary_actions
                 .child(div().text_xs().text_color(rgb(p.secondary)).mr_3().child("配置管理"))
@@ -1022,21 +1022,21 @@ impl Render for ManagerView {
                     .bg(rgba(p.glass_control)).border_1().border_color(rgba(p.glass_border))
                     .child(div().id("main-interaction-015").cursor_pointer().rounded_md()
                         .px_3().py_2()
-                        .bg(rgb(if self.appearance == Appearance::System { p.inspector } else { p.control }))
+                        .bg(rgba(if self.appearance == Appearance::System { p.glass_card } else { p.glass_control }))
                         .text_color(rgb(if self.appearance == Appearance::System { p.accent } else { p.secondary }))
                         .text_xs().font_semibold().child("自动")
                         .on_click(cx.listener(|this,_,window,cx| this.set_theme(Appearance::System,window,cx)))
                     )
                     .child(div().id("main-interaction-016").cursor_pointer().rounded_md()
                         .px_3().py_2()
-                        .bg(rgb(if self.appearance == Appearance::Dark { p.inspector } else { p.control }))
+                        .bg(rgba(if self.appearance == Appearance::Dark { p.glass_card } else { p.glass_control }))
                         .text_color(rgb(if self.appearance == Appearance::Dark { p.accent } else { p.secondary }))
                         .text_xs().font_semibold().child("深色")
                         .on_click(cx.listener(|this,_,window,cx| this.set_theme(Appearance::Dark,window,cx)))
                     )
                     .child(div().id("main-interaction-017").cursor_pointer().rounded_md()
                         .px_3().py_2()
-                        .bg(rgb(if self.appearance == Appearance::Light { p.inspector } else { p.control }))
+                        .bg(rgba(if self.appearance == Appearance::Light { p.glass_card } else { p.glass_control }))
                         .text_color(rgb(if self.appearance == Appearance::Light { p.accent } else { p.secondary }))
                         .text_xs().font_semibold().child("浅色")
                         .on_click(cx.listener(|this,_,window,cx| this.set_theme(Appearance::Light,window,cx)))
@@ -1058,7 +1058,7 @@ impl Render for ManagerView {
                         .prefix(Icon::new(IconName::Search).small())))
                 .child(div().id("list-filter-menu-toggle").cursor_pointer().rounded_lg()
                     .border_1().border_color(rgba(p.glass_border)).px_3().py_2()
-                    .bg(rgb(if self.filter_menu_open { p.selected } else { p.control }))
+                    .bg(rgba(if self.filter_menu_open { p.glass_selected } else { p.glass_control }))
                     .text_color(rgb(p.secondary))
                     .child(Icon::new(IconName::Settings))
                     .on_click(cx.listener(|this,_,_,cx| {
@@ -1067,19 +1067,19 @@ impl Render for ManagerView {
                     }))))
             .when(self.filter_menu_open, |el| el.child(div().h_flex().items_center().gap_2()
                 .child(div().id("list-filter-all").cursor_pointer().px_3().py_2().rounded_md()
-                    .bg(rgb(if self.filter == ViewFilter::All { p.selected } else { p.control }))
+                    .bg(rgba(if self.filter == ViewFilter::All { p.glass_selected } else { p.glass_control }))
                     .text_xs().child("全部")
                     .on_click(cx.listener(|this,_,_,cx| {
                         this.filter=ViewFilter::All; this.filter_menu_open=false;cx.notify();
                     })))
                 .child(div().id("list-filter-favorites").cursor_pointer().px_3().py_2().rounded_md()
-                    .bg(rgb(if self.filter == ViewFilter::Favorites { p.selected } else { p.control }))
+                    .bg(rgba(if self.filter == ViewFilter::Favorites { p.glass_selected } else { p.glass_control }))
                     .text_xs().child("已收藏")
                     .on_click(cx.listener(|this,_,_,cx| {
                         this.filter=ViewFilter::Favorites; this.filter_menu_open=false;cx.notify();
                     })))
                 .child(div().id("list-filter-recent").cursor_pointer().px_3().py_2().rounded_md()
-                    .bg(rgb(if self.filter == ViewFilter::Recent { p.selected } else { p.control }))
+                    .bg(rgba(if self.filter == ViewFilter::Recent { p.glass_selected } else { p.glass_control }))
                     .text_xs().child("最近连接")
                     .on_click(cx.listener(|this,_,_,cx| {
                         this.filter=ViewFilter::Recent; this.filter_menu_open=false;cx.notify();
@@ -1088,7 +1088,8 @@ impl Render for ManagerView {
                 .child(connections));
 
         let inspector_editor = div().size_full().v_flex().min_h_0()
-            .bg(rgba(p.glass_inspector))
+            // The parent already provides this material; avoid double alpha compositing.
+            .bg(rgba(0x00000000))
             .child(div().h_flex().items_center().justify_between().px_4().py_2()
                 .child(div().v_flex().gap_1()
                     .child(div().text_xl().font_semibold().text_color(rgb(p.primary))
@@ -1096,7 +1097,7 @@ impl Render for ManagerView {
                     .child(div().text_xs().text_color(rgb(p.tertiary))
                         .child(if imported { "已导入 · 连接字段只读" } else { "自管主机 · OpenSSH" })))
                 .child(div().id("inspector-favorite").cursor_pointer().rounded_lg().px_3().py_2()
-                    .bg(rgb(if self.favorite { p.selected } else { p.control }))
+                    .bg(rgba(if self.favorite { p.glass_selected } else { p.glass_control }))
                     .text_color(rgb(if self.favorite { 0xEFB53D } else { p.secondary }))
                     .text_xs().child(if self.favorite { "★ 已收藏" } else { "☆ 设为收藏" })
                     .on_click(cx.listener(Self::toggle_favorite))))
