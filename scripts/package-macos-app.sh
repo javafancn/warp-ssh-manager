@@ -49,17 +49,13 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 </dict></plist>
 PLIST
 plutil -lint "$app/Contents/Info.plist"
-# Render the approved scalable app icon into a 1024px bitmap, preserving gradients
-# for Finder, Dock and Launchpad. Keep the separate mark in app resources for GPUI.
-# The librsvg renderer is a build-time dependency only; installed users do not need it.
-if ! command -v rsvg-convert >/dev/null 2>&1; then
-  command -v brew >/dev/null || { echo 'Missing rsvg-convert; install with brew install librsvg' >&2; exit 1; }
-  brew install librsvg
-fi
-[[ -s assets/brand-app-icon.svg && -s assets/brand-mark.svg ]] || { echo 'Brand SVG resources are missing.' >&2; exit 1; }
-rsvg-convert -w 1024 -h 1024 assets/brand-app-icon.svg -o dist/brand-app-icon-1024.png
-cp assets/brand-mark.svg "$app/Contents/Resources/brand-mark.svg"
-[[ -s dist/brand-app-icon-1024.png && -s "$app/Contents/Resources/brand-mark.svg" ]] || { echo 'Brand resources failed validation.' >&2; exit 1; }
+# Use the exact user-approved images extracted from the supplied brand board:
+# dark rounded-square icon for Finder/Dock/Launchpad, transparent chevron in the UI.
+# The checked-in PNGs are compressed masters; sips creates every macOS iconset size.
+[[ -s assets/brand-app-icon.png && -s assets/brand-mark.png ]] || { echo 'Approved PNG assets are missing.' >&2; exit 1; }
+sips -s format png -z 1024 1024 assets/brand-app-icon.png --out dist/brand-app-icon-1024.png >/dev/null
+cp assets/brand-mark.png "$app/Contents/Resources/brand-mark.png"
+[[ -s dist/brand-app-icon-1024.png && -s "$app/Contents/Resources/brand-mark.png" ]] || { echo 'Brand resources failed validation.' >&2; exit 1; }
 # Convert the generated artwork into an Apple .icns using macOS tools.
 iconset='dist/WarpSSHManager.iconset'
 rm -rf "$iconset"
