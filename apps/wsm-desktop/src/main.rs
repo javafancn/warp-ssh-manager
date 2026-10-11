@@ -685,7 +685,9 @@ impl Render for ManagerView {
         if filtered_count == 0 {
             if self.hosts.is_empty() && !library_error {
                 connections=connections.child(
-                    div().v_flex().items_center().gap_3().px_3().pt_16()
+                    div().v_flex().items_center().gap_3().px_4().py_8()
+                        .rounded_lg().bg(rgb(p.inspector)).border_1()
+                        .border_color(rgb(p.border)).shadow_sm()
                         .child(div().w(px(64.)).h(px(64.)).rounded_lg()
                             .bg(rgb(p.selected)).border_1().border_color(rgb(p.border))
                             .flex().items_center().justify_center()
@@ -696,7 +698,7 @@ impl Render for ManagerView {
                         .child(div().text_sm().text_center()
                             .text_color(rgb(p.secondary))
                             .child("导入现有 SSH 配置，或从零添加第一台主机"))
-                        .child(div().v_flex().gap_2().w_full().pt_3()
+                        .child(div().v_flex().gap_2().w_full().pt_2()
                             .child(div().id("empty-import").cursor_pointer()
                                 .h_flex().items_center().justify_center().gap_2()
                                 .rounded_lg().px_3().py_3()
@@ -1158,18 +1160,13 @@ impl Render for ManagerView {
                                 "从 SSH 配置导入，或手动添加第一台主机"
                             } else { "从中间连接列表选择主机，即可查看详情并在 Warp 中打开" }))
                         .when(host_count==0 && !library_error, |el| el.child(
-                            div().h_flex().items_center().gap_2().pt_3()
-                                .child(div().id("welcome-import").cursor_pointer()
-                                    .rounded_lg().border_1().border_color(rgb(p.border))
-                                    .bg(rgb(p.control)).px_4().py_3()
-                                    .text_sm().font_semibold().text_color(rgb(p.primary))
-                                    .child("导入 SSH 配置")
-                                    .on_click(cx.listener(Self::import)))
-                                .child(div().id("welcome-add").cursor_pointer()
-                                    .rounded_lg().bg(rgb(p.accent)).px_4().py_3()
-                                    .text_sm().font_semibold().text_color(rgb(p.accent_foreground))
-                                    .child("+ 新建主机")
-                                    .on_click(cx.listener(|this,_,window,cx| this.new_host(window,cx))))))
+                            div().v_flex().items_center().gap_2().pt_3()
+                                .child(div().text_xs().font_semibold()
+                                    .text_color(rgb(p.secondary))
+                                    .child("从一个连接开始"))
+                                .child(div().text_xs().text_center()
+                                    .text_color(rgb(p.tertiary))
+                                    .child("左侧可以导入已有 SSH 配置，或创建新的主机连接"))))
                         .child(div().px_4().py_3().rounded_lg()
                             .bg(rgb(p.control)).text_xs().text_color(rgb(p.tertiary))
                             .child(if library_error {
