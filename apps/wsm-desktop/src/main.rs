@@ -1082,7 +1082,7 @@ impl Render for ManagerView {
             .child(div().flex_1().min_h_0().overflow_y_scrollbar()
                 .child(connections));
 
-        let inspector_pane = div().flex_1().min_w_0().h_full().v_flex().min_h_0()
+        let inspector_editor = div().size_full().v_flex().min_h_0()
             .bg(rgb(p.inspector))
             .child(div().h_flex().items_center().justify_between().px_4().py_2()
                 .child(div().v_flex().gap_1()
@@ -1120,6 +1120,61 @@ impl Render for ManagerView {
                     .text_color(rgb(p.danger)).text_sm()
                     .child(if self.confirm_delete { "确认删除" } else { "删除" })
                     .on_click(cx.listener(Self::remove))));
+
+
+        // No host selected means "welcome/select a host", NOT "new host editor".
+        // New host editing is an explicit action and does not fabricate a host.
+        let no_selection = self.selected.is_none() && !self.editing_new;
+        let inspector_pane = div().flex_1().min_w_0().h_full().v_flex().min_h_0()
+            .bg(rgb(p.inspector))
+            .when(!no_selection, |el| el.child(inspector_editor))
+            .when(no_selection, |el| el.child(
+                div().size_full().v_flex()
+                    .child(div().px_5().py_5().border_b_1().border_color(rgb(p.border))
+                        .child(div().text_xl().font_semibold().text_color(rgb(p.primary))
+                            .child(if library_error { "数据读取异常" } else { "主机工作台" }))
+                        .child(div().pt_2().text_sm().text_color(rgb(p.secondary))
+                            .child(if library_error {
+                                "无法加载本地主机信息，请先检查数据库"
+                            } else { "集中管理连接、分组和标签，交给 Warp 发起 SSH 会话" })))
+                    .child(div().flex_1().v_flex().items_center().justify_center()
+                        .px_6().gap_4()
+                        .child(div().w(px(72.)).h(px(72.)).rounded_lg()
+                            .bg(rgb(p.selected)).border_1().border_color(rgb(p.border))
+                            .flex().items_center().justify_center()
+                            .text_color(rgb(p.accent))
+                            .child(Icon::new(IconName::SquareTerminal)))
+                        .child(div().text_lg().font_semibold().text_color(rgb(p.primary))
+                            .child(if library_error { "请检查主机数据库" }
+                                else if host_count==0 { "准备连接第一台服务器？" }
+                                else { "选择一台主机查看详情" }))
+                        .child(div().text_sm().text_center().text_color(rgb(p.secondary))
+                            .child(if library_error {
+                                "数据库读取失败不会清空原有资料，请先检查文件与权限"
+                            } else if host_count==0 {
+                                "从 SSH 配置导入，或手动添加第一台主机"
+                            } else { "从中间连接列表选择主机，即可查看详情并在 Warp 中打开" }))
+                        .when(host_count==0 && !library_error, |el| el.child(
+                            div().h_flex().items_center().gap_2().pt_3()
+                                .child(div().id("welcome-import").cursor_pointer()
+                                    .rounded_lg().border_1().border_color(rgb(p.border))
+                                    .bg(rgb(p.control)).px_4().py_3()
+                                    .text_sm().font_semibold().text_color(rgb(p.primary))
+                                    .child("导入 SSH 配置")
+                                    .on_click(cx.listener(Self::import)))
+                                .child(div().id("welcome-add").cursor_pointer()
+                                    .rounded_lg().bg(rgb(p.accent)).px_4().py_3()
+                                    .text_sm().font_semibold().text_color(rgb(p.accent_foreground))
+                                    .child("+ 新建主机")
+                                    .on_click(cx.listener(|this,_,window,cx| this.new_host(window,cx))))))
+                        .child(div().px_4().py_3().rounded_lg()
+                            .bg(rgb(p.control)).text_xs().text_color(rgb(p.tertiary))
+                            .child(if library_error {
+                                self.message.clone()
+                            } else {
+                                "所有主机记录保存在本机；不会自动修改现有 SSH 配置".to_string()
+                            })))
+            ));
 
         let workspace = div().flex_1().min_w_0().h_full().v_flex().min_h_0()
             .child(toolbar)
