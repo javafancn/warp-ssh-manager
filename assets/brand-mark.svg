@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 330">
+<defs>
+<linearGradient id="steel" x1="0" y1="0" x2=".95" y2="1"><stop stop-color="#647B9A"/><stop offset=".48" stop-color="#2B528B"/><stop offset=".8" stop-color="#0C4194"/><stop offset="1" stop-color="#598CDA"/></linearGradient>
+<linearGradient id="electric" x1=".2" y1="0" x2=".85" y2="1"><stop stop-color="#04DDEA"/><stop offset=".40" stop-color="#00B2F2"/><stop offset=".70" stop-color="#1279FB"/><stop offset="1" stop-color="#7940F8"/></linearGradient>
+<linearGradient id="outline" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#BCEBFF" stop-opacity=".9"/><stop offset="1" stop-color="#3474E8" stop-opacity=".5"/></linearGradient>
+</defs>
+<path d="M12 37 Q4 30 16 30 H133 Q143 30 152 40 L250 152 Q261 164 250 177 L151 287 Q143 297 132 297 H16 Q4 297 13 285 L113 174 Q122 164 113 153 Z" fill="url(#steel)" stroke="url(#outline)" stroke-width="2"/>
+<path d="M185 36 Q177 30 190 30 H300 Q311 30 320 40 L455 151 Q467 163 455 177 L320 288 Q311 299 300 299 H191 Q178 299 188 287 L289 175 Q299 164 288 153 Z" fill="url(#electric)" stroke="#7AECFF" stroke-opacity=".75" stroke-width="2"/>
+</svg>
