@@ -92,7 +92,7 @@ jobs:
           name: native-visual-smoke-macOS
           path: |
             dist/native-macos-render.png
-            dist/native-advanced-inspector.png
+            dist/native-connection-inspector.png
             dist/native-macos-render-warm.png
             dist/native-macos-desktop.png
             dist/native-macos-desktop-warm-with-app.png
@@ -109,7 +109,7 @@ jobs:
       - name: Upload separate DMG installers
         uses: actions/upload-artifact@v4
         with:
-          name: WarpSSHManager-Native-0.4.25-${{ matrix.arch }}-macOS12
-          path: dist/WarpSSHManager-0.4.25-${{ matrix.arch }}.dmg
+          name: WarpSSHManager-Native-1.0.0-${{ matrix.arch }}-macOS12
+          path: dist/WarpSSHManager-1.0.0-${{ matrix.arch }}.dmg
           if-no-files-found: error
           retention-days: 30

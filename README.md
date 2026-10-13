@@ -1,86 +1,118 @@
 <p align="center">
-  <img src="assets/brand-app-icon.png" alt="Warp SSH Manager" width="104" />
+  <img src="assets/brand-app-icon.png" alt="Warp SSH Manager" width="104">
 </p>
 
 <h1 align="center">Warp SSH Manager</h1>
 
 <p align="center">
-  面向 macOS 的 SSH 主机管理器 · 原生毛玻璃界面 · 一键在 Warp 中连接
+  为 Warp 打造的 macOS 原生 SSH 主机管理器
 </p>
 
 <p align="center">
-  <strong>macOS 12+（构建目标）</strong> · <strong>Apple Silicon / Intel</strong> · <strong>SwiftUI + AppKit + Rust</strong>
+  <strong>v1.0.0</strong> · macOS 12+（构建目标） · Apple Silicon / Intel · SwiftUI + AppKit + Rust
 </p>
 
-> **当前版本：v0.4.25。** 应用负责管理 SSH 主机和生成 Warp Tab Configs；实际 SSH 会话、身份验证和终端窗口由 [Warp](https://www.warp.dev/) 与 OpenSSH 处理。项目并非 Warp 官方产品。
+<p align="center">
+  <a href="https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml">下载 macOS 安装包</a>
+  ·
+  <a href="https://github.com/javafancn/warp-ssh-manager/actions/workflows/ci.yml">持续集成</a>
+  ·
+  <a href="LICENSE">MIT License</a>
+</p>
 
-## 功能
+> **关于项目**：Warp SSH Manager 是社区项目，并非 Warp 官方应用。它管理本地 SSH 主机和 Warp 的启动配置；SSH 传输与交互式终端仍由 **OpenSSH + Warp** 提供，而不是在应用内重新实现 SSH 客户端。
 
-- **原生 macOS 界面**：SwiftUI / AppKit 三栏管理器、系统毛玻璃、自动／深色／浅色外观。
-- **主机管理**：搜索、分组、收藏、最近连接、端口／用户名／密钥路径／跳板配置，以及标签与备注。
-- **快速连接**：菜单栏「快速连接…」提供独立搜索浮层；按 **Esc** 关闭，选择主机后交给 Warp 打开。
-- **桌面入口**：Dock 图标及菜单栏「打开主机管理器」用于唤起主窗口。
-- **OpenSSH 兼容**：导入已有的 <code>~/.ssh/config</code> 主机；导入主机的连接参数由原配置管理。
-- **安全地管理 SSH 配置**：用户明确初始化后，才在 SSH 配置中添加 <code>Include</code>，自建主机写入单独的托管文件。
-- **Warp Tab Configs**：为连接生成配置并调用 Warp URI Scheme；不内置 SSH 终端。
-- **SSH 认证偏好**：自管主机可选择自动、公钥或密码认证；所有旧主机默认自动，不修改 Warp 的 `ssh <alias>` 启动形式。
-- **手动连接回退**：主机卡片菜单和详情底部连接菜单保留「手动连接（不自动填写密码）」，不设置 Askpass 环境。
-- **自动登录测试范围**：CI 可验证 Rust 生成配置、辅助程序编译和提示识别；真实 Keychain 授权、Warp SSH Extension 识别及服务器端密码认证仍需 macOS 实机测试。
-- **可选密码自动登录**：在自管或导入主机的「连接配置」选择「用户名 + 密码」，保存主机和 SSH 密码后，连接时通过 120 秒内一次性 ASKPASS 会话自动提供一次密码。Warp 仍执行独立的 `ssh <alias>` 命令，未包装 SSH 或使用自建 PTY；首次确认主机指纹、密码错误、复杂 PAM/MFA 等提示仍可能需要用户交互。真实 Warp SSH Extension 兼容性需实机确认。
-- **安全凭据复制**：在主机详情的「连接配置」中为已保存主机设置 SSH/sudo 密码，使用 macOS Keychain 单独保存；主机菜单支持按需复制，30 秒后尝试清理未变化的剪贴板。
+## 为什么使用它
+
+不必反复打开文本编辑器管理大量 SSH Host。使用原生三栏界面组织服务器、切换连接认证方式，并在 Warp 中快速打开目标主机。
+
+| 主机管理 | 登录认证 | Warp 集成 |
+| --- | --- | --- |
+| 搜索、收藏、最近连接、分组 | 自动选择、SSH 密钥、用户名密码 | 一键打开、菜单栏快速连接 |
+| 标签配色、备注、SSH 参数 | Keychain 保存 SSH / sudo 密码 | 保留原生 `ssh <别名>` 命令 |
+| 导入已有 `~/.ssh/config` | 按需复制密码、尝试自动登录 | 独立生成 Warp Tab Config |
+
+界面提供自动、浅色、深色外观，支持 Apple Silicon 和 Intel 独立构建。
 
 ## 下载安装
 
-1. 打开 [GitHub Actions · macOS 原生安装包](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml)，选择最近一次**成功**的构建（也可以从 **Run workflow** 手动触发）。
-2. 在该次运行页面的 **Artifacts** 中，根据 Mac 芯片选择对应的包：
+1. 在 [GitHub Actions · macOS 安装包](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml) 打开 **main 分支最新成功**的构建。
+2. 在 **Artifacts** 下载与你的 Mac 架构对应的构建产物，并解压：
+   - Apple Silicon（M 系列）：`WarpSSHManager-Native-1.0.0-apple-silicon-macOS12`
+   - Intel（x86_64）：`WarpSSHManager-Native-1.0.0-intel-macOS12`
+3. 打开压缩包内的 `WarpSSHManager-1.0.0-<架构>.dmg`，将 **Warp SSH Manager.app** 拖入 `/Applications`。
+4. 安装 [Warp Terminal](https://www.warp.dev/)。macOS 自带 OpenSSH；确保终端能使用 `ssh`。
 
-   | Mac 类型 | 构建产物 |
-   | --- | --- |
-   | Apple Silicon（M 系列） | `WarpSSHManager-Native-0.4.25-apple-silicon-macOS12` |
-   | Intel | `WarpSSHManager-Native-0.4.25-intel-macOS12` |
+**发布与系统要求**：项目目前分别构建两个架构的 DMG，并非 Universal Binary。CI 的编译目标为 **macOS 12+**，实际操作系统兼容性仍需实机验证。安装包采用 **Ad-hoc 签名，尚未使用 Apple Developer ID 签名或 Apple 公证**；如果 Gatekeeper 阻止打开，应先确认下载来源并遵循 macOS 的安全提示，不要盲目关闭系统安全功能。Actions 的 Artifacts 可能过期。
 
-3. 解压下载的 Artifact，打开其中的 `.dmg`，将 **Warp SSH Manager.app** 拖入 **Applications（应用程序）**。
-4. 确保已安装 [Warp Terminal](https://www.warp.dev/)，并且本机 OpenSSH 可用。
+## 快速开始
 
-**关于安装包：** GitHub Actions 当前分别构建 Apple Silicon 与 Intel 的 **独立 DMG**，不是 Universal 2。构建使用 macOS 15 runner，二进制目标最低版本设为 macOS 12；这**不等于**已经在所有 macOS 12 真机上完成兼容性测试。安装包采用 **Ad-hoc 签名，未经 Apple Developer ID 签名或公证**，从网络下载后可能受到 Gatekeeper 限制；请自行确认构建来源及安全性。
+### 1. 导入 SSH 主机或初始化新主机
 
-## 快速上手
+**已有 SSH 配置**：从应用中选择「导入 SSH 配置」，导入 `~/.ssh/config` 里的主机别名。导入主机的主机名、用户、端口等信息仍由原始 SSH 配置管理；要修改连接参数，请编辑原文件再重新导入。
 
-### 1. 导入已有 SSH 主机
+**自建主机**：首次使用前通过应用的「初始化 SSH 集成」或执行 `wsm init`。它会先备份主 SSH 配置，再加入一个指向专用托管配置的 `Include`；后续由 WSM 维护自己的 SSH Host。接着新建主机，填写：
 
-启动应用后，从主界面的更多操作或高级设置中选择 **导入 SSH 配置**。管理器读取本机的 SSH 别名、地址、用户、端口等信息，并保留你原有的 OpenSSH 配置文件。
+- 显示名称及 SSH 别名
+- 主机 IP / 域名、用户名、端口
+- 可选的身份文件路径、代理跳板、分组、标签和备注
 
-> 导入的主机连接字段在应用内为只读；需要修改时请编辑原始 SSH 配置，然后重新导入。导入会调用 `ssh -G` 解析配置，如果你的配置含有 `Match exec`，OpenSSH 可能执行其中的本地命令，请只导入可信配置。
+应用仅保存私钥**路径**，不会复制 SSH 私钥内容。
 
-### 2. 添加自管主机
+> 导入过程使用 `ssh -G` 解析有效配置；请只导入可信任的 SSH 配置，尤其应注意可能包含的 `Match exec` 指令。
 
-首次创建自管 SSH 主机前，点击 **初始化 SSH 集成**（或在 CLI 运行 `wsm init`）。此操作会：
+### 2. 选择认证方式
 
-- 为已有的 `~/.ssh/config` 创建备份；
-- 在主配置中添加指向托管配置文件的一条 `Include`（重复初始化不会重复添加）；
-- 将自管主机保存到 `~/.ssh/config.d/warp-ssh-manager.conf`。
+在主机详情的「连接配置 → SSH 认证方式」中选择：
 
-之后在右上角点击 **新建主机**，填写 SSH 别名、IP／域名、用户名和端口；需要时指定已有的密钥文件路径。应用不会复制或存储私钥内容。
+| 模式 | 实际效果 | 建议场景 |
+| --- | --- | --- |
+| **自动选择** | 保留 OpenSSH 原有的认证协商与配置，旧主机默认使用 | 已有配置、ssh-agent、组合认证 |
+| **SSH 密钥** | 自管主机明确使用公钥认证、关闭密码认证 | 使用密钥的服务器 |
+| **用户名 + 密码** | 自管主机启用密码 / keyboard-interactive、关闭公钥；可配合 Keychain 尝试自动输入密码 | 使用账号密码的服务器 |
 
-### 3. 在 Warp 中连接
+**导入主机**：不改写其原始 `~/.ssh/config`。即使在 WSM 选择「用户名 + 密码」，外部 SSH Config 的认证规则仍可能决定最终行为。
 
-从列表中选中主机，点击 **在 Warp 中打开**；也可以通过菜单栏的 **快速连接…** 搜索并打开。
+**注意**：自动选择不等于自动从 Keychain 注入密码；只有明确选择「用户名 + 密码」且保存 SSH 密码的主机，WSM 才会尝试辅助登录。
 
-管理器会创建／更新对应的 Warp Tab Config，再向 macOS 发送 Warp URI 打开请求。**成功唤起 Warp 不代表 SSH 已登录成功**；连通性、密钥、授权等错误请以 Warp 和 OpenSSH 的反馈为准。
+### 3. 保存密码并连接
 
-## 命令行（可选）
+1. 先保存主机。
+2. 进入「连接配置 → 凭据管理」，点击「SSH 登录密码」，填写并保存密码。
+3. 点击「在 Warp 中打开」或使用菜单栏快速连接。
+4. 选择密码模式且已保存凭据时，WSM 会创建短期、一次性 Askpass 授权；OpenSSH 请求密码时，辅助程序尝试从 macOS Keychain 取出密码并提交**一次**。
+5. 若遇到密码错误、指纹确认、MFA 或其他交互式认证问题，需要用户手动完成认证。主机操作菜单提供「手动连接」以绕开辅助登录。
 
-安装包内附带 Rust CLI `wsm`，也可以从源码运行。以下示例在仓库根目录执行：
+连接入口仍是 Warp 执行的原生 `ssh <别名>`，而不是自建终端或 SSH 代理。**Warp 成功打开不代表服务器登录成功。自动密码登录及 Warp SSH Extension 的完整兼容性仍需要在真实 Warp + SSH 服务器环境下验证。**
+
+### 4. 标签、分组与 sudo 密码
+
+使用分组、收藏、搜索和标签组织主机。常见环境标签（如 `production`、`test`、`dev`）具有语义配色；其他标签按名称生成稳定颜色。新增标签支持连续输入和重复校验。
+
+可为每台主机另存 **sudo 密码**，也可以默认复用已保存的 SSH 密码。sudo 只提供**一键复制**，不做自动检测或自动填写，以避免改变远端终端的交互行为。主机菜单还支持复制 SSH 登录密码。
+
+## 安全与隐私
+
+- **钥匙串存储**：SSH 和 sudo 密码直接保存在当前 Mac 的 **macOS Keychain**（通用密码条目），使用 `WhenUnlockedThisDeviceOnly` 访问属性；不作为明文写入 SQLite、SSH Config、Warp Tab Config 或 Rust JSON 快照。
+- **自动登录辅助**：Askpass 会话授权文件使用受限权限、120 秒有效期，并在读取前尝试一次性消费。它不是强沙箱：同一个 macOS 用户下的恶意进程可能利用短期令牌竞争；不要把这视为对本机已入侵进程的完整防护。
+- **提示验证**：自动回答仅面向识别到的密码提示；MFA、指纹或其他询问不会无条件返回保存的密码。
+- **剪贴板**：复制密码后，应用会在约 30 秒时尝试清空**没有被更改**的系统剪贴板。剪贴板历史、同步软件或恶意进程可能已经读取内容。
+- **sudo**：只复制，不自动填写。若管理员禁止密码登录、使用 MFA 或限制 sudo，WSM 不会绕过这些限制。
+- **真实环境验收**：CI 能覆盖 Rust 单元测试、SwiftUI 编译、Askpass 提示识别、隔离的 SSH 配置及窗口冒烟检查；**不等于**真实 Keychain 授权、密码服务器端到端登录和 Warp SSH 增强功能都已验证。
+
+## 命令行
+
+应用包包含 Rust CLI `wsm`。在源码仓库根目录可以这样使用：
 
 ```bash
-# 检查本机环境和配置路径
+# 环境检查
 cargo run -p wsm-cli -- doctor
 
-# 导入现有 SSH 配置（不修改已有 Host 定义）
+# 导入和列出已有 SSH 主机
 cargo run -p wsm-cli -- import
 cargo run -p wsm-cli -- list
 
-# 创建自管主机前，明确授权安装 Include
+# 初始化托管 SSH Config，再添加服务器
 cargo run -p wsm-cli -- init
 cargo run -p wsm-cli -- add \
   --name "Dev API" \
@@ -89,119 +121,85 @@ cargo run -p wsm-cli -- add \
   --user deploy \
   --port 22
 
-# 列出与搜索主机
+# 查询、预览 Warp 连接和同步 Tab Config
 cargo run -p wsm-cli -- list --search dev
-
-# 测试 Warp 配置与 URI，不实际发起打开请求
 cargo run -p wsm-cli -- connect <HOST_UUID> --dry-run
-
-# 收藏主机以及已有的 Warp Tab Configs 同步
-cargo run -p wsm-cli -- favorite <HOST_UUID>
 cargo run -p wsm-cli -- sync
 ```
 
-还支持 `edit`、`delete`、`group add/list/delete`、`connect --new-window`、`connect --preview` 和 `sync --all` 等命令。查看完整用法：
+更多命令包括 `edit`、`delete`、`favorite`、`group`、`connect` 和 `sync --all`。查看：
 
 ```bash
 cargo run -p wsm-cli -- --help
-cargo run -p wsm-cli -- connect --help
+"/Applications/Warp SSH Manager.app/Contents/MacOS/wsm" --version
 ```
 
-安装后的应用也可以直接使用内置 CLI：
+## 本地编译
+
+需要 **macOS、Xcode Command Line Tools、Rust / Cargo**。本项目的构建工具链使用 SwiftUI / AppKit 和 Rust；在仓库根目录执行：
 
 ```bash
-"/Applications/Warp SSH Manager.app/Contents/MacOS/wsm" doctor
-```
+xcode-select --install  # 已安装时可跳过
+cargo test -p wsm-core -p wsm-cli
 
-> DMG 中应用包的文件名为 `Warp SSH Manager.app`，Finder 可能按本地化的应用显示名呈现；若自行重命名过应用，请以实际 `.app/Contents/MacOS/wsm` 路径为准。
-
-## 本地构建原生 macOS 应用
-
-需要 **macOS、Xcode Command Line Tools、Rust/Cargo**，首次安装依赖需要联网。以下命令根据当前机器架构生成**对应架构**的安装包：
-
-```bash
-xcode-select --install  # 若已安装，可跳过
-
-case "$(uname -m)" in
-  arm64)
-    rust_target="aarch64-apple-darwin"
-    swift_target="arm64-apple-macos12.0"
-    arch="apple-silicon"
-    ;;
-  x86_64)
-    rust_target="x86_64-apple-darwin"
-    swift_target="x86_64-apple-macos12.0"
-    arch="intel"
-    ;;
-  *)
-    echo "Unsupported macOS architecture" >&2
-    exit 1
-    ;;
-esac
+if [ "$(uname -m)" = "arm64" ]; then
+  rust_target=aarch64-apple-darwin
+  swift_target=arm64-apple-macos12.0
+  arch=apple-silicon
+else
+  rust_target=x86_64-apple-darwin
+  swift_target=x86_64-apple-macos12.0
+  arch=intel
+fi
 
 rustup target add "$rust_target"
-cargo test -p wsm-core -p wsm-cli
 cargo build -p wsm-cli --release --target "$rust_target"
-
 mkdir -p dist
 xcrun swiftc -O -target "$swift_target" \
   -framework SwiftUI -framework AppKit \
-  apps/wsm-native/Sources/*.swift \
-  -o dist/warp-ssh-manager
+  apps/wsm-native/Sources/*.swift -o dist/warp-ssh-manager
 
-bash scripts/package-macos-app.sh \
-  --single dist/warp-ssh-manager "$arch"
+bash scripts/package-macos-app.sh --single dist/warp-ssh-manager "$arch"
 ```
 
-输出在 `dist/` 下，包含相应架构的 `.dmg` 和 `.app.zip`。本仓库只维护 SwiftUI / AppKit 原生界面，CLI 与 SSH 数据逻辑仍由 Rust 提供。
+安装包写入 `dist/`，包含对应架构的 DMG 和 `.app.zip`。打包过程也会编译专用 Askpass 辅助程序、验证捆绑架构及 macOS 版本元数据。
 
-### 项目结构
+## 项目结构
 
 ```text
-apps/wsm-native/Sources/  SwiftUI + AppKit 原生主窗口、详情和快速连接
-crates/wsm-core/         主机数据、SQLite、OpenSSH、Warp 配置逻辑
-crates/wsm-cli/          wsm 命令行及原生应用使用的 JSON 桥接
-examples/               SSH 配置与 Warp Tab Config 示例
-scripts/                macOS 打包、功能测试和截图验收脚本
-.github/workflows/      Rust 检查与双架构原生打包 CI
-assets/                 应用图标和品牌资源
+apps/
+  wsm-native/Sources/      SwiftUI / AppKit 主机管理界面
+  wsm-askpass/             macOS Keychain / SSH_ASKPASS 辅助程序
+crates/
+  wsm-core/                SQLite、SSH Host、Warp Tab Config 核心
+  wsm-cli/                 wsm CLI 以及原生应用的 JSON 桥接
+scripts/                   本地构建、检查与 macOS GUI 冒烟测试
+.github/workflows/         Rust CI、Intel / Apple Silicon 安装包
+assets/                    品牌图标
+examples/                  SSH 与 Warp 配置示例
 ```
 
-原生应用通过内置 `wsm ui ...` JSON 接口调用 Rust 核心，避免在 SwiftUI 和 CLI 中分别实现 SSH 配置写入逻辑。
+## 配置文件与升级
 
-## 配置与数据
-
-| 位置 | 内容 |
+| 路径 | 用途 |
 | --- | --- |
-| `~/Library/Application Support/WarpSSHManager/hosts.sqlite3` | 主机、分组、收藏及标签、备注等本地数据 |
-| `~/.ssh/config` | 原有 OpenSSH 主配置；显式初始化时添加 Include |
-| `~/.ssh/config.wsm-backup-<UUID>` | 初始化时对已有 SSH 主配置创建的备份 |
-| `~/.ssh/config.d/warp-ssh-manager.conf` | 管理器维护的自管 SSH Host 定义 |
-| `~/.warp/tab_configs/wsm_<UUID>.toml` | 管理器生成的 Warp Tab Config；文件名中的 UUID 不含连字符 |
+| `~/Library/Application Support/WarpSSHManager/hosts.sqlite3` | 主机、分组、收藏、标签和认证方式等数据（**不包含密码**） |
+| `~/.ssh/config` | 用户原有 SSH 配置，仅在明确初始化后写入 `Include` |
+| `~/.ssh/config.d/warp-ssh-manager.conf` | WSM 自管 SSH Host |
+| `~/.warp/tab_configs/wsm_<UUID>.toml` | WSM 生成的 Warp Tab Config |
+| macOS Keychain | 按主机 UUID 存储 SSH 和 sudo 凭据 |
+| `~/Library/Application Support/WarpSSHManager/askpass_sessions/` | 短期、一次性自动认证会话文件 |
 
-可用环境变量 **`WSM_HOME`、`WSM_SSH_CONFIG`、`WSM_WARP_CONFIG_DIR`** 覆盖数据目录、SSH 主配置与 Warp Tab Config 目录。运行测试时建议使用独立临时目录，避免碰到个人的真实 SSH 配置。
+支持环境变量 `WSM_HOME`、`WSM_SSH_CONFIG` 和 `WSM_WARP_CONFIG_DIR` 重定向路径。升级时请**先备份** SSH 配置及 `hosts.sqlite3`；应用的数据库迁移会给旧主机添加默认的 `auto` 认证方式，但不可把数据库备份当作 Keychain 密码备份。应用本身不支持跨设备迁移 Keychain 凭据。
 
-## 测试与 CI
+## 测试与贡献
 
-- [Rust checks](https://github.com/javafancn/warp-ssh-manager/actions/workflows/ci.yml)：Rust 格式检查、核心和 CLI 测试、静态检查，以及 macOS 相关检查。
-- [macOS 原生安装包](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml)：Apple Silicon / Intel 分别编译 SwiftUI 和 Rust 核心、打包独立 DMG。
-- Apple Silicon 的视觉 smoke test 使用**实际 SwiftUI 窗口截图**，检查三栏毛玻璃随桌面背景响应、透明缝隙，以及菜单栏与 Dock 主窗口的路由和重复窗口数量。
-- 本机可运行 `bash scripts/macos-smoke.sh`（隔离临时配置）及 `bash scripts/native-ui-bridge-smoke.sh <PATH_TO_WSM>`。
+- [Rust / SwiftUI CI](https://github.com/javafancn/warp-ssh-manager/actions/workflows/ci.yml) — 格式、测试、静态检查、类型检查及受控的 SSH 集成检查。
+- [macOS 构建](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml) — 两种架构单独打包，并在 Apple Silicon Runner 上执行实际窗口截图冒烟检查。
+- 本地功能检查：`bash scripts/macos-smoke.sh`；原生 JSON 桥接：`bash scripts/native-ui-bridge-smoke.sh <PATH_TO_WSM>`。
 
-CI 通过证明指定 runner、构建和模拟场景下的结果；**不等于**已完成全部 macOS 版本、物理 Dock 点击、真实 SSH 服务器认证或 Apple 公证验收。
-
-## 注意事项
-
-- 项目不会在 SQLite 或 SSH 配置中保存明文密码；显式保存的 SSH/sudo 密码单独存于当前 Mac 的 Keychain，私钥文件仅记录**路径**。复制到剪贴板期间仍存在被其他程序读取或同步的风险。
-- **自动登录是可选且受限的**：只有主机认证方式明确选择 `password`、SSH 密码已保存时才启用。ASKPASS 会话仅能取一次密码，失败或过期后显示系统认证对话框；本功能不会自动填写 sudo 密码。若 Warp 版本不能保留 Tab Config 的环境变量，请关闭自动登录，使用一键复制功能。
-- **安全边界**：本机同用户恶意进程可能读取短期存放在 Warp Tab Config 中的 ASKPASS 会话标识并竞态发起请求；当前实现不构成对本机同用户恶意进程的强隔离。生产使用前应完成真实设备安全测试。
-- 从 OpenSSH 配置导入的主机保留原 SSH 配置为认证策略来源；可另外保存和复制本地密码。设置凭据需先保存主机。
-- 妥善保管本地 SQLite 数据库及 SSH 配置。
-- 删除从 SSH 配置导入的主机，不会删除原始 OpenSSH Host 定义。
-- `wsm sync --all` 会为所有主机生成 Warp Tab Configs，可能增加 Warp 菜单中的条目。
-- 不要将个人 `~/.ssh/config`、私钥、令牌或真实服务器清单提交到公共仓库。
-- 若应用能打开但 Warp 无法连接，请先检查 Warp 是否已安装、`ssh <ALIAS>` 能否连接，以及高级设置中的 SSH 集成状态。
+如需提交问题或改进，请附上 macOS / Warp 版本、主机的**脱敏配置**、认证模式及复现步骤。**请勿上传密码、私钥、访问令牌或生产服务器清单。**
 
 ## 许可证
 
-[MIT License](LICENSE)。与 Warp 官方无隶属关系。
+本项目采用 [MIT License](LICENSE)，与 Warp 官方无隶属关系。
