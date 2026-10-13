@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use uuid::Uuid;
 
-use crate::model::Host;
+use crate::model::{AuthMode, Host};
 use crate::paths::AppPaths;
 
 /// Restrict aliases to a conservative subset that is safe in a shell startup command.
@@ -58,6 +58,16 @@ pub fn render_managed_config(hosts: &[Host]) -> Result<String> {
         output.push_str(&format!("Host {}\n    HostName {}\n    User {}\n    Port {}\n", host.alias, host.hostname,host.username,host.port));
         if let Some(key) = &host.identity_file { output.push_str(&format!("    IdentityFile {}\n", key)); }
         if let Some(jump) = &host.proxy_jump { output.push_str(&format!("    ProxyJump {}\n", jump)); }
+        // Per-host policy lives in managed ssh config; Warp continues to run "ssh <alias>".
+        match host.auth_mode {
+            AuthMode::Auto => {}
+            AuthMode::Key => output.push_str(
+                "    PreferredAuthentications publickey\n    PubkeyAuthentication yes\n    PasswordAuthentication no\n    KbdInteractiveAuthentication no\n",
+            ),
+            AuthMode::Password => output.push_str(
+                "    PreferredAuthentications password,keyboard-interactive\n    PubkeyAuthentication no\n    PasswordAuthentication yes\n    KbdInteractiveAuthentication yes\n    BatchMode no\n",
+            ),
+        }
         output.push('\n');
     }
     Ok(output)
@@ -219,7 +229,7 @@ pub fn effective_config(alias: &str) -> Result<EffectiveSsh> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{HostInput,HostSource};
+    use crate::model::{AuthMode,HostInput,HostSource};
     #[test] fn rejects_shell_injection_aliases() {
         for alias in ["-oProxyCommand", "prod;rm", "foo bar", "$(id)", "a\nb", ""] {
             assert!(validate_alias(alias).is_err(),"{alias}");
@@ -228,10 +238,16 @@ mod tests {
     }
     #[test] fn rejects_config_injection() {
         let mut host=HostInput{name:"Prod".into(),alias:"prod".into(),hostname:"example.com\nProxyCommand rm".into(),
-            username:"root".into(),port:22,identity_file:None,proxy_jump:None,group_id:None,favorite:false}.into_host(HostSource::Managed);
+            username:"root".into(),port:22,identity_file:None,proxy_jump:None,auth_mode:AuthMode::Auto,group_id:None,favorite:false}.into_host(HostSource::Managed);
         assert!(render_managed_config(&[host.clone()]).is_err());
         host.hostname="example.com".into();
-        assert!(render_managed_config(&[host]).unwrap().contains("Host prod"));
+        assert!(render_managed_config(&[host.clone()]).unwrap().contains("Host prod"));
+        host.auth_mode = AuthMode::Password;
+        let config = render_managed_config(&[host.clone()]).unwrap();
+        assert!(config.contains("PreferredAuthentications password,keyboard-interactive"));
+        assert!(config.contains("PubkeyAuthentication no"));
+        host.auth_mode = AuthMode::Key;
+        assert!(render_managed_config(&[host]).unwrap().contains("PasswordAuthentication no"));
     }
     #[test] fn aliases_and_includes() {
         let dir=tempfile::tempdir().unwrap();

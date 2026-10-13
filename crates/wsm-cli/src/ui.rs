@@ -4,7 +4,7 @@ use clap::Subcommand;
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read};
 use uuid::Uuid;
-use wsm_core::{Group, Host, HostInput, HostSource, Manager};
+use wsm_core::{AuthMode, Group, Host, HostInput, HostSource, Manager};
 
 #[derive(Subcommand)]
 pub enum UiCommand {
@@ -14,7 +14,7 @@ pub enum UiCommand {
     Save,
     Delete { id: Uuid },
     Favorite { id: Uuid, value: String },
-    Connect { id: Uuid },
+    Connect { id: Uuid, #[arg(long)] askpass_session: Option<Uuid> },
     Init,
     Import,
     AddGroup { name: String },
@@ -44,6 +44,8 @@ struct Draft {
     port: u16,
     identity_file: Option<String>,
     proxy_jump: Option<String>,
+    #[serde(default)]
+    auth_mode: AuthMode,
     group_id: Option<Uuid>,
     favorite: bool,
     tags: String,
@@ -79,6 +81,7 @@ fn save(manager: &Manager) -> Result<()> {
         host.name = draft.name;
         host.favorite = draft.favorite;
         host.group_id = draft.group_id;
+        host.auth_mode = draft.auth_mode;
         if host.source == HostSource::Managed {
             host.alias = draft.alias;
             host.hostname = draft.hostname;
@@ -98,6 +101,7 @@ fn save(manager: &Manager) -> Result<()> {
             port: draft.port,
             identity_file: draft.identity_file,
             proxy_jump: draft.proxy_jump,
+            auth_mode: draft.auth_mode,
             group_id: draft.group_id,
             favorite: draft.favorite,
         })?
@@ -123,7 +127,10 @@ pub fn run(manager: &Manager, command: UiCommand) -> Result<()> {
             manager.update_host(h)?;
             manager.sync_existing_tabs()?;
         }
-        UiCommand::Connect {id} => manager.connect(id, false, false)?,
+        UiCommand::Connect {id,askpass_session} => {
+            if let Some(session)=askpass_session {manager.connect_askpass(id,session)?;}
+            else {manager.connect(id,false,false)?;}
+        },
         UiCommand::Init => {manager.initialize_ssh()?;},
         UiCommand::Import => {
             let (_added, _updated, errors) = manager.import_ssh()?;

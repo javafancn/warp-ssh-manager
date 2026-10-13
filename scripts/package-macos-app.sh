@@ -36,6 +36,17 @@ rust_cli="target/${rust_target}/release/wsm"
 [[ -s "$rust_cli" ]] || { echo "Missing Rust core CLI: $rust_cli" >&2; exit 1; }
 cp "$rust_cli" "$app/Contents/MacOS/wsm"
 chmod 755 "$app/Contents/MacOS/wsm"
+# Bundle dedicated, native Keychain ASKPASS executable alongside wsm.
+case "$arch" in
+  apple-silicon) askpass_target=arm64-apple-macos12.0 ;;
+  intel) askpass_target=x86_64-apple-macos12.0 ;;
+esac
+xcrun swiftc -O -target "$askpass_target" -framework AppKit -framework Security \
+    apps/wsm-askpass/Askpass.swift -o "$app/Contents/MacOS/wsm-askpass"
+chmod 755 "$app/Contents/MacOS/wsm-askpass"
+[[ "$(lipo -archs "$app/Contents/MacOS/wsm-askpass")" == "$expected_arch" ]] || {
+    echo 'ASKPASS helper architecture mismatch.' >&2; exit 1;
+}
 [[ "$(lipo -archs "$app/Contents/MacOS/wsm")" == "$expected_arch" ]] || {
     echo 'Rust core architecture mismatch.' >&2; exit 1;
 }
@@ -88,6 +99,7 @@ sips -g pixelWidth -g pixelHeight "$app/Contents/Resources/brand-mark.png" >/dev
 sips -g pixelWidth -g pixelHeight "$app/Contents/Resources/WarpSSHManager.icns" >/dev/null
 # Ad-hoc signing is appropriate for local test builds; it is not Developer ID notarization.
 codesign --force --sign - --timestamp=none "$app/Contents/MacOS/wsm"
+codesign --force --sign - --timestamp=none "$app/Contents/MacOS/wsm-askpass"
 codesign --force --sign - --timestamp=none "$app"
 codesign --verify --verbose=2 "$app"
 "$app/Contents/MacOS/wsm" --version

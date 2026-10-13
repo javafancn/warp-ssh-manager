@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
 use uuid::Uuid;
-use wsm_core::{HostInput, Manager};
+use wsm_core::{AuthMode, HostInput, Manager};
 
 #[derive(Parser)]
 #[command(name="wsm",about="Warp SSH Manager — native SSH host management for Warp",version)]
@@ -95,7 +95,7 @@ fn run()->Result<()> {
         }
         Commands::Add{name,alias,hostname,user,port,identity,jump,group,favorite}=> {
             let h=manager.add_managed(HostInput{name,alias,hostname,username:user,port,identity_file:identity,
-                proxy_jump:jump,group_id:group,favorite})?;
+                proxy_jump:jump,auth_mode:AuthMode::Auto,group_id:group,favorite})?;
             println!("Created {} ({})",h.name,h.id);
         }
         Commands::Edit{id,name,alias,hostname,user,port,identity,jump,group,no_group}=> {
