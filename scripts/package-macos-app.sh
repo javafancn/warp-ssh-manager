@@ -20,6 +20,16 @@ for tool in lipo codesign ditto hdiutil sips iconutil plutil; do
 done
 project="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project"
+# Cargo workspace version is the single source of truth for app metadata
+# and installer filenames; do not allow a mismatched 1.0.0 release bundle.
+app_version="$(awk '
+  /^\[workspace\.package\]$/ { in_package=1; next }
+  in_package && /^\[/ { exit }
+  in_package && /^version = "/ { gsub(/"/, "", $3); print $3; exit }
+' Cargo.toml)"
+[[ "$app_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+  echo "Cannot read semantic version from Cargo workspace" >&2; exit 1;
+}
 mkdir -p dist
 app='dist/Warp SSH Manager.app'
 rm -rf "$app"
@@ -36,13 +46,24 @@ rust_cli="target/${rust_target}/release/wsm"
 [[ -s "$rust_cli" ]] || { echo "Missing Rust core CLI: $rust_cli" >&2; exit 1; }
 cp "$rust_cli" "$app/Contents/MacOS/wsm"
 chmod 755 "$app/Contents/MacOS/wsm"
+# Bundle dedicated, native Keychain ASKPASS executable alongside wsm.
+case "$arch" in
+  apple-silicon) askpass_target=arm64-apple-macos12.0 ;;
+  intel) askpass_target=x86_64-apple-macos12.0 ;;
+esac
+xcrun swiftc -O -target "$askpass_target" -framework AppKit -framework Security \
+    apps/wsm-askpass/Askpass.swift -o "$app/Contents/MacOS/wsm-askpass"
+chmod 755 "$app/Contents/MacOS/wsm-askpass"
+[[ "$(lipo -archs "$app/Contents/MacOS/wsm-askpass")" == "$expected_arch" ]] || {
+    echo 'ASKPASS helper architecture mismatch.' >&2; exit 1;
+}
 [[ "$(lipo -archs "$app/Contents/MacOS/wsm")" == "$expected_arch" ]] || {
     echo 'Rust core architecture mismatch.' >&2; exit 1;
 }
 found_archs="$(lipo -archs "$exe")"
 [[ "$found_archs" == "$expected_arch" ]] || { echo "Architecture mismatch: wanted $expected_arch, got $found_archs" >&2; exit 1; }
 chmod 755 "$exe"
-cat > "$app/Contents/Info.plist" <<'PLIST'
+cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -53,8 +74,8 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleName</key><string>Warp SSH 管理器</string>
 <key>CFBundleDisplayName</key><string>Warp SSH 管理器</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.4.25</string>
-<key>CFBundleVersion</key><string>36</string>
+<key>CFBundleShortVersionString</key><string>$app_version</string>
+<key>CFBundleVersion</key><string>100</string>
 <key>CFBundleIconFile</key><string>WarpSSHManager</string>
 <key>LSMinimumSystemVersion</key><string>12.0</string>
 <key>NSHighResolutionCapable</key><true/>
@@ -88,12 +109,17 @@ sips -g pixelWidth -g pixelHeight "$app/Contents/Resources/brand-mark.png" >/dev
 sips -g pixelWidth -g pixelHeight "$app/Contents/Resources/WarpSSHManager.icns" >/dev/null
 # Ad-hoc signing is appropriate for local test builds; it is not Developer ID notarization.
 codesign --force --sign - --timestamp=none "$app/Contents/MacOS/wsm"
+codesign --force --sign - --timestamp=none "$app/Contents/MacOS/wsm-askpass"
 codesign --force --sign - --timestamp=none "$app"
 codesign --verify --verbose=2 "$app"
-"$app/Contents/MacOS/wsm" --version
+cli_version="$("$app/Contents/MacOS/wsm" --version)"
+[[ "$cli_version" == *" $app_version" ]] || {
+    echo "Bundled CLI version mismatch: $cli_version (expected $app_version)" >&2; exit 1;
+}
+echo "$cli_version"
 bash scripts/verify-macos-binary.sh "$app"
-zip_path="dist/WarpSSHManager-0.4.25-${arch}.app.zip"
-dmg_path="dist/WarpSSHManager-0.4.25-${arch}.dmg"
+zip_path="dist/WarpSSHManager-${app_version}-${arch}.app.zip"
+dmg_path="dist/WarpSSHManager-${app_version}-${arch}.dmg"
 rm -f "$zip_path" "$dmg_path"
 ditto -c -k --sequesterRsrc --keepParent "$app" "$zip_path"
 # Finder-style drag-to-Applications installer instead of a raw .app disk image.

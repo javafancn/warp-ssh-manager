@@ -1,5 +1,5 @@
 use crate::db::Repository;
-use crate::model::{Group, Host, HostInput, HostSource};
+use crate::model::{AuthMode, Group, Host, HostInput, HostSource};
 use crate::paths::AppPaths;
 use crate::{ssh, warp};
 use anyhow::{bail, Context, Result};
@@ -131,7 +131,7 @@ impl Manager {
                     let mut host=if let Some(h)=current { updated+=1;h } else {
                         added+=1;
                         HostInput{name:alias.clone(),alias:alias.clone(),hostname:c.hostname.clone(),username:c.username.clone(),port:c.port,
-                            identity_file:c.identity_file.clone(),proxy_jump:c.proxy_jump.clone(),group_id:None,favorite:false}
+                            identity_file:c.identity_file.clone(),proxy_jump:c.proxy_jump.clone(),auth_mode:AuthMode::Auto,group_id:None,favorite:false}
                             .into_host(HostSource::Imported)
                     };
                     host.hostname=c.hostname;host.username=c.username;host.port=c.port;
@@ -155,6 +155,32 @@ impl Manager {
         let group=self.group_name(host.group_id)?;
         let path=warp::write_tab(&self.paths,&host,group.as_deref())?;
         Ok((host,path))
+    }
+
+    /// Explicit one-shot Keychain auto-login; the Rust bridge never sees a password.
+    pub fn connect_askpass(&self,id:Uuid,session:Uuid) -> Result<()> {
+        let host=self.db.get_host(id)?.context("host not found")?;
+        if host.auth_mode!=AuthMode::Password {
+            bail!("auto-login requires password authentication mode");
+        }
+        if host.source==HostSource::Managed && !ssh::include_installed(&self.paths)? {
+            bail!("SSH Include is missing; run wsm init");
+        }
+        let sessions_dir=self.paths.data_dir.join("askpass_sessions");
+        if !sessions_dir.join(format!("{}.json",session.simple())).is_file() {
+            bail!("auto-login session not found");
+        }
+        let helper=std::env::current_exe()?
+            .parent().context("wsm executable directory missing")?
+            .join("wsm-askpass");
+        if !helper.is_file() { bail!("wsm-askpass helper not installed"); }
+        let launch=warp::AskpassLaunch {session,sessions_dir:&sessions_dir,helper:&helper};
+        let group=self.group_name(host.group_id)?;
+        warp::write_tab_with_askpass(&self.paths,&host,group.as_deref(),Some(&launch))?;
+        warp::open_tab(id,false,false)?;
+        let now=SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64;
+        self.db.mark_connected(host.id,now)?;
+        Ok(())
     }
 
     pub fn connect(&self,id:Uuid,new_window:bool,preview:bool) -> Result<()> {
@@ -222,7 +248,7 @@ mod tests {
     }
     fn input(alias:&str)->HostInput {
         HostInput{name:"API".into(),alias:alias.into(),hostname:"example.com".into(),username:"deploy".into(),port:22,
-            identity_file:None,proxy_jump:None,group_id:None,favorite:false}
+            identity_file:None,proxy_jump:None,auth_mode:AuthMode::Auto,group_id:None,favorite:false}
     }
     #[test] fn lifecycle_and_config_sync() {
         let (_dir,m)=fixture();

@@ -237,31 +237,28 @@ struct ManagerShell: View {
     @State private var loaded = false
     var body: some View {
         GeometryReader { geometry in
-            // Respect the reference's ~22%/37%/41% three-pane rhythm across
-            // laptop resolutions while keeping the inspector comfortable.
-            let sidebarWidth = max(258, min(300, geometry.size.width * 0.225))
-            let listWidth = max(415, min(525, geometry.size.width * 0.378))
-            let inspectorWidth = max(310, geometry.size.width - sidebarWidth - listWidth - 2)
+            // Reference: sidebar ~21%, list ~36%, inspector ~43%.
+            // The inspector begins at the *top of the window*, alongside the
+            // list toolbar, instead of being pushed below its 70pt header.
+            let sidebarWidth = max(252, min(306, geometry.size.width * 0.211))
+            let listWidth = max(380, min(540, geometry.size.width * 0.362))
+            let inspectorWidth = max(360, geometry.size.width - sidebarWidth - listWidth - 2)
             let chromeScale = max(CGFloat(0.79), min(CGFloat(1), geometry.size.width / 1410))
             HStack(spacing:0) {
                 ManagerSidebar(paneWidth:sidebarWidth)
                     .frame(width:sidebarWidth)
                 Rectangle().fill(Design.hairline).frame(width:1)
                 VStack(spacing:0) {
-                    // The title row belongs to the SAME continuous glass as
-                    // the connection list and inspector. A second .titlebar
-                    // NSVisualEffectView made it appear as a detached pale bar.
                     ConnectionToolbar(scale:chromeScale)
                         .frame(height:70 * chromeScale)
                     Rectangle().fill(Design.hairline).frame(height:1)
-                    HStack(spacing:0) {
-                        ConnectionList(listWidth:listWidth)
-                            .frame(width:listWidth)
-                        Rectangle().fill(Design.hairline).frame(width:1)
-                        HostInspector(paneWidth:inspectorWidth)
-                            .frame(maxWidth:.infinity,maxHeight:.infinity)
-                    }
+                    ConnectionList(listWidth:listWidth)
+                        .frame(maxWidth:.infinity,maxHeight:.infinity)
                 }
+                .frame(width:listWidth)
+                Rectangle().fill(Design.hairline).frame(width:1)
+                HostInspector(paneWidth:inspectorWidth)
+                    .frame(maxWidth:.infinity,maxHeight:.infinity)
             }
         }
         .frame(maxWidth:.infinity,maxHeight:.infinity)
@@ -284,6 +281,20 @@ struct ManagerShell: View {
         .preferredColorScheme(store.appearance == "dark" ? .dark :
                             (store.appearance == "light" ? .light : nil))
         .overlay(alignment:.top) {
+            if let notice = store.noticeMessage, store.errorMessage == nil {
+                HStack(spacing:10) {
+                    Image(systemName:"checkmark.circle.fill").foregroundColor(.green)
+                    Text(notice).font(Design.font(13))
+                    Spacer()
+                    Button("关闭") {store.noticeMessage=nil}.buttonStyle(.plain)
+                }
+                .padding(14)
+                .frame(maxWidth:460)
+                .background(.regularMaterial,in:RoundedRectangle(cornerRadius:12))
+                .shadow(radius:12)
+                .padding(.top,76)
+                .zIndex(10)
+            }
             if let message = store.errorMessage {
                 HStack(spacing:12) {
                     Image(systemName:"exclamationmark.triangle.fill").foregroundColor(.orange)
@@ -303,9 +314,13 @@ struct ManagerShell: View {
             if !loaded {
                 loaded = true
                 store.refresh()
-                // Isolated GUI screenshot fixture only: exercise the advanced
-                // layout without clicking tabs in a real user's session.
-                if ProcessInfo.processInfo.environment["WSM_CI_ADVANCED_INSPECTOR"] == "1" {
+                // Isolated GUI screenshot fixture: display the actual
+                // connection inspector rather than the unrelated Advanced tab.
+                if ProcessInfo.processInfo.environment["WSM_CI_CONNECTION_INSPECTOR"] == "1" {
+                    DispatchQueue.main.asyncAfter(deadline:.now()+4) {
+                        store.tab = .connection
+                    }
+                } else if ProcessInfo.processInfo.environment["WSM_CI_ADVANCED_INSPECTOR"] == "1" {
                     DispatchQueue.main.asyncAfter(deadline:.now()+4) {
                         store.tab = .advanced
                     }
@@ -315,55 +330,28 @@ struct ManagerShell: View {
     }
 }
 
+// The list owns its header; the inspector owns its independent header.
+// Appearance settings and host creation are also available in the sidebar gear.
 struct ConnectionToolbar: View {
     var scale: CGFloat = 1
     @EnvironmentObject private var store: ManagerStore
     var body: some View {
-        HStack(spacing:14 * scale) {
+        HStack {
             Text("连接列表")
                 .font(Design.font(24 * scale,.semibold))
                 .foregroundColor(Design.primary)
-            Spacer(minLength:12 * scale)
-            HStack(spacing:3 * scale) {
-                appearanceSegment("auto","自动")
-                appearanceSegment("dark","深色")
-                appearanceSegment("light","浅色")
+            Spacer(minLength:0)
+            Button { store.newHost() } label: {
+                Image(systemName:"plus")
+                    .font(.system(size:15 * scale,weight:.semibold))
+                    .foregroundColor(Design.secondary)
+                    .frame(width:32 * scale,height:32 * scale)
             }
-            .padding(3 * scale)
-            .frame(width:258 * scale,height:42 * scale)
-            // Light control chrome, not another material pane.
-            .background(Design.surface(0.24),in:RoundedRectangle(cornerRadius:11 * scale))
-            .overlay(RoundedRectangle(cornerRadius:11 * scale)
-                .strokeBorder(Design.hairline.opacity(0.75),lineWidth:1))
-            .accessibilityLabel("外观设置")
-            Button(action:{store.newHost()}) {
-                Label("新建主机",systemImage:"plus")
-                    .font(Design.font(16 * scale,.semibold))
-                    .padding(.horizontal,31 * scale)
-                    .frame(height:42 * scale)
-            }
-            .buttonStyle(SoftButtonStyle(prominent:true))
+            .buttonStyle(.plain)
+            .help("新建主机")
+            .accessibilityLabel("新建主机")
         }
         .padding(.leading,23 * scale)
-        .padding(.trailing,21 * scale)
-        // The scene now uses HiddenTitleBarWindowStyle; additional titlebar
-        // clearance would push these controls below the reference position.
-    }
-
-    private func appearanceSegment(_ value: String,_ label: String) -> some View {
-        let selected = store.appearance == value
-        return Button {
-            store.appearance = value
-        } label: {
-            Text(label)
-                .font(Design.font(16 * scale,selected ? .semibold : .medium))
-                .foregroundColor(selected ? Design.blue : Design.secondary)
-                .frame(maxWidth:.infinity).frame(height:36 * scale)
-                .background(selected ? Design.surface(0.86) : .clear,
-                            in:RoundedRectangle(cornerRadius:9 * scale,style:.continuous))
-                .shadow(color:.black.opacity(selected ? 0.09 : 0),radius:3,y:1)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? [.isSelected] : [])
+        .padding(.trailing,18 * scale)
     }
 }

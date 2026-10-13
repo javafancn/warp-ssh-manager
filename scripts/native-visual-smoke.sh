@@ -30,8 +30,8 @@ done
 launchctl setenv WSM_HOME "$WSM_HOME" || true
 launchctl setenv WSM_SSH_CONFIG "$WSM_SSH_CONFIG" || true
 launchctl setenv WSM_WARP_CONFIG_DIR "$WSM_WARP_CONFIG_DIR" || true
-# Only the isolated visual fixture opens the Advanced tab for screenshot audit.
-launchctl setenv WSM_CI_ADVANCED_INSPECTOR 1 || true
+# Isolated screenshot fixture opens the connection tab for visual audit.
+launchctl setenv WSM_CI_CONNECTION_INSPECTOR 1 || true
 # GUI-only routing audit exercises quick-panel vs manager vs Dock reopen.
 ROUTING_RESULT="$RUNNER_TEMP/wsm-native-window-routing.txt"
 ROUTING_READY="$RUNNER_TEMP/wsm-native-quick-ready.txt"
@@ -58,7 +58,7 @@ cleanup_visual_fixture() {
   launchctl unsetenv WSM_HOME 2>/dev/null || true
   launchctl unsetenv WSM_SSH_CONFIG 2>/dev/null || true
   launchctl unsetenv WSM_WARP_CONFIG_DIR 2>/dev/null || true
-  launchctl unsetenv WSM_CI_ADVANCED_INSPECTOR 2>/dev/null || true
+  launchctl unsetenv WSM_CI_CONNECTION_INSPECTOR 2>/dev/null || true
   launchctl unsetenv WSM_WINDOW_ROUTING_SMOKE_RESULT 2>/dev/null || true
   launchctl unsetenv WSM_ROUTING_QUICK_READY 2>/dev/null || true
 }
@@ -176,7 +176,7 @@ if [[ "$window_id" =~ ^[0-9]+$ ]] && [[ -n "$BACKDROP_PID" ]]; then
   fi
 fi
 if [[ -s dist/native-macos-render.png ]]; then
-  cp dist/native-macos-render.png dist/native-advanced-inspector.png
+  cp dist/native-macos-render.png dist/native-connection-inspector.png
   sips -g pixelWidth -g pixelHeight dist/native-macos-render.png
   echo "Captured actual SwiftUI rendering"
 else

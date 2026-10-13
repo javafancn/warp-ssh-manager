@@ -1,4 +1,4 @@
-use crate::model::{Group, Host, HostSource};
+use crate::model::{AuthMode, Group, Host, HostSource};
 use anyhow::{Context, Result};
 use rusqlite::{params, Connection, OptionalExtension, Row};
 use std::path::Path;
@@ -38,6 +38,15 @@ impl Repository {
             );\
             CREATE INDEX IF NOT EXISTS idx_hosts_group ON hosts(group_id);\
             CREATE INDEX IF NOT EXISTS idx_hosts_favorite ON hosts(favorite);")?;
+        // Existing v0.4 databases have no auth_mode column.
+        let has_auth_mode = {
+            let mut statement = conn.prepare("PRAGMA table_info(hosts)")?;
+            let rows = statement.query_map([], |row| row.get::<_, String>(1))?;
+            rows.collect::<rusqlite::Result<Vec<_>>>()?.iter().any(|name| name == "auth_mode")
+        };
+        if !has_auth_mode {
+            conn.execute("ALTER TABLE hosts ADD COLUMN auth_mode TEXT NOT NULL DEFAULT 'auto'", [])?;
+        }
         Ok(Self { conn })
     }
 
@@ -57,33 +66,41 @@ impl Repository {
                 _ => return Err(rusqlite::Error::InvalidColumnType(10, "source".into(), rusqlite::types::Type::Text)),
             },
             last_connected: row.get(11)?,
+            auth_mode: match row.get::<_, String>(12)?.as_str() {
+                "auto" => AuthMode::Auto,
+                "key" => AuthMode::Key,
+                "password" => AuthMode::Password,
+                _ => return Err(rusqlite::Error::InvalidColumnType(
+                    12, "auth_mode".into(), rusqlite::types::Type::Text,
+                )),
+            },
         })
     }
 
 
     pub fn list_hosts(&self) -> Result<Vec<Host>> {
-        let mut stmt = self.conn.prepare("SELECT id,name,alias,hostname,username,port,identity_file,proxy_jump,group_id,favorite,source,last_connected FROM hosts ORDER BY favorite DESC, name COLLATE NOCASE")?;
+        let mut stmt = self.conn.prepare("SELECT id,name,alias,hostname,username,port,identity_file,proxy_jump,group_id,favorite,source,last_connected,auth_mode FROM hosts ORDER BY favorite DESC, name COLLATE NOCASE")?;
         let rows = stmt.query_map([], Self::map_host)?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
     pub fn get_host(&self, id: Uuid) -> Result<Option<Host>> {
-        self.conn.query_row("SELECT id,name,alias,hostname,username,port,identity_file,proxy_jump,group_id,favorite,source,last_connected FROM hosts WHERE id=?1", [id.to_string()], Self::map_host).optional().map_err(Into::into)
+        self.conn.query_row("SELECT id,name,alias,hostname,username,port,identity_file,proxy_jump,group_id,favorite,source,last_connected,auth_mode FROM hosts WHERE id=?1", [id.to_string()], Self::map_host).optional().map_err(Into::into)
     }
 
     pub fn find_alias(&self, alias: &str) -> Result<Option<Host>> {
-        self.conn.query_row("SELECT id,name,alias,hostname,username,port,identity_file,proxy_jump,group_id,favorite,source,last_connected FROM hosts WHERE alias=?1 COLLATE NOCASE", [alias], Self::map_host).optional().map_err(Into::into)
+        self.conn.query_row("SELECT id,name,alias,hostname,username,port,identity_file,proxy_jump,group_id,favorite,source,last_connected,auth_mode FROM hosts WHERE alias=?1 COLLATE NOCASE", [alias], Self::map_host).optional().map_err(Into::into)
     }
 
     pub fn save_host(&self, host: &Host) -> Result<()> {
-        self.conn.execute("INSERT INTO hosts (id,name,alias,hostname,username,port,identity_file,proxy_jump,group_id,favorite,source,last_connected)
-             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)
+        self.conn.execute("INSERT INTO hosts (id,name,alias,hostname,username,port,identity_file,proxy_jump,group_id,favorite,source,last_connected,auth_mode)
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)
              ON CONFLICT(id) DO UPDATE SET name=excluded.name,alias=excluded.alias,hostname=excluded.hostname,
              username=excluded.username,port=excluded.port,identity_file=excluded.identity_file,
              proxy_jump=excluded.proxy_jump,group_id=excluded.group_id,favorite=excluded.favorite,
-             source=excluded.source,last_connected=excluded.last_connected",
+             source=excluded.source,last_connected=excluded.last_connected,auth_mode=excluded.auth_mode",
             params![host.id.to_string(),host.name,host.alias,host.hostname,host.username,host.port,host.identity_file,
-                host.proxy_jump,host.group_id.map(|v|v.to_string()),host.favorite as i32,host.source.as_str(),host.last_connected])?;
+                host.proxy_jump,host.group_id.map(|v|v.to_string()),host.favorite as i32,host.source.as_str(),host.last_connected,host.auth_mode.as_str()])?;
         Ok(())
     }
 
@@ -134,6 +151,39 @@ impl Repository {
 
     pub fn delete_group(&self, id: Uuid) -> Result<bool> {
         Ok(self.conn.execute("DELETE FROM groups WHERE id=?1", [id.to_string()])? != 0)
+    }
+}
+
+#[cfg(test)]
+mod auth_tests {
+    use super::*;
+    #[test]
+    fn migrates_existing_host_table_without_losing_rows() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("hosts.sqlite3");
+        {
+            let conn = Connection::open(&path).unwrap();
+            conn.execute_batch(
+                "CREATE TABLE hosts (id TEXT PRIMARY KEY, name TEXT NOT NULL, alias TEXT NOT NULL,
+                hostname TEXT NOT NULL, username TEXT NOT NULL, port INTEGER NOT NULL,
+                identity_file TEXT, proxy_jump TEXT, group_id TEXT,
+                favorite INTEGER NOT NULL DEFAULT 0, source TEXT NOT NULL, last_connected INTEGER);
+                INSERT INTO hosts VALUES
+                ('3c728e71-68f7-41f3-a9de-1c9e036953f8','Legacy','legacy','example.test','deploy',22,
+                 NULL,NULL,NULL,0,'managed',NULL);"
+            ).unwrap();
+        }
+        let db = Repository::open(&path).unwrap();
+        let old = db.list_hosts().unwrap();
+        assert_eq!(old.len(),1);
+        assert_eq!(old[0].auth_mode,AuthMode::Auto);
+        let mut edited = old[0].clone();
+        edited.auth_mode=AuthMode::Password;
+        db.save_host(&edited).unwrap();
+        assert_eq!(db.get_host(edited.id).unwrap().unwrap().auth_mode,AuthMode::Password);
+        drop(db);
+        let reopened=Repository::open(&path).unwrap();
+        assert_eq!(reopened.list_hosts().unwrap()[0].auth_mode,AuthMode::Password);
     }
 }
 

@@ -21,6 +21,7 @@ struct ManagerSidebar: View {
     }
     @EnvironmentObject private var store: ManagerStore
     @State private var showAddGroup = false
+    @State private var showSettings = false
     @State private var newGroupName = ""
     var body: some View {
         VStack(alignment:.leading,spacing:0) {
@@ -90,13 +91,37 @@ struct ManagerSidebar: View {
                         .frame(height:38 * sidebarScale)
                 }
                 .buttonStyle(SoftButtonStyle())
-                Button {store.refresh()} label:{
+                Button {showSettings.toggle()} label:{
                     Image(systemName:"gearshape")
                         .font(.system(size:17 * sidebarScale))
                         .frame(width:38 * sidebarScale,height:38 * sidebarScale)
                 }
                 .buttonStyle(SoftButtonStyle())
-                .help("刷新连接列表")
+                .help("更多选项")
+                .popover(isPresented:$showSettings,arrowEdge:.top) {
+                    VStack(alignment:.leading,spacing:13) {
+                        Button {
+                            showSettings=false;store.newHost()
+                        } label: { Label("新建主机",systemImage:"plus") }
+                        Button {
+                            showSettings=false;store.refresh()
+                        } label: { Label("刷新连接列表",systemImage:"arrow.clockwise") }
+                        Divider()
+                        Text("外观")
+                            .font(Design.font(13,.medium))
+                            .foregroundColor(Design.secondary)
+                        Picker("外观",selection:$store.appearance) {
+                            Text("自动").tag("auto")
+                            Text("深色").tag("dark")
+                            Text("浅色").tag("light")
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.segmented)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(16)
+                    .frame(width:240)
+                }
             }
             .font(Design.font(15 * sidebarScale))
             .padding(.horizontal,18 * sidebarScale)
@@ -142,28 +167,50 @@ struct ManagerSidebar: View {
     }
 }
 
+/// Stable tag colors: common environments keep meaningful hues, while
+/// custom tags get a deterministic hue from their name (not list position).
+/// Avoid Swift's randomized hashValue so colors survive app restarts.
+enum TagBadgePalette {
+    static func hue(for tag:String) -> Double {
+        let name=tag.trimmingCharacters(in:.whitespacesAndNewlines).lowercased()
+        switch name {
+        case "production","prod","生产","生产环境": return 0.42 // green
+        case "test","testing","测试","测试环境": return 0.09 // orange
+        case "dev","development","开发","开发环境": return 0.76 // violet
+        case "staging","stage","预发布": return 0.15 // amber
+        case "api": return 0.58 // blue
+        case "database","db","数据库": return 0.94 // rose
+        case "ops","operations","运维": return 0.51 // teal
+        case "jump","bastion","跳板机": return 0.48 // mint
+        default:
+            var hash: UInt64 = 14695981039346656037
+            for byte in name.utf8 {
+                hash = (hash ^ UInt64(byte)) &* 1099511628211
+            }
+            return Double(hash % 360) / 360.0
+        }
+    }
+}
+
 struct TerminalBadge: View {
     var tag: String
     var scale: CGFloat = 1
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
-        let lower = tag.lowercased()
-        let isAPI = lower == "api"
-        let isProd = lower.contains("production") || lower == "prod"
-        let isDev = lower == "dev"
-        let isDB = lower.contains("database")
-        let fg: Color = isAPI ? Color(red:0.05,green:0.39,blue:0.95) :
-            isProd ? Color(red:0.02,green:0.46,blue:0.30) :
-            isDev ? Color(red:0.35,green:0.22,blue:0.90) :
-            isDB ? .red : Color(red:0.65,green:0.34,blue:0.05)
-        let bg: Color = isAPI ? Color(red:0.84,green:0.92,blue:1) :
-            isProd ? Color(red:0.77,green:0.96,blue:0.88) :
-            isDev ? Color(red:0.90,green:0.86,blue:1) :
-            isDB ? Color(red:1,green:0.87,blue:0.91) :
-            Color(red:1,green:0.91,blue:0.80)
-        Text(tag).font(Design.font(14 * scale))
+        let hue=TagBadgePalette.hue(for:tag)
+        let isDark=colorScheme == .dark
+        let fg=Color(hue:hue,saturation:isDark ? 0.43 : 0.78,
+                     brightness:isDark ? 0.99 : 0.43)
+        let bg=Color(hue:hue,saturation:isDark ? 0.38 : 0.25,
+                     brightness:isDark ? 0.35 : 0.98)
+        Text(tag)
+            .font(Design.font(14 * scale,.medium))
             .foregroundColor(fg)
-            .padding(.horizontal,9 * scale).padding(.vertical,5 * scale)
-            .background(bg,in:RoundedRectangle(cornerRadius:8))
+            .padding(.horizontal,9 * scale)
+            .padding(.vertical,5 * scale)
+            .background(bg,in:RoundedRectangle(cornerRadius:8 * scale))
+            .fixedSize(horizontal:true,vertical:false)
     }
 }
 struct TerminalIcon: View {
@@ -214,6 +261,7 @@ struct ConnectionList: View {
     private var cardScale: CGFloat { max(0.82, min(1.0, listWidth / 538.0)) }
     @EnvironmentObject private var store: ManagerStore
     @State private var showFilters = false
+    @State private var shownHostMenuID: String? = nil
     var body: some View {
         VStack(spacing:0) {
             HStack(spacing:10 * cardScale) {
@@ -323,19 +371,63 @@ struct ConnectionList: View {
                 }
             }
             Spacer(minLength:0)
-            Button {store.toggleFavorite(host)} label: {
-                Image(systemName:host.favorite ? "star.fill" : "star")
-                    .font(.system(size:19 * cardScale))
-                    .foregroundColor(host.favorite ? .orange : Design.secondary)
-            }.buttonStyle(.plain).help("收藏")
-            Menu {
-                Button("在 Warp 中打开"){store.connect(host)}
-                Button(host.favorite ? "取消收藏" : "收藏"){store.toggleFavorite(host)}
+            // Favorites remain available inside the actions popover.
+            // Each row now has only one trailing ellipsis control.
+            // macOS Menu's borderless style appends a disclosure chevron.
+            // A plain ellipsis Button with a popover has only the three dots.
+            Button {
+                shownHostMenuID = shownHostMenuID == host.id ? nil : host.id
             } label: {
                 Image(systemName:"ellipsis")
                     .font(.system(size:19 * cardScale,weight:.medium))
                     .foregroundColor(Design.secondary)
-            }.menuStyle(.borderlessButton).frame(width:24 * cardScale)
+                    .frame(width:25 * cardScale,height:31 * cardScale)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("更多主机操作")
+            .accessibilityLabel("更多主机操作")
+            .popover(isPresented:Binding(
+                get:{shownHostMenuID == host.id},
+                set:{if !$0 && shownHostMenuID == host.id {shownHostMenuID = nil}}
+            ),arrowEdge:.bottom) {
+                VStack(alignment:.leading,spacing:12) {
+                    Button {
+                        shownHostMenuID=nil;store.connect(host)
+                    } label: {
+                        Label("在 Warp 中打开",systemImage:"arrow.up.right.square")
+                    }
+                    Button {
+                        shownHostMenuID=nil;store.connectManual(host)
+                    } label: {
+                        Label("手动连接",systemImage:"terminal")
+                    }
+                    Divider()
+                    Button {
+                        shownHostMenuID=nil;store.copyPassword(.ssh,for:host)
+                    } label: {
+                        Label("复制 SSH 密码",systemImage:"doc.on.doc")
+                    }
+                    .disabled(!store.hasPassword(.ssh,for:host.id))
+                    Button {
+                        shownHostMenuID=nil;store.copyPassword(.sudo,for:host)
+                    } label: {
+                        Label("复制 sudo 密码",systemImage:"doc.on.doc")
+                    }
+                    .disabled(!store.hasPassword(.sudo,for:host.id) && !store.hasPassword(.ssh,for:host.id))
+                    Divider()
+                    Button {
+                        shownHostMenuID=nil;store.toggleFavorite(host)
+                    } label: {
+                        Label(host.favorite ? "取消收藏" : "收藏",
+                              systemImage:host.favorite ? "star.slash" : "star")
+                    }
+                }
+                .font(Design.font(14))
+                .buttonStyle(.plain)
+                .padding(16)
+                .frame(width:215,alignment:.leading)
+            }
         }
         .padding(.horizontal,17 * cardScale)
         .frame(minHeight:125 * cardScale)

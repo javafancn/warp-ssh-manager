@@ -23,6 +23,24 @@ impl HostSource {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AuthMode { #[default] Auto, Key, Password }
+
+impl AuthMode {
+    pub fn as_str(self) -> &'static str {
+        match self { Self::Auto => "auto", Self::Key => "key", Self::Password => "password" }
+    }
+    pub fn from_db(value: &str) -> anyhow::Result<Self> {
+        match value {
+            "auto" => Ok(Self::Auto),
+            "key" => Ok(Self::Key),
+            "password" => Ok(Self::Password),
+            _ => anyhow::bail!("invalid auth mode: {value}"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Host {
     pub id: Uuid,
@@ -33,6 +51,8 @@ pub struct Host {
     pub port: u16,
     pub identity_file: Option<String>,
     pub proxy_jump: Option<String>,
+    #[serde(default)]
+    pub auth_mode: AuthMode,
     pub group_id: Option<Uuid>,
     pub favorite: bool,
     pub source: HostSource,
@@ -48,6 +68,8 @@ pub struct HostInput {
     pub port: u16,
     pub identity_file: Option<String>,
     pub proxy_jump: Option<String>,
+    #[serde(default)]
+    pub auth_mode: AuthMode,
     pub group_id: Option<Uuid>,
     pub favorite: bool,
 }
@@ -63,6 +85,7 @@ impl HostInput {
             port: self.port,
             identity_file: self.identity_file,
             proxy_jump: self.proxy_jump,
+            auth_mode: self.auth_mode,
             group_id: self.group_id,
             favorite: self.favorite,
             source,

@@ -11,6 +11,15 @@ if [[ -d "$input" ]]; then
     minimum="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$plist")"
     echo "App Info.plist minimum: $minimum"
     [[ "$minimum" == '12.0' ]] || { echo 'App minimum system version is not 12.0' >&2; exit 1; }
+    package_version="$(awk '
+      /^\[workspace\.package\]$/ { in_package=1; next }
+      in_package && /^\[/ { exit }
+      in_package && /^version = "/ { gsub(/"/, "", $3); print $3; exit }
+    ' Cargo.toml)"
+    bundle_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
+    [[ -n "$package_version" && "$bundle_version" == "$package_version" ]] || {
+      echo "App version ($bundle_version) does not match Cargo ($package_version)" >&2; exit 1;
+    }
   fi
 else
   binary="$input"

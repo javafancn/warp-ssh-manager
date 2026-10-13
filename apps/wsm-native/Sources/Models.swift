@@ -1,6 +1,8 @@
 import Foundation
 import SwiftUI
 import AppKit
+import Security
+import Darwin
 
 struct HostRecord: Codable, Identifiable, Hashable {
     var id: String
@@ -10,6 +12,7 @@ struct HostRecord: Codable, Identifiable, Hashable {
     var username: String
     var port: Int
     var identityFile: String?
+    var authMode: String
     var proxyJump: String?
     var groupId: String?
     var favorite: Bool
@@ -41,6 +44,7 @@ struct HostDraft {
     var port = "22"
     var identityFile = ""
     var proxyJump = ""
+    var authMode = "auto"
     var groupId: String? = nil
     var favorite = false
     var source = "Managed"
@@ -56,6 +60,7 @@ struct HostDraft {
         port = String(host.port)
         identityFile = host.identityFile ?? ""
         proxyJump = host.proxyJump ?? ""
+        authMode = host.authMode
         groupId = host.groupId
         favorite = host.favorite
         source = host.source
@@ -73,12 +78,139 @@ struct HostDraft {
             "name": name, "alias": alias, "hostname": hostname, "username": username,
             "port": Int(number), "identity_file": identityFile.isEmpty ? NSNull() : identityFile as Any,
             "proxy_jump": proxyJump.isEmpty ? NSNull() : proxyJump as Any,
+            "auth_mode": authMode,
             "group_id": groupId as Any? ?? NSNull(), "favorite": favorite,
             "tags": tags, "notes": notes
         ]
         return try JSONSerialization.data(withJSONObject: record)
     }
 }
+// Passwords never enter the Rust JSON bridge, SQLite, SSH config, or Warp Tab config.
+// Keychain handles at-rest encryption; the UI only reads on explicit copy.
+enum CredentialVault {
+    enum Kind: String { case ssh, sudo }
+    static let service = "dev.warpsshmanager.app.credentials.v1"
+    static func account(_ hostID: String, _ kind: Kind) -> String { "\(hostID):\(kind.rawValue)" }
+    static func status(_ hostID: String, _ kind: Kind) -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account(hostID,kind),
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        return SecItemCopyMatching(query as CFDictionary,nil) == errSecSuccess
+    }
+    static func load(_ hostID: String, _ kind: Kind) throws -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account(hostID,kind),
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary,&result)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess, let data = result as? Data,
+              let password = String(data:data,encoding:.utf8) else {
+            throw NSError(domain:"WSM Keychain",code:Int(status),
+                          userInfo:[NSLocalizedDescriptionKey:"读取钥匙串密码失败 (\(status))"])
+        }
+        return password
+    }
+    static func save(_ password: String, for hostID: String, kind: Kind) throws {
+        guard !password.isEmpty else { throw NSError(domain:"WSM Keychain",code:1,
+            userInfo:[NSLocalizedDescriptionKey:"密码不能为空"]) }
+        let item: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account(hostID,kind)
+        ]
+        let attributes: [String: Any] = [kSecValueData as String: Data(password.utf8)]
+        var status = SecItemUpdate(item as CFDictionary,attributes as CFDictionary)
+        if status == errSecItemNotFound {
+            var insertion = item
+            insertion[kSecValueData as String] = Data(password.utf8)
+            insertion[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            status = SecItemAdd(insertion as CFDictionary,nil)
+        }
+        guard status == errSecSuccess else {
+            throw NSError(domain:"WSM Keychain",code:Int(status),
+                 userInfo:[NSLocalizedDescriptionKey:"保存到钥匙串失败 (\(status))"])
+        }
+    }
+    static func remove(_ hostID: String, _ kind: Kind) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account(hostID,kind)
+        ]
+        let code = SecItemDelete(query as CFDictionary)
+        if code != errSecSuccess && code != errSecItemNotFound {
+            throw NSError(domain:"WSM Keychain",code:Int(code),
+                userInfo:[NSLocalizedDescriptionKey:"删除钥匙串密码失败 (\(code))"])
+        }
+    }
+}
+
+/// A 120-second, single-use capability: only the signed askpass helper reads
+/// the saved password, and only after OpenSSH requests an actual password.
+enum AutoLoginSession {
+    static func create(for hostID:String) throws -> UUID {
+        guard UUID(uuidString:hostID) != nil else {
+            throw NSError(domain:"WSM Askpass",code:1,
+                userInfo:[NSLocalizedDescriptionKey:"无效的主机 ID"])
+        }
+        let root:URL
+        if let home=ProcessInfo.processInfo.environment["WSM_HOME"], !home.isEmpty {
+            root=URL(fileURLWithPath:home,isDirectory:true)
+        } else {
+            root=FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Application Support/WarpSSHManager",isDirectory:true)
+        }
+        let folder=root.appendingPathComponent("askpass_sessions",isDirectory:true)
+        try FileManager.default.createDirectory(
+            at:folder,withIntermediateDirectories:true,
+            attributes:[.posixPermissions:0o700]
+        )
+        try FileManager.default.setAttributes(
+            [.posixPermissions:0o700],ofItemAtPath:folder.path
+        )
+        let session=UUID()
+        let file=folder.appendingPathComponent(
+            session.uuidString.lowercased().replacingOccurrences(of:"-",with:"") + ".json"
+        )
+        let record:[String:Any] = [
+            "host_id":hostID,
+            "created_at":Int64(Date().timeIntervalSince1970)
+        ]
+        let data=try JSONSerialization.data(withJSONObject:record)
+        // O_EXCL + O_NOFOLLOW + 0600, no temporary world-readable window.
+        let fd=Darwin.open(file.path,O_CREAT | O_EXCL | O_WRONLY | O_NOFOLLOW,0o600)
+        guard fd >= 0 else {
+            throw NSError(domain:"WSM Askpass",code:2,
+                userInfo:[NSLocalizedDescriptionKey:"无法创建安全的临时认证会话"])
+        }
+        let handle=FileHandle(fileDescriptor:fd,closeOnDealloc:true)
+        do { try handle.write(contentsOf:data);try handle.close() }
+        catch { try? FileManager.default.removeItem(at:file);throw error }
+        return session
+    }
+}
+
+enum PasswordClipboard {
+    static func copy(_ value: String) {
+        let board = NSPasteboard.general
+        board.clearContents()
+        guard board.setString(value,forType:.string) else { return }
+        let change = board.changeCount
+        DispatchQueue.main.asyncAfter(deadline:.now() + 30) {
+            if board.changeCount == change { board.clearContents() }
+        }
+    }
+}
+
 enum HostFilter: Hashable {
     case all, favorites, recent, group(String), ungrouped
 }
@@ -136,6 +268,8 @@ final class ManagerStore: ObservableObject {
     @Published var tab: InspectorTab = .basic
     @Published var includeEnabled = false
     @Published var busy = false
+    @Published var credentialRevision = 0
+    @Published var noticeMessage: String? = nil
     @Published var errorMessage: String? = nil
     @AppStorage("warp.appearance") var appearance: String = "auto"
 
@@ -244,10 +378,69 @@ final class ManagerStore: ObservableObject {
                 }
             })
     }
-    func connect(_ host: HostRecord) { act(["connect",host.id]) }
+    func connectManual(_ host: HostRecord) { act(["connect",host.id]) }
+    func connect(_ host: HostRecord) {
+        // No SSH wrapper: Rust emits an export command, a standalone "ssh alias",
+        // then environment cleanup in this Warp tab only.
+        if host.authMode == "password" && hasPassword(.ssh,for:host.id) {
+            do {
+                let token=try AutoLoginSession.create(for:host.id)
+                act(["connect",host.id,"--askpass-session",token.uuidString])
+                return
+            } catch {
+                noticeMessage="自动登录初始化失败，改为普通 SSH 连接"
+            }
+        }
+        act(["connect",host.id])
+    }
+    func hasPassword(_ kind: CredentialVault.Kind, for id: String) -> Bool {
+        CredentialVault.status(id,kind)
+    }
+    func copyPassword(_ kind: CredentialVault.Kind, for host: HostRecord) {
+        do {
+            // The SSH credential is reused only when no separate sudo credential exists.
+            let requested = kind == .sudo && !CredentialVault.status(host.id,.sudo)
+                ? CredentialVault.Kind.ssh : kind
+            guard let value = try CredentialVault.load(host.id,requested) else {
+                noticeMessage = "这台主机还没有保存对应的密码"
+                return
+            }
+            PasswordClipboard.copy(value)
+            noticeMessage = "密码已复制，30 秒后尝试清空剪贴板"
+        } catch { errorMessage = error.localizedDescription }
+    }
+    @discardableResult
+    func savePassword(_ password: String, kind: CredentialVault.Kind, hostID: String) -> Bool {
+        do {
+            try CredentialVault.save(password,for:hostID,kind:kind)
+            credentialRevision += 1
+            noticeMessage = "密码已安全保存到 macOS 钥匙串"
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+    @discardableResult
+    func removePassword(_ kind: CredentialVault.Kind, hostID: String) -> Bool {
+        do {
+            try CredentialVault.remove(hostID,kind)
+            credentialRevision += 1
+            noticeMessage = "保存的密码已删除"
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
     func delete() {
         guard let id = selectedID else { return }
         act(["delete",id]) { _ in
+            // Only delete secrets once the host deletion has succeeded.
+            do {
+                try CredentialVault.remove(id,.ssh)
+                try CredentialVault.remove(id,.sudo)
+            } catch { self.errorMessage = error.localizedDescription }
             self.selectedID = nil; self.isNew = false
         }
     }

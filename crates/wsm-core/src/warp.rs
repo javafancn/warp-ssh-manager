@@ -4,7 +4,7 @@ use crate::ssh::{atomic_write, validate_alias};
 use anyhow::{bail, Context, Result};
 use serde::Serialize;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use uuid::Uuid;
 
@@ -26,7 +26,25 @@ pub fn config_path(paths:&AppPaths, id: Uuid) -> PathBuf {
     paths.warp_configs.join(format!("{}.toml",config_stem(id)))
 }
 
+/// Launch-scoped Askpass environment. Secrets never enter Warp TOML.
+pub struct AskpassLaunch<'a> {
+    pub session: Uuid,
+    pub sessions_dir: &'a Path,
+    pub helper: &'a Path,
+}
+fn quote_path(path: &Path) -> Result<String> {
+    let value=path.to_str().context("non-UTF8 askpass path")?;
+    if !path.is_absolute() || value.chars().any(char::is_control) {
+        bail!("invalid askpass path");
+    }
+    Ok(format!("'{}'",value.replace('\'', "'\\''")))
+}
 pub fn render_tab_config(host:&Host, group_name: Option<&str>) -> Result<String> {
+    render_tab_config_with_askpass(host,group_name,None)
+}
+pub fn render_tab_config_with_askpass(
+    host:&Host, group_name:Option<&str>, askpass:Option<&AskpassLaunch<'_>>
+) -> Result<String> {
     validate_alias(&host.alias)?;
     let color=match group_name.unwrap_or("").to_ascii_lowercase().as_str() {
         x if x.contains("prod") || x.contains("生产") => "red",
@@ -35,15 +53,33 @@ pub fn render_tab_config(host:&Host, group_name: Option<&str>) -> Result<String>
         _ => "blue",
     };
     let name=match group_name { Some(g) if !g.is_empty()=>format!("{g} / {}",host.name), _=>host.name.clone() };
+    let mut commands=Vec::new();
+    if let Some(session)=askpass {
+        commands.push(format!(
+            "export SSH_ASKPASS={} SSH_ASKPASS_REQUIRE=force WSM_ASKPASS_SESSION={} WSM_ASKPASS_DIR={}",
+            quote_path(session.helper)?,session.session.simple(),quote_path(session.sessions_dir)?
+        ));
+    }
+    // Keep this SSH command unwrapped so Warp can recognize SSH Extension sessions.
+    commands.push(format!("ssh {}",host.alias));
+    if askpass.is_some() {
+        commands.push("unset SSH_ASKPASS SSH_ASKPASS_REQUIRE WSM_ASKPASS_SESSION WSM_ASKPASS_DIR".to_owned());
+    }
     let config=Config { name, title:host.name.clone(), color,
-        panes:vec![Pane{id:"main",kind:"terminal",commands:vec![format!("ssh {}",host.alias)]}] };
+        panes:vec![Pane{id:"main",kind:"terminal",commands}] };
     Ok(format!("{HEADER}{}",toml::to_string_pretty(&config)?))
 }
 
 pub fn write_tab(paths:&AppPaths, host:&Host, group_name:Option<&str>) -> Result<PathBuf> {
+    write_tab_with_askpass(paths,host,group_name,None)
+}
+pub fn write_tab_with_askpass(
+    paths:&AppPaths, host:&Host, group_name:Option<&str>,
+    askpass:Option<&AskpassLaunch<'_>>,
+) -> Result<PathBuf> {
     let path=config_path(paths,host.id);
     if path.exists() && !is_owned(&path)? { bail!("refusing to overwrite non-managed Warp config: {}",path.display()); }
-    atomic_write(&path,&render_tab_config(host,group_name)?)?;
+    atomic_write(&path,&render_tab_config_with_askpass(host,group_name,askpass)?)?;
     Ok(path)
 }
 
@@ -71,15 +107,31 @@ pub fn open_tab(id:Uuid,new_window:bool,preview:bool) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{HostInput,HostSource};
+    use crate::model::{AuthMode,HostInput,HostSource};
     fn fixture()->Host{ HostInput{name:"API \"Blue\"".into(),alias:"prod-api".into(),hostname:"example.net".into(),
-        username:"deploy".into(),port:2222,identity_file:None,proxy_jump:None,group_id:None,favorite:true}.into_host(HostSource::Managed) }
+        username:"deploy".into(),port:2222,identity_file:None,proxy_jump:None,auth_mode:AuthMode::Auto,group_id:None,favorite:true}.into_host(HostSource::Managed) }
     #[test] fn toml_is_valid_and_quotes_names() {
         let text=render_tab_config(&fixture(),Some("Production")).unwrap();
         let doc:toml::Value=toml::from_str(&text).unwrap();
         assert_eq!(doc["name"].as_str(),Some("Production / API \"Blue\""));
         assert_eq!(doc["panes"][0]["commands"][0].as_str(),Some("ssh prod-api"));
+        let mut password_host = fixture();
+        password_host.auth_mode = AuthMode::Password;
+        let password_config: toml::Value = toml::from_str(&render_tab_config(&password_host,None).unwrap()).unwrap();
+        assert_eq!(password_config["panes"][0]["commands"][0].as_str(),Some("ssh prod-api"));
         assert_eq!(doc["color"].as_str(),Some("red"));
+        let launch=AskpassLaunch{
+            session:Uuid::nil(),sessions_dir:Path::new("/tmp/wsm session"),
+            helper:Path::new("/Applications/Warp SSH Manager.app/Contents/MacOS/wsm-askpass"),
+        };
+        let doc:toml::Value=toml::from_str(
+            &render_tab_config_with_askpass(&password_host,None,Some(&launch)).unwrap()
+        ).unwrap();
+        let commands=doc["panes"][0]["commands"].as_array().unwrap();
+        assert_eq!(commands.len(),3);
+        assert!(commands[0].as_str().unwrap().starts_with("export SSH_ASKPASS="));
+        assert_eq!(commands[1].as_str(),Some("ssh prod-api"));
+        assert!(commands[2].as_str().unwrap().starts_with("unset SSH_ASKPASS"));
     }
     #[test] fn generated_files_never_delete_user_content() {
         let dir=tempfile::tempdir().unwrap();let p=AppPaths{data_dir:dir.path().join("app"),

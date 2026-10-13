@@ -33,5 +33,16 @@ jobs:
           xcrun swiftc -typecheck -target arm64-apple-macos12.0 \
             -framework SwiftUI -framework AppKit \
             apps/wsm-native/Sources/*.swift
+      - name: Typecheck ASKPASS helper
+        run: |
+          xcrun swiftc -typecheck -target arm64-apple-macos12.0 \
+            -framework AppKit -framework Security \
+            apps/wsm-askpass/Askpass.swift
+      - name: Link and smoke test ASKPASS helper
+        run: |
+          xcrun swiftc -O -target arm64-apple-macos12.0 \
+            -framework AppKit -framework Security \
+            apps/wsm-askpass/Askpass.swift -o "$RUNNER_TEMP/wsm-askpass"
+          "$RUNNER_TEMP/wsm-askpass" --self-test
       - name: Check isolated SSH integration
         run: bash scripts/macos-smoke.sh
