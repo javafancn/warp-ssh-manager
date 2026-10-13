@@ -1,0 +1,18 @@
+/target/
+.DS_Store
+*.app
+*.dmg
+Cargo.lock.bak
+.env
+.idea/
+.vscode/
+
+# Local packaging results and sensitive development state
+/dist/
+*.app.zip
+*.pem
+*.key
+*.p12
+*.p8
+.env.*
+!.env.example

@@ -1,0 +1,6 @@
+# A sample SSH config (no real credentials).
+Host prod-api
+    HostName 192.0.2.10
+    User deploy
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519

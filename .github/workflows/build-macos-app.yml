@@ -1,0 +1,115 @@
+name: 构建 macOS 原生安装包（SwiftUI + Rust）
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ['v*']
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  package:
+    name: ${{ matrix.name }} 原生安装包
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Apple Silicon
+            runner: macos-15
+            rust_target: aarch64-apple-darwin
+            swift_target: arm64-apple-macos12.0
+            arch: apple-silicon
+          - name: Intel
+            runner: macos-15-intel
+            rust_target: x86_64-apple-darwin
+            swift_target: x86_64-apple-macos12.0
+            arch: intel
+    runs-on: ${{ matrix.runner }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '12.0'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show macOS toolchain
+        run: |
+          sw_vers
+          uname -m
+          xcodebuild -version
+          xcrun swiftc -version
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: swiftui-${{ matrix.arch }}
+      - name: Test Rust SSH core and JSON bridge
+        run: cargo test -p wsm-core -p wsm-cli
+      - name: Build bundled Rust SSH core
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo build -p wsm-cli --release --target ${{ matrix.rust_target }} 2>&1 | tee rust-build.log
+      - name: Smoke test native UI Rust JSON bridge
+        run: bash scripts/native-ui-bridge-smoke.sh target/${{ matrix.rust_target }}/release/wsm
+      - name: Compile native SwiftUI / AppKit application
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          xcrun swiftc -O -target ${{ matrix.swift_target }} \
+            -framework SwiftUI -framework AppKit \
+            apps/wsm-native/Sources/*.swift \
+            -o dist/warp-ssh-manager 2>&1 | tee swift-build.log
+      - name: Save build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 原生编译诊断-${{ matrix.arch }}
+          path: |
+            swift-build.log
+            rust-build.log
+          if-no-files-found: warn
+      - name: Package native macOS application
+        shell: bash
+        run: |
+          set -o pipefail
+          bash scripts/package-macos-app.sh --single dist/warp-ssh-manager ${{ matrix.arch }} 2>&1 | tee package.log
+      - name: Save packaging errors
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 原生打包诊断-${{ matrix.arch }}
+          path: package.log
+          if-no-files-found: warn
+      - name: Capture actual SwiftUI window (visual smoke, Apple Silicon)
+        if: matrix.arch == 'apple-silicon'
+        run: bash scripts/native-visual-smoke.sh
+      - name: Upload visual smoke screenshot (including failures)
+        if: always() && matrix.arch == 'apple-silicon'
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-visual-smoke-macOS
+          path: |
+            dist/native-macos-render.png
+            dist/native-advanced-inspector.png
+            dist/native-macos-render-warm.png
+            dist/native-macos-desktop.png
+            dist/native-macos-desktop-warm-with-app.png
+            dist/native-ci-backdrop-cool-only.png
+            dist/native-ci-backdrop-warm-only.png
+            dist/native-backdrop-audit.txt
+            dist/native-window-routing-audit.txt
+            dist/native-dock-window-count.txt
+            dist/native-quick-panel.png
+            dist/native-quick-panel-desktop.png
+            dist/native-window-seam-audit.txt
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Upload separate DMG installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: WarpSSHManager-Native-0.4.25-${{ matrix.arch }}-macOS12
+          path: dist/WarpSSHManager-0.4.25-${{ matrix.arch }}.dmg
+          if-no-files-found: error
+          retention-days: 30

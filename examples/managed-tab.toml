@@ -1,0 +1,9 @@
+# Example of a generated Warp Tab Config; not an actual generated instance.
+name = "Production / API Server"
+title = "API Server"
+color = "red"
+
+[[panes]]
+id = "main"
+type = "terminal"
+commands = ["ssh prod-api"]

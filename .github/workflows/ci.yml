@@ -1,0 +1,37 @@
+name: Rust and SwiftUI checks
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: Rust core and CLI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all
+      - run: cargo test -p wsm-core -p wsm-cli
+      - run: cargo clippy -p wsm-core -p wsm-cli --all-targets
+
+  native:
+    name: Native SwiftUI and SSH smoke
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Typecheck production SwiftUI / AppKit UI
+        run: |
+          xcrun swiftc -typecheck -target arm64-apple-macos12.0 \
+            -framework SwiftUI -framework AppKit \
+            apps/wsm-native/Sources/*.swift
+      - name: Check isolated SSH integration
+        run: bash scripts/macos-smoke.sh
