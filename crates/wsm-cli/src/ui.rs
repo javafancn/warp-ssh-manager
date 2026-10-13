@@ -17,7 +17,10 @@ pub enum UiCommand {
     Connect { id: Uuid, #[arg(long)] askpass_session: Option<Uuid> },
     Init,
     Import,
-    AddGroup { name: String },
+    AddGroup { name: String, #[arg(long)] parent: Option<Uuid> },
+    UpdateGroup { id: Uuid, name: String,
+        #[arg(long,conflicts_with = "root")] parent: Option<Uuid>,
+        #[arg(long)] root: bool },
     DeleteGroup { id: Uuid },
 }
 
@@ -136,7 +139,16 @@ pub fn run(manager: &Manager, command: UiCommand) -> Result<()> {
             let (_added, _updated, errors) = manager.import_ssh()?;
             for error in errors {eprintln!("Warning: {error}");}
         }
-        UiCommand::AddGroup {name} => {manager.group_add(&name, None)?;},
+        UiCommand::AddGroup {name,parent} => {
+            let group=manager.group_add(&name,parent)?;
+            println!("{}",serde_json::json!({"id":group.id}));
+        },
+        UiCommand::UpdateGroup {id,name,parent,root} => {
+            let existing=manager.db.list_groups()?.into_iter()
+                .find(|g|g.id==id).context("group not found")?;
+            let parent_id=if root {None} else {parent.or(existing.parent_id)};
+            manager.group_update(id,&name,parent_id)?;
+        },
         UiCommand::DeleteGroup {id} => {manager.group_delete(id)?;},
     }
     Ok(())

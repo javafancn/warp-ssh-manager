@@ -276,19 +276,72 @@ final class ManagerStore: ObservableObject {
     var selected: HostRecord? { hosts.first { $0.id == selectedID } }
     var favoriteCount: Int { hosts.filter { $0.favorite }.count }
     var recentCount: Int { hosts.filter { $0.lastConnected != nil }.count }
+
+    // The database already stores parentId; keep the hierarchy derived from
+    // snapshots so a rename/move is reflected everywhere without a UI cache.
+    func groupChildren(of parentID:String?) -> [GroupRecord] {
+        groups.filter { group in
+            group.parentId == parentID ||
+            (parentID == nil && group.parentId != nil &&
+             !groups.contains(where:{ candidate in candidate.id == group.parentId }))
+        }
+    }
+
+    func groupAncestors(of id:String) -> [String] {
+        var ids:[String]=[]
+        var cursor=groups.first(where:{$0.id == id})?.parentId
+        var visited:Set<String>=[id]
+        while let parent=cursor,visited.insert(parent).inserted {
+            ids.append(parent)
+            cursor=groups.first(where:{$0.id == parent})?.parentId
+        }
+        return ids
+    }
+
+    func groupDescendants(of id:String) -> Set<String> {
+        var result:Set<String>=[]
+        var pending:[String]=[id]
+        while let parent=pending.popLast() {
+            for child in groups where child.parentId == parent && !result.contains(child.id) {
+                result.insert(child.id)
+                pending.append(child.id)
+            }
+        }
+        return result
+    }
+
+    func groupHostCount(_ id:String) -> Int {
+        let ids=groupDescendants(of:id).union([id])
+        return hosts.filter { $0.groupId.map(ids.contains) ?? false }.count
+    }
+
+    func groupPath(_ id:String) -> String {
+        let chain=Array(groupAncestors(of:id).reversed()) + [id]
+        return chain.compactMap { id in groups.first(where:{$0.id == id})?.name }
+            .joined(separator:" / ")
+    }
+
     var filtered: [HostRecord] {
-        hosts.filter { host in
+        let matchingIDs: Set<String>?
+        if case .group(let id)=filter {
+            matchingIDs=groupDescendants(of:id).union([id])
+        } else {
+            matchingIDs=nil
+        }
+        return hosts.filter { host in
             let match: Bool
             switch filter {
             case .all: match = true
             case .favorites: match = host.favorite
             case .recent: match = host.lastConnected != nil
             case .ungrouped: match = host.groupId == nil
-            case .group(let id): match = host.groupId == id
+            case .group: match = host.groupId.map {
+                matchingIDs?.contains($0) ?? false
+            } ?? false
             }
             guard match else { return false }
             let query = search.trimmingCharacters(in:.whitespacesAndNewlines)
-            let groupName = groups.first(where: { $0.id == host.groupId })?.name ?? ""
+            let groupName = host.groupId.map { groupPath($0) } ?? ""
             return query.isEmpty || [host.name,host.alias,host.hostname,host.tags,groupName].contains {
                 $0.localizedCaseInsensitiveContains(query)
             }
@@ -444,9 +497,25 @@ final class ManagerStore: ObservableObject {
             self.selectedID = nil; self.isNew = false
         }
     }
-    func addGroup(_ name: String) {
-        let trimmed = name.trimmingCharacters(in:.whitespacesAndNewlines)
-        if !trimmed.isEmpty { act(["add-group",trimmed]) }
+    func addGroup(_ name:String,parentID:String? = nil) {
+        let trimmed=name.trimmingCharacters(in:.whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {return}
+        var args=["add-group",trimmed]
+        if let parentID=parentID {args += ["--parent",parentID]}
+        act(args,after:{ output in
+            if let data=try? JSONSerialization.jsonObject(with:output) as? [String:String],
+               let id=data["id"] { self.filter = .group(id) }
+        })
     }
-    func removeGroup(_ id: String) { act(["delete-group",id]) }
+    func updateGroup(_ group:GroupRecord,name:String,parentID:String?) {
+        var args=["update-group",group.id,name.trimmingCharacters(in:.whitespacesAndNewlines)]
+        if let parentID=parentID {args += ["--parent",parentID]}
+        else {args.append("--root")}
+        act(args)
+    }
+    func removeGroup(_ id:String) {
+        act(["delete-group",id],after:{ _ in
+            if self.filter == .group(id) { self.filter = .all }
+        })
+    }
 }

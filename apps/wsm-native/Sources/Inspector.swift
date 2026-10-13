@@ -281,7 +281,7 @@ struct HostInspector: View {
             Button {showGroupPicker.toggle()} label: {
                 HStack(spacing:8) {
                     Image(systemName:"folder").font(.system(size:15 * textScale))
-                    Text(store.groups.first(where:{$0.id==store.draft.groupId})?.name ?? "未分组")
+                    Text(store.draft.groupId.map {store.groupPath($0)} ?? "未分组")
                         .font(Design.font(16 * textScale))
                     Spacer()
                     Image(systemName:"chevron.down").font(.system(size:12 * textScale))
@@ -296,8 +296,12 @@ struct HostInspector: View {
             .popover(isPresented:$showGroupPicker,arrowEdge:.bottom) {
                 VStack(alignment:.leading,spacing:8) {
                     Button("未分组"){store.draft.groupId=nil;showGroupPicker=false}
-                    ForEach(store.groups) { group in
-                        Button(group.name){store.draft.groupId=group.id;showGroupPicker=false}
+                    ForEach(store.groups.sorted(by:{
+                        store.groupPath($0.id).localizedStandardCompare(store.groupPath($1.id)) == .orderedAscending
+                    })) { group in
+                        Button(store.groupPath(group.id)){
+                            store.draft.groupId=group.id;showGroupPicker=false
+                        }
                     }
                 }
                 .buttonStyle(.plain)
