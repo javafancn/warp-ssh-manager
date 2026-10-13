@@ -21,7 +21,7 @@ done
 project="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project"
 # Cargo workspace version is the single source of truth for app metadata
-# and installer filenames; do not allow a mismatched 1.0.0 release bundle.
+# and installer filenames; do not allow a mismatched release bundle.
 app_version="$(awk '
   /^\[workspace\.package\]$/ { in_package=1; next }
   in_package && /^\[/ { exit }
@@ -75,7 +75,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
 <key>CFBundleDisplayName</key><string>Warp SSH 管理器</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>$app_version</string>
-<key>CFBundleVersion</key><string>100</string>
+<key>CFBundleVersion</key><string>101</string>
 <key>CFBundleIconFile</key><string>WarpSSHManager</string>
 <key>LSMinimumSystemVersion</key><string>12.0</string>
 <key>NSHighResolutionCapable</key><true/>

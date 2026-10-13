@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>v1.0.0</strong> · macOS 12+（构建目标） · Apple Silicon / Intel · SwiftUI + AppKit + Rust
+  <strong>v1.0.1</strong> · macOS 12+（构建目标） · Apple Silicon / Intel · SwiftUI + AppKit + Rust
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
   <a href="LICENSE">MIT License</a>
 </p>
 
-> **正式版与源码区别：** 已发布的 [v1.0.0](https://github.com/javafancn/warp-ssh-manager/releases/tag/v1.0.0) 安装包早于嵌套分组功能；当前 `main` 源码以及 [Actions 测试安装包](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml) 已包含多级分组。下一次正式发布后，这项功能才会进入 Releases 安装包。
+> **v1.0.1 更新：** 现已包含多级嵌套分组、分组编辑弹窗、侧栏优化及中英文 README。旧版 [v1.0.0](https://github.com/javafancn/warp-ssh-manager/releases/tag/v1.0.0) 不包含嵌套分组。
 
 > **关于项目**：Warp SSH Manager 是社区项目，并非 Warp 官方应用。它管理本地 SSH 主机和 Warp 的启动配置；SSH 传输与交互式终端仍由 **OpenSSH + Warp** 提供，而不是在应用内重新实现 SSH 客户端。
 
@@ -43,11 +43,11 @@
 
 ## 下载安装
 
-1. 稳定版请前往 [GitHub Releases](https://github.com/javafancn/warp-ssh-manager/releases/latest)，下载 Apple Silicon 或 Intel 对应的 DMG。若要提前使用多级嵌套分组，请在 [GitHub Actions · macOS 安装包](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml) 选择 **main 分支最新成功**的构建。
-2. 如果选择 Actions 测试构建，请在 **Artifacts** 下载对应架构的构建产物，并解压：
-   - Apple Silicon（M 系列）：`WarpSSHManager-Native-1.0.0-apple-silicon-macOS12`
-   - Intel（x86_64）：`WarpSSHManager-Native-1.0.0-intel-macOS12`
-3. 打开 DMG（Actions 构建解压后可能仍沿用 v1.0.0 文件名，但实际包含较新的源码），将 **Warp SSH Manager.app** 拖入 `/Applications`。
+1. 前往 [GitHub Releases](https://github.com/javafancn/warp-ssh-manager/releases/latest)，下载 Apple Silicon 或 Intel 对应的 v1.0.1 DMG。
+2. 如果使用 [GitHub Actions](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml) 的测试构建，请在 **Artifacts** 下载对应架构的构建产物，并解压：
+   - Apple Silicon（M 系列）：`WarpSSHManager-Native-1.0.1-apple-silicon-macOS12`
+   - Intel（x86_64）：`WarpSSHManager-Native-1.0.1-intel-macOS12`
+3. 打开 DMG，将 **Warp SSH Manager.app** 拖入 `/Applications`。
 4. 安装 [Warp Terminal](https://www.warp.dev/)。macOS 自带 OpenSSH；确保终端能使用 `ssh`。
 
 **发布与系统要求**：项目目前分别构建两个架构的 DMG，并非 Universal Binary。CI 的编译目标为 **macOS 12+**，实际操作系统兼容性仍需实机验证。安装包采用 **Ad-hoc 签名，尚未使用 Apple Developer ID 签名或 Apple 公证**；如果 Gatekeeper 阻止打开，应先确认下载来源并遵循 macOS 的安全提示，不要盲目关闭系统安全功能。Actions 的 Artifacts 可能过期。

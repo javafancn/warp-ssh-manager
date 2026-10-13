@@ -24,7 +24,7 @@
 
 > **Community project, not affiliated with Warp.** Warp SSH Manager organizes SSH hosts and launches connections in Warp. The actual SSH transport and interactive terminal are still provided by **OpenSSH and Warp**. This app does not implement a separate SSH client.
 
-> **Release vs. source:** The published **v1.0.0** installer predates nested groups. The latest `main` source and its successful [Actions builds](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml) include nested group support. A new numbered release is needed to distribute that feature through GitHub Releases.
+> **v1.0.1 release:** Includes nested SSH host groups, the refreshed sidebar and group editor, and bilingual documentation. The previous v1.0.0 installer does not include nested groups.
 
 ## Features
 
@@ -46,7 +46,7 @@ The native three-pane interface offers automatic, light, and dark appearances.
 3. Open the DMG and move **Warp SSH Manager.app** to `/Applications`.
 4. Install [Warp Terminal](https://www.warp.dev/) separately. macOS includes OpenSSH; make sure the `ssh` command is available.
 
-**To try nested groups before the next release:** Open the [macOS Actions workflow](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml), select a successful **main** run, and download the architecture-specific Artifact. Actions artifacts may expire and may still use the v1.0.0 filename until the next release, even though they contain newer source code.
+**Development builds:** The [macOS Actions workflow](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml) offers installers from newer main commits. Artifacts can expire; use Releases for a stable download.
 
 **Compatibility and signing:** The build targets macOS 12 or later and produces separate Apple Silicon and Intel packages, not a Universal Binary. Installers are **ad-hoc signed and not Apple-notarized**, so macOS Gatekeeper may display a warning. Review the download source and follow macOS security guidance rather than disabling Gatekeeper indiscriminately. Compatibility across all macOS versions has not been verified on physical Macs.
 
