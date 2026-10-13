@@ -54,6 +54,9 @@ enum Commands {
 enum GroupCmd {
     List,
     Add { name:String, #[arg(long)] parent:Option<Uuid> },
+    Edit { id:Uuid, #[arg(long)] name:Option<String>,
+        #[arg(long,conflicts_with="root")] parent:Option<Uuid>,
+        #[arg(long)] root:bool },
     Delete { id:Uuid },
 }
 
@@ -128,7 +131,14 @@ fn run()->Result<()> {
             GroupCmd::List=>for g in manager.db.list_groups()? {
                 println!("{} {} parent={}",g.id,g.name,g.parent_id.map(|id|id.to_string()).unwrap_or_else(||"none".into()));
             },
-            GroupCmd::Add{name,parent}=> {let g=manager.group_add(&name,parent)?;println!("Added group '{}' {}",g.name,g.id);}
+            GroupCmd::Add{name,parent}=> {let g=manager.group_add(&name,parent)?;println!("Added group '{}' {}",g.name,g.id);},
+            GroupCmd::Edit{id,name,parent,root}=> {
+                let old=manager.db.list_groups()?.into_iter().find(|g|g.id==id)
+                    .ok_or_else(||anyhow::anyhow!("group not found"))?;
+                let new_parent=if root{None}else{parent.or(old.parent_id)};
+                let g=manager.group_update(id,name.as_deref().unwrap_or(&old.name),new_parent)?;
+                println!("Updated group '{}' {}",g.name,g.id);
+            },
             GroupCmd::Delete{id}=>{manager.group_delete(id)?;println!("Group deleted");}
         }
     }

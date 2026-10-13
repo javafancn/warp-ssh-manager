@@ -1,118 +1,133 @@
 <p align="center">
-  <img src="assets/brand-app-icon.png" alt="Warp SSH Manager" width="104">
+  <img src="assets/brand-app-icon.png" alt="Warp SSH Manager logo" width="104">
 </p>
 
 <h1 align="center">Warp SSH Manager</h1>
 
+<p align="center">A native macOS SSH host manager designed for Warp Terminal.</p>
+
 <p align="center">
-  为 Warp 打造的 macOS 原生 SSH 主机管理器
+  <a href="README.md"><strong>English</strong></a> ·
+  <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 <p align="center">
-  <strong>v1.0.0</strong> · macOS 12+（构建目标） · Apple Silicon / Intel · SwiftUI + AppKit + Rust
+  macOS 12+ build target · Apple Silicon &amp; Intel · SwiftUI / AppKit + Rust
 </p>
 
 <p align="center">
-  <a href="https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml">下载 macOS 安装包</a>
-  ·
-  <a href="https://github.com/javafancn/warp-ssh-manager/actions/workflows/ci.yml">持续集成</a>
-  ·
+  <a href="https://github.com/javafancn/warp-ssh-manager/releases/latest">Download latest release</a> ·
+  <a href="https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml">Development builds</a> ·
+  <a href="https://github.com/javafancn/warp-ssh-manager/actions/workflows/ci.yml">CI</a> ·
   <a href="LICENSE">MIT License</a>
 </p>
 
-> **关于项目**：Warp SSH Manager 是社区项目，并非 Warp 官方应用。它管理本地 SSH 主机和 Warp 的启动配置；SSH 传输与交互式终端仍由 **OpenSSH + Warp** 提供，而不是在应用内重新实现 SSH 客户端。
+> **Community project, not affiliated with Warp.** Warp SSH Manager organizes SSH hosts and launches connections in Warp. The actual SSH transport and interactive terminal are still provided by **OpenSSH and Warp**. This app does not implement a separate SSH client.
 
-## 为什么使用它
+> **Release vs. source:** The published **v1.0.0** installer predates nested groups. The latest `main` source and its successful [Actions builds](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml) include nested group support. A new numbered release is needed to distribute that feature through GitHub Releases.
 
-不必反复打开文本编辑器管理大量 SSH Host。使用原生三栏界面组织服务器、切换连接认证方式，并在 Warp 中快速打开目标主机。
+## Features
 
-| 主机管理 | 登录认证 | Warp 集成 |
+| SSH host management | Authentication and credentials | Warp integration |
 | --- | --- | --- |
-| 搜索、收藏、最近连接、分组 | 自动选择、SSH 密钥、用户名密码 | 一键打开、菜单栏快速连接 |
-| 标签配色、备注、SSH 参数 | Keychain 保存 SSH / sudo 密码 | 保留原生 `ssh <别名>` 命令 |
-| 导入已有 `~/.ssh/config` | 按需复制密码、尝试自动登录 | 独立生成 Warp Tab Config |
+| Search, favorites, recent connections | OpenSSH automatic negotiation, key-only or password mode | Open hosts in Warp using native `ssh <alias>` |
+| **Nested groups** with expand/collapse, rename and move | macOS Keychain for SSH and sudo passwords | Menu-bar quick connections |
+| Group-aware filtering and descendant host counts | Optional one-time SSH password Askpass assistance | Dedicated Warp Tab Config files |
+| Color-coded tags, notes, ports, jump hosts | Copy passwords; no automatic sudo entry | Import existing `~/.ssh/config` hosts |
 
-界面提供自动、浅色、深色外观，支持 Apple Silicon 和 Intel 独立构建。
+The native three-pane interface offers automatic, light, and dark appearances.
 
-## 下载安装
+## Installation
 
-1. 在 [GitHub Actions · macOS 安装包](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml) 打开 **main 分支最新成功**的构建。
-2. 在 **Artifacts** 下载与你的 Mac 架构对应的构建产物，并解压：
-   - Apple Silicon（M 系列）：`WarpSSHManager-Native-1.0.0-apple-silicon-macOS12`
-   - Intel（x86_64）：`WarpSSHManager-Native-1.0.0-intel-macOS12`
-3. 打开压缩包内的 `WarpSSHManager-1.0.0-<架构>.dmg`，将 **Warp SSH Manager.app** 拖入 `/Applications`。
-4. 安装 [Warp Terminal](https://www.warp.dev/)。macOS 自带 OpenSSH；确保终端能使用 `ssh`。
+**Recommended stable release:**
 
-**发布与系统要求**：项目目前分别构建两个架构的 DMG，并非 Universal Binary。CI 的编译目标为 **macOS 12+**，实际操作系统兼容性仍需实机验证。安装包采用 **Ad-hoc 签名，尚未使用 Apple Developer ID 签名或 Apple 公证**；如果 Gatekeeper 阻止打开，应先确认下载来源并遵循 macOS 的安全提示，不要盲目关闭系统安全功能。Actions 的 Artifacts 可能过期。
+1. Open the [latest GitHub Release](https://github.com/javafancn/warp-ssh-manager/releases/latest).
+2. Choose the `apple-silicon` DMG for an Apple Silicon Mac or the `intel` DMG for an Intel Mac.
+3. Open the DMG and move **Warp SSH Manager.app** to `/Applications`.
+4. Install [Warp Terminal](https://www.warp.dev/) separately. macOS includes OpenSSH; make sure the `ssh` command is available.
 
-## 快速开始
+**To try nested groups before the next release:** Open the [macOS Actions workflow](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml), select a successful **main** run, and download the architecture-specific Artifact. Actions artifacts may expire and may still use the v1.0.0 filename until the next release, even though they contain newer source code.
 
-### 1. 导入 SSH 主机或初始化新主机
+**Compatibility and signing:** The build targets macOS 12 or later and produces separate Apple Silicon and Intel packages, not a Universal Binary. Installers are **ad-hoc signed and not Apple-notarized**, so macOS Gatekeeper may display a warning. Review the download source and follow macOS security guidance rather than disabling Gatekeeper indiscriminately. Compatibility across all macOS versions has not been verified on physical Macs.
 
-**已有 SSH 配置**：从应用中选择「导入 SSH 配置」，导入 `~/.ssh/config` 里的主机别名。导入主机的主机名、用户、端口等信息仍由原始 SSH 配置管理；要修改连接参数，请编辑原文件再重新导入。
+## Getting started
 
-**自建主机**：首次使用前通过应用的「初始化 SSH 集成」或执行 `wsm init`。它会先备份主 SSH 配置，再加入一个指向专用托管配置的 `Include`；后续由 WSM 维护自己的 SSH Host。接着新建主机，填写：
+### 1. Import or create a host
 
-- 显示名称及 SSH 别名
-- 主机 IP / 域名、用户名、端口
-- 可选的身份文件路径、代理跳板、分组、标签和备注
+**Import an existing host:** Import aliases from your existing `~/.ssh/config`. Imported connection parameters continue to be managed by the original SSH configuration: edit the source file and re-import instead of expecting Warp SSH Manager to rewrite it.
 
-应用仅保存私钥**路径**，不会复制 SSH 私钥内容。
+**Create a managed host:** Run the app's SSH integration initialization, or `wsm init`, before your first managed connection. Initialization backs up the existing top-level SSH config and adds an `Include` pointing to a dedicated WSM-managed file. Then add a host with:
 
-> 导入过程使用 `ssh -G` 解析有效配置；请只导入可信任的 SSH 配置，尤其应注意可能包含的 `Match exec` 指令。
+- Display name and unique SSH alias
+- Hostname/IP address, login username and port
+- Optional identity file **path**, ProxyJump, group, labels and notes
 
-### 2. 选择认证方式
+The app stores the path to an SSH private key, not a copy of the key material.
 
-在主机详情的「连接配置 → SSH 认证方式」中选择：
+> Imports may invoke `ssh -G` to evaluate an SSH configuration. Only import configurations you trust; OpenSSH configurations can contain executable `Match exec` conditions.
 
-| 模式 | 实际效果 | 建议场景 |
+### 2. Choose an SSH authentication mode
+
+Open **Host details → Connection settings → SSH authentication**:
+
+| Mode | Behavior | Typical use |
 | --- | --- | --- |
-| **自动选择** | 保留 OpenSSH 原有的认证协商与配置，旧主机默认使用 | 已有配置、ssh-agent、组合认证 |
-| **SSH 密钥** | 自管主机明确使用公钥认证、关闭密码认证 | 使用密钥的服务器 |
-| **用户名 + 密码** | 自管主机启用密码 / keyboard-interactive、关闭公钥；可配合 Keychain 尝试自动输入密码 | 使用账号密码的服务器 |
+| **Automatic** | Lets OpenSSH negotiate based on existing SSH configuration and ssh-agent; default for previously configured hosts | Existing SSH setups |
+| **SSH key** | For managed hosts, enables public-key authentication and disables password-based authentication | Key-only servers |
+| **Username + password** | For managed hosts, enables password and keyboard-interactive authentication instead of public-key authentication | Password-based servers |
 
-**导入主机**：不改写其原始 `~/.ssh/config`。即使在 WSM 选择「用户名 + 密码」，外部 SSH Config 的认证规则仍可能决定最终行为。
+Imported hosts keep their original `~/.ssh/config` parameters. Any applicable OpenSSH configuration may still affect the actual authentication behavior.
 
-**注意**：自动选择不等于自动从 Keychain 注入密码；只有明确选择「用户名 + 密码」且保存 SSH 密码的主机，WSM 才会尝试辅助登录。
+**Automatic does not mean automatic password injection.** WSM only attempts saved-password Askpass assistance when password authentication is explicitly selected and an SSH password has been saved.
 
-### 3. 保存密码并连接
+### 3. Save a password and connect
 
-1. 先保存主机。
-2. 进入「连接配置 → 凭据管理」，点击「SSH 登录密码」，填写并保存密码。
-3. 点击「在 Warp 中打开」或使用菜单栏快速连接。
-4. 选择密码模式且已保存凭据时，WSM 会创建短期、一次性 Askpass 授权；OpenSSH 请求密码时，辅助程序尝试从 macOS Keychain 取出密码并提交**一次**。
-5. 若遇到密码错误、指纹确认、MFA 或其他交互式认证问题，需要用户手动完成认证。主机操作菜单提供「手动连接」以绕开辅助登录。
+1. Save the host first.
+2. In **Connection settings → Credentials**, select **SSH login password** and save the secret in macOS Keychain.
+3. Choose **Open in Warp**, double-click a host, or use the menu-bar shortcut.
+4. When eligible, WSM prepares a short-lived, single-use `SSH_ASKPASS` authorization. The helper attempts to retrieve the saved secret from Keychain and answer **one recognized password prompt**.
+5. If a password is incorrect, the server requires MFA or another interactive response, or helper authorization fails, complete the SSH prompt manually. **Manual connect** is also available to bypass assistance.
 
-连接入口仍是 Warp 执行的原生 `ssh <别名>`，而不是自建终端或 SSH 代理。**Warp 成功打开不代表服务器登录成功。自动密码登录及 Warp SSH Extension 的完整兼容性仍需要在真实 Warp + SSH 服务器环境下验证。**
+WSM still launches the ordinary `ssh <alias>` command in Warp; it does not intercept Warp's PTY stream. **Launching Warp is not proof of successful SSH authentication.** Saved-password login and Warp SSH Extension/other enhanced terminal features still require end-to-end validation with real servers.
 
-### 4. 标签、分组与 sudo 密码
+### 4. Organize hosts with nested groups
 
-使用分组、收藏、搜索和标签组织主机。常见环境标签（如 `production`、`test`、`dev`）具有语义配色；其他标签按名称生成稳定颜色。新增标签支持连续输入和重复校验。
+The sidebar supports arbitrarily nested groups:
 
-可为每台主机另存 **sudo 密码**，也可以默认复用已保存的 SSH 密码。sudo 只提供**一键复制**，不做自动检测或自动填写，以避免改变远端终端的交互行为。主机菜单还支持复制 SSH 登录密码。
+1. Select **New group**, enter a group name and optionally choose a parent. Choose **Top-level group** for a root group.
+2. Right-click any group and select **New subgroup** to create a child directly.
+3. Use the disclosure arrow to expand or collapse a branch. Right-click a group and select **Rename or move** to change its name or parent.
+4. Selecting a parent group shows its own hosts **and all descendant-group hosts**; the sidebar count includes descendants. Host details show full group paths to distinguish equally named groups under different parents.
+5. Sibling names must be unique. A group cannot be moved beneath itself or one of its descendants. **Groups with children cannot be deleted** until their children are moved or removed. Deleting a leaf group does not delete its hosts; the hosts become ungrouped.
 
-## 安全与隐私
+Nested groups reuse the existing SQLite `parent_id` column; existing flat groups remain top-level and require no schema migration. Group structure is local metadata and does not modify SSH host configuration.
 
-- **钥匙串存储**：SSH 和 sudo 密码直接保存在当前 Mac 的 **macOS Keychain**（通用密码条目），使用 `WhenUnlockedThisDeviceOnly` 访问属性；不作为明文写入 SQLite、SSH Config、Warp Tab Config 或 Rust JSON 快照。
-- **自动登录辅助**：Askpass 会话授权文件使用受限权限、120 秒有效期，并在读取前尝试一次性消费。它不是强沙箱：同一个 macOS 用户下的恶意进程可能利用短期令牌竞争；不要把这视为对本机已入侵进程的完整防护。
-- **提示验证**：自动回答仅面向识别到的密码提示；MFA、指纹或其他询问不会无条件返回保存的密码。
-- **剪贴板**：复制密码后，应用会在约 30 秒时尝试清空**没有被更改**的系统剪贴板。剪贴板历史、同步软件或恶意进程可能已经读取内容。
-- **sudo**：只复制，不自动填写。若管理员禁止密码登录、使用 MFA 或限制 sudo，WSM 不会绕过这些限制。
-- **真实环境验收**：CI 能覆盖 Rust 单元测试、SwiftUI 编译、Askpass 提示识别、隔离的 SSH 配置及窗口冒烟检查；**不等于**真实 Keychain 授权、密码服务器端到端登录和 Warp SSH 增强功能都已验证。
+Tags such as `production`, `test` and `dev` use recognizable colors; other tags have stable colors derived from their names. Tags support inline editing and duplicate checks. Host lists also support favorites, search and recent connections.
 
-## 命令行
+### 5. sudo passwords
 
-应用包包含 Rust CLI `wsm`。在源码仓库根目录可以这样使用：
+You can optionally store a different **sudo password** for a host. If not configured, the app can copy the saved SSH password instead. sudo passwords are **copy-only**: they are not automatically detected or typed into remote terminals. SSH passwords can also be copied from the host's action menu.
+
+## Security and privacy
+
+- **macOS Keychain:** SSH and sudo passwords are saved as generic-password entries with `WhenUnlockedThisDeviceOnly` accessibility. Passwords are **not** written in plaintext to SQLite, SSH config, Warp Tab Config or Rust JSON snapshots.
+- **One-time Askpass authorization:** Temporary credential requests use restricted-permission files with a 120-second expiry and attempted single consumption. This is not isolation from a malicious process already running as the same macOS user.
+- **Prompt checks:** The Askpass helper attempts to respond only to recognized password prompts. Host-key confirmation, MFA and unrelated prompts are not silently answered.
+- **Clipboard:** After copying a password, the app attempts to clear the clipboard after about 30 seconds **only if it has not changed**. Clipboard history or other programs may still retain copied data.
+- **No automatic sudo entry:** Remote sudo behavior and server authentication policies remain unchanged.
+- **Testing limits:** Passing CI does **not** imply real Keychain authorization on all machines, successful password login against all SSH servers, or verified Warp SSH enhancements.
+
+## Command-line usage
+
+The app bundle contains the Rust `wsm` CLI. From the repository root:
 
 ```bash
-# 环境检查
+# Basic diagnostics, import and enumeration
 cargo run -p wsm-cli -- doctor
-
-# 导入和列出已有 SSH 主机
 cargo run -p wsm-cli -- import
 cargo run -p wsm-cli -- list
 
-# 初始化托管 SSH Config，再添加服务器
+# Initialize WSM-managed SSH configuration
 cargo run -p wsm-cli -- init
 cargo run -p wsm-cli -- add \
   --name "Dev API" \
@@ -121,25 +136,31 @@ cargo run -p wsm-cli -- add \
   --user deploy \
   --port 22
 
-# 查询、预览 Warp 连接和同步 Tab Config
+# Search, dry-run connection and regenerate Warp config
 cargo run -p wsm-cli -- list --search dev
 cargo run -p wsm-cli -- connect <HOST_UUID> --dry-run
 cargo run -p wsm-cli -- sync
+
+# Nested group operations (replace UUID placeholders)
+cargo run -p wsm-cli -- group add "Production"
+cargo run -p wsm-cli -- group add "Databases" --parent <PARENT_GROUP_UUID>
+cargo run -p wsm-cli -- group edit <GROUP_UUID> --name "DB" --root
+cargo run -p wsm-cli -- group list
 ```
 
-更多命令包括 `edit`、`delete`、`favorite`、`group`、`connect` 和 `sync --all`。查看：
+Other commands include `edit`, `delete`, `favorite`, `group`, `connect` and `sync --all`:
 
 ```bash
 cargo run -p wsm-cli -- --help
 "/Applications/Warp SSH Manager.app/Contents/MacOS/wsm" --version
 ```
 
-## 本地编译
+## Build from source
 
-需要 **macOS、Xcode Command Line Tools、Rust / Cargo**。本项目的构建工具链使用 SwiftUI / AppKit 和 Rust；在仓库根目录执行：
+You need **macOS, Xcode Command Line Tools and Rust/Cargo**. The application is built with SwiftUI/AppKit and Rust.
 
 ```bash
-xcode-select --install  # 已安装时可跳过
+xcode-select --install  # Skip if already installed
 cargo test -p wsm-core -p wsm-cli
 
 if [ "$(uname -m)" = "arm64" ]; then
@@ -162,44 +183,44 @@ xcrun swiftc -O -target "$swift_target" \
 bash scripts/package-macos-app.sh --single dist/warp-ssh-manager "$arch"
 ```
 
-安装包写入 `dist/`，包含对应架构的 DMG 和 `.app.zip`。打包过程也会编译专用 Askpass 辅助程序、验证捆绑架构及 macOS 版本元数据。
+Packages are written to `dist/` and include architecture-specific DMGs and `.app.zip` files. Packaging also compiles the separate Askpass helper and validates bundle metadata and architectures.
 
-## 项目结构
+## Repository layout
 
 ```text
 apps/
-  wsm-native/Sources/      SwiftUI / AppKit 主机管理界面
-  wsm-askpass/             macOS Keychain / SSH_ASKPASS 辅助程序
+  wsm-native/Sources/      Native SwiftUI/AppKit interface
+  wsm-askpass/             macOS Keychain and SSH_ASKPASS helper
 crates/
-  wsm-core/                SQLite、SSH Host、Warp Tab Config 核心
-  wsm-cli/                 wsm CLI 以及原生应用的 JSON 桥接
-scripts/                   本地构建、检查与 macOS GUI 冒烟测试
-.github/workflows/         Rust CI、Intel / Apple Silicon 安装包
-assets/                    品牌图标
-examples/                  SSH 与 Warp 配置示例
+  wsm-core/                SQLite, SSH hosts, Warp Tab Config
+  wsm-cli/                 Command line and native JSON bridge
+scripts/                   Build, verification and macOS smoke tests
+.github/workflows/         CI and macOS packaging workflows
+assets/                    Branding
+examples/                  Example SSH/Warp configuration
 ```
 
-## 配置文件与升级
+## Local data and upgrades
 
-| 路径 | 用途 |
+| Location | Purpose |
 | --- | --- |
-| `~/Library/Application Support/WarpSSHManager/hosts.sqlite3` | 主机、分组、收藏、标签和认证方式等数据（**不包含密码**） |
-| `~/.ssh/config` | 用户原有 SSH 配置，仅在明确初始化后写入 `Include` |
-| `~/.ssh/config.d/warp-ssh-manager.conf` | WSM 自管 SSH Host |
-| `~/.warp/tab_configs/wsm_<UUID>.toml` | WSM 生成的 Warp Tab Config |
-| macOS Keychain | 按主机 UUID 存储 SSH 和 sudo 凭据 |
-| `~/Library/Application Support/WarpSSHManager/askpass_sessions/` | 短期、一次性自动认证会话文件 |
+| `~/Library/Application Support/WarpSSHManager/hosts.sqlite3` | Host/group metadata, favorites, labels and authentication preferences (**not passwords**) |
+| `~/.ssh/config` | Existing SSH configuration; an `Include` is added only after explicit initialization |
+| `~/.ssh/config.d/warp-ssh-manager.conf` | Managed host definitions |
+| `~/.warp/tab_configs/wsm_<UUID>.toml` | Generated Warp launch tabs |
+| macOS Keychain | SSH and sudo credentials indexed by host UUID |
+| `~/Library/Application Support/WarpSSHManager/askpass_sessions/` | Short-lived single-use authentication files |
 
-支持环境变量 `WSM_HOME`、`WSM_SSH_CONFIG` 和 `WSM_WARP_CONFIG_DIR` 重定向路径。升级时请**先备份** SSH 配置及 `hosts.sqlite3`；应用的数据库迁移会给旧主机添加默认的 `auto` 认证方式，但不可把数据库备份当作 Keychain 密码备份。应用本身不支持跨设备迁移 Keychain 凭据。
+`WSM_HOME`, `WSM_SSH_CONFIG` and `WSM_WARP_CONFIG_DIR` can override data locations. Before upgrading, back up `hosts.sqlite3` and your SSH config. SQLite backups do not include Keychain entries. Existing hosts are migrated to the default `auto` authentication preference when required; the app does not provide cross-device Keychain credential migration.
 
-## 测试与贡献
+## Tests and contributions
 
-- [Rust / SwiftUI CI](https://github.com/javafancn/warp-ssh-manager/actions/workflows/ci.yml) — 格式、测试、静态检查、类型检查及受控的 SSH 集成检查。
-- [macOS 构建](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml) — 两种架构单独打包，并在 Apple Silicon Runner 上执行实际窗口截图冒烟检查。
-- 本地功能检查：`bash scripts/macos-smoke.sh`；原生 JSON 桥接：`bash scripts/native-ui-bridge-smoke.sh <PATH_TO_WSM>`。
+- [Rust / SwiftUI CI](https://github.com/javafancn/warp-ssh-manager/actions/workflows/ci.yml): tests, linting, native typechecking and isolated SSH checks.
+- [macOS packaging workflow](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml): Intel/Apple Silicon builds and an actual-window screenshot smoke test on Apple Silicon.
+- Local checks: `bash scripts/macos-smoke.sh` and `bash scripts/native-ui-bridge-smoke.sh <PATH_TO_WSM>`.
 
-如需提交问题或改进，请附上 macOS / Warp 版本、主机的**脱敏配置**、认证模式及复现步骤。**请勿上传密码、私钥、访问令牌或生产服务器清单。**
+Bug reports should include the macOS and Warp versions, redacted SSH configuration, authentication mode and reproduction steps. **Never attach passwords, private keys, tokens or production host inventories.**
 
-## 许可证
+## License
 
-本项目采用 [MIT License](LICENSE)，与 Warp 官方无隶属关系。
+[MIT License](LICENSE). Not affiliated with Warp.

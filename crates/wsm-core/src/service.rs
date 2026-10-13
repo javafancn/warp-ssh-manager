@@ -96,13 +96,43 @@ impl Manager {
         Ok(())
     }
 
-    pub fn group_add(&self,name:&str,parent_id:Option<Uuid>) -> Result<Group> {
-        if name.trim().is_empty() || name.len()>120 || name.chars().any(char::is_control) { bail!("invalid group name"); }
-        if let Some(parent)=parent_id {
-            if !self.db.list_groups()?.iter().any(|g|g.id==parent) { bail!("parent group not found"); }
+    fn validate_group(&self,name:&str,parent_id:Option<Uuid>,self_id:Option<Uuid>) -> Result<String> {
+        let name=name.trim();
+        if name.is_empty() || name.chars().count()>120 || name.chars().any(char::is_control) {
+            bail!("invalid group name (1–120 printable characters)");
         }
-        let group=Group{id:Uuid::new_v4(),name:name.to_string(),parent_id,sort_order:0};
+        let groups=self.db.list_groups()?;
+        if let Some(parent)=parent_id {
+            if !groups.iter().any(|g|g.id==parent) { bail!("parent group not found"); }
+            let mut cursor=Some(parent);
+            let mut visited=std::collections::HashSet::new();
+            while let Some(id)=cursor {
+                if Some(id)==self_id { bail!("cannot move group beneath itself or a descendant"); }
+                if !visited.insert(id) { bail!("cycle in group hierarchy"); }
+                cursor=groups.iter().find(|g|g.id==id).and_then(|g|g.parent_id);
+            }
+        }
+        if groups.iter().any(|g|Some(g.id)!=self_id && g.parent_id==parent_id
+            && g.name.eq_ignore_ascii_case(name)) {
+            bail!("duplicate group name under the same parent");
+        }
+        Ok(name.to_owned())
+    }
+
+    pub fn group_add(&self,name:&str,parent_id:Option<Uuid>) -> Result<Group> {
+        let name=self.validate_group(name,parent_id,None)?;
+        let group=Group{id:Uuid::new_v4(),name,parent_id,sort_order:0};
         self.db.save_group(&group)?;
+        Ok(group)
+    }
+
+    pub fn group_update(&self,id:Uuid,name:&str,parent_id:Option<Uuid>) -> Result<Group> {
+        let mut group=self.db.list_groups()?.into_iter()
+            .find(|g|g.id==id).context("group not found")?;
+        group.name=self.validate_group(name,parent_id,Some(id))?;
+        group.parent_id=parent_id;
+        self.db.save_group(&group)?;
+        self.sync_existing_tabs()?;
         Ok(group)
     }
 
@@ -272,6 +302,25 @@ mod tests {
         fs::write(&m.paths.ssh_config,format!("Include \"{}\"\n{external}",m.paths.managed_ssh.display())).unwrap();
         assert!(m.add_managed(input("user-host")).is_err());
         assert!(fs::read_to_string(&m.paths.ssh_config).unwrap().contains(external));
+    }
+    #[test] fn nested_group_lifecycle_and_cycle_guards() {
+        let (_dir,m)=fixture();
+        let root=m.group_add("Team",None).unwrap();
+        let child=m.group_add("Services",Some(root.id)).unwrap();
+        let grandchild=m.group_add("API",Some(child.id)).unwrap();
+        let sibling=m.group_add("Backend",Some(root.id)).unwrap();
+        assert!(m.group_add("services",Some(root.id)).is_err());
+        assert!(m.group_add("Services",None).is_ok());
+        assert!(m.group_update(root.id,"Team",Some(grandchild.id)).is_err());
+        assert!(m.group_update(child.id,"Services",Some(child.id)).is_err());
+        assert!(m.group_update(sibling.id,"API",Some(child.id)).is_err());
+        assert_eq!(m.group_update(grandchild.id,"API",Some(sibling.id)).unwrap().parent_id,Some(sibling.id));
+        assert!(m.group_delete(root.id).is_err());
+        assert!(m.group_delete(child.id).is_ok());
+        assert!(m.group_delete(root.id).is_err());
+        assert!(m.group_update(sibling.id,"Backend",None).is_ok());
+        assert!(m.group_delete(root.id).is_ok());
+        assert_eq!(m.db.list_groups().unwrap().iter().find(|g|g.id==grandchild.id).unwrap().parent_id,Some(sibling.id));
     }
     #[test] fn annotations_preserved_and_removed_with_host() {
         let (_dir,m)=fixture();
