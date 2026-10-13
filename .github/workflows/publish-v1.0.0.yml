@@ -1,0 +1,102 @@
+name: Publish Warp SSH Manager v1.0.0
+
+# This workflow is intentionally tied to the already-tested v1.0.0
+# main commit and its successful two-architecture packaging run.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-v1.0.0.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: publish-wsm-v1.0.0
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Tag and publish signed-by-CI v1.0.0 installers
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: v1.0.0
+      RELEASE_SHA: 32947984f0d15031f937426a9bbe3bd67786ddd5
+      BUILD_RUN_ID: 38367139702
+    steps:
+      - name: Verify the selected packaging run
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_path="repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN_ID"
+          build_sha="$(gh api "$run_path" --jq '.head_sha')"
+          build_conclusion="$(gh api "$run_path" --jq '.conclusion')"
+          if [[ "$build_sha" != "$RELEASE_SHA" || "$build_conclusion" != "success" ]]; then
+            echo "Refusing release: expected successful run for $RELEASE_SHA; got $build_sha / $build_conclusion" >&2
+            exit 1
+          fi
+
+      - name: Download the two v1.0.0 DMG artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --pattern 'WarpSSHManager-Native-1.0.0-*-macOS12' --dir release-assets
+          find release-assets -type f -name '*.dmg' -print
+
+      - name: Publish GitHub Release with both DMGs
+        shell: bash
+        run: |
+          set -euo pipefail
+          arm="$(find release-assets -type f -name 'WarpSSHManager-1.0.0-apple-silicon.dmg' -print -quit)"
+          intel="$(find release-assets -type f -name 'WarpSSHManager-1.0.0-intel.dmg' -print -quit)"
+          [[ -n "$arm" && -s "$arm" ]] || { echo "Missing Apple Silicon installer" >&2; exit 1; }
+          [[ -n "$intel" && -s "$intel" ]] || { echo "Missing Intel installer" >&2; exit 1; }
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "$RELEASE_TAG is already published; refusing duplicate release."
+            exit 0
+          fi
+
+          cat > release-notes.md <<'RELEASE_NOTES'
+          ## Warp SSH Manager 1.0.0
+
+          macOS 原生 SSH 主机管理器，支持通过 Warp + OpenSSH 快速连接服务器。本次 v1.0.0 加入用户名密码认证与 Keychain 凭据管理，并更新原生管理界面。
+
+          ### 主要更新
+          - **三种 SSH 认证模式**：自动选择、SSH 密钥、用户名 + 密码；保留既有 OpenSSH 配置兼容性。
+          - **密码管理**：在 macOS Keychain 保存 SSH 登录密码及单独的 sudo 密码；可以按需复制，约 30 秒后尝试清理未变化的剪贴板。
+          - **可选密码自动登录**：使用一次性、120 秒的 SSH_ASKPASS 会话尝试提供已保存的 SSH 密码；支持手动连接回退，不会自动填写 sudo 密码。
+          - **界面升级**：原生三栏主机管理、搜索和快速连接、收藏与分组、标签颜色、认证方式卡片及凭据管理界面。
+          - **主机与 Warp 集成**：保留独立的原生 `ssh <别名>` 命令、导入 `~/.ssh/config`、管理 Warp Tab Config。
+
+          ### 下载安装
+          请根据处理器选择本页附件：
+          - **Apple Silicon（M1/M2/M3/M4/M 系列）**：`WarpSSHManager-1.0.0-apple-silicon.dmg`
+          - **Intel**：`WarpSSHManager-1.0.0-intel.dmg`
+
+          打开 DMG，将 **Warp SSH Manager.app** 拖入「应用程序」。运行前请安装 [Warp Terminal](https://www.warp.dev/)。
+
+          ### 使用限制与安全说明
+          - 安装包目标系统版本为 macOS 12+，已在 CI 中编译并通过基础冒烟检查；未覆盖所有 macOS 版本的真实设备测试。
+          - 此安装包是 **Ad-hoc 签名且未经 Apple 公证**的社区构建；可能触发 Gatekeeper 警告。
+          - **真实 SSH 密码服务器自动登录，以及 Warp SSH Extension / 增强功能兼容性仍需实机验证**。Warp 打开成功不代表 SSH 登录成功。
+          - Keychain 中的凭据不写入 SQLite 或 SSH 配置；自动登录授权只使用一次，不能视为对本机受攻击用户会话的完全隔离。
+          - sudo 仅支持复制密码，不会自动输入。
+
+          详细安装、功能与开发说明见 [README](https://github.com/javafancn/warp-ssh-manager/blob/main/README.md)。
+          RELEASE_NOTES
+
+          gh release create "$RELEASE_TAG" "$arm" "$intel" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$RELEASE_SHA" \
+            --title "Warp SSH Manager v1.0.0" \
+            --notes-file release-notes.md \
+            --latest
+
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --json url,tagName,isDraft,isPrerelease,assets
