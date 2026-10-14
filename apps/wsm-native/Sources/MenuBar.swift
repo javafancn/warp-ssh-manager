@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Carbon
 
 // A borderless NSPanel is a keyboard-capable quick launcher, not another
 // document window. ESC dismisses it without touching the main manager.
@@ -15,6 +16,9 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
     private var item: NSStatusItem?
     private var quickPanel: QuickConnectWindow?
     private var managerWindow: NSWindow?
+    private var quickHotKey: EventHotKeyRef?
+    private var quickHotKeyHandler: EventHandlerRef?
+    private let quickHotKeySignature: OSType = 0x57534D51 // WSMQ
     // A presentation request can arrive before SwiftUI mounts WindowGroup.
     // Defer it until the scene registers, never create a competing NSWindow.
     private var pendingManagerPresentation = false
@@ -31,13 +35,17 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
         status.button?.image = icon
         status.button?.toolTip = "Warp SSH 管理器"
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title:"快速连接…",action:#selector(showQuickPanel),keyEquivalent:"k"))
+        let quickItem = NSMenuItem(title:"快速打开…",action:#selector(showQuickPanel),
+                                   keyEquivalent:"k")
+        quickItem.keyEquivalentModifierMask = [.control,.option,.command]
+        menu.addItem(quickItem)
         menu.addItem(NSMenuItem(title:"打开主机管理器",action:#selector(showMainWindow),keyEquivalent:""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title:"退出 Warp SSH 管理器",action:#selector(quitApp),keyEquivalent:"q"))
         for entry in menu.items { entry.target = self }
         item = status
         status.menu = menu
+        registerQuickHotKey()
 
         // SwiftUI owns the initial manager window. Only discover/register
         // that scene: launching a second native NSWindow here races WindowGroup.
@@ -55,6 +63,69 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
                 self.runWindowRoutingSmoke()
             }
         }
+    }
+
+    // Carbon RegisterEventHotKey is a real, system-wide hotkey even when Warp
+    // or another app is frontmost. Unlike a global event tap, it does not
+    // request Accessibility or Input Monitoring permissions.
+    // Ctrl+Option+Command+K is intentionally less common than Cmd+K/Spotlight.
+    private func registerQuickHotKey() {
+        var kind=EventTypeSpec(eventClass:OSType(kEventClassKeyboard),
+                               eventKind:UInt32(kEventHotKeyPressed))
+        let callback:EventHandlerUPP = { _, event, userData in
+            guard let event=event,let userData=userData else {
+                return OSStatus(eventNotHandledErr)
+            }
+            var identity=EventHotKeyID(signature:0,id:0)
+            let result=GetEventParameter(event,EventParamName(kEventParamDirectObject),
+                                         EventParamType(typeEventHotKeyID),nil,
+                                         MemoryLayout<EventHotKeyID>.size,nil,&identity)
+            guard result == noErr,identity.signature == 0x57534D51,identity.id == 1 else {
+                return OSStatus(eventNotHandledErr)
+            }
+            let delegate=Unmanaged<StatusBarDelegate>.fromOpaque(userData).takeUnretainedValue()
+            delegate.toggleQuickPanel()
+            return noErr
+        }
+        let handlerStatus=InstallEventHandler(GetApplicationEventTarget(),callback,1,
+                                              &kind,Unmanaged.passUnretained(self).toOpaque(),
+                                              &quickHotKeyHandler)
+        guard handlerStatus == noErr else {
+            NSLog("WSM: failed to install global hotkey handler (%d)",handlerStatus)
+            return
+        }
+        let identity=EventHotKeyID(signature:quickHotKeySignature,id:1)
+        let status=RegisterEventHotKey(UInt32(kVK_ANSI_K),
+                                       UInt32(cmdKey | optionKey | controlKey),
+                                       identity,GetApplicationEventTarget(),0,&quickHotKey)
+        if status != noErr {
+            NSLog("WSM: Ctrl+Option+Command+K unavailable (%d); menu remains usable",status)
+        }
+    }
+
+    func applicationWillTerminate(_ notification:Notification) {
+        if let ref=quickHotKey {UnregisterEventHotKey(ref)}
+        if let handler=quickHotKeyHandler {RemoveEventHandler(handler)}
+    }
+
+    private func toggleQuickPanel() {
+        if quickPanel?.isVisible == true && NSApp.keyWindow === quickPanel {
+            quickPanel?.orderOut(nil)
+        } else {
+            showQuickPanel()
+        }
+    }
+
+    // Align to the visible desktop's upper center like Spotlight, not NSWindow.center()
+    // (which is the vertical midpoint). Prefer the screen containing the pointer.
+    private func positionQuickPanel(_ panel:QuickConnectWindow) {
+        guard let screen=NSScreen.screens.first(where:{$0.frame.contains(NSEvent.mouseLocation)})
+              ?? NSScreen.main ?? NSScreen.screens.first else {return}
+        let visible=screen.visibleFrame
+        let topInset=max(55,min(125,visible.height * 0.14))
+        let x=visible.midX-panel.frame.width/2
+        let y=max(visible.minY+12,visible.maxY-topInset-panel.frame.height)
+        panel.setFrameOrigin(NSPoint(x:x,y:y))
     }
 
     private func managerCandidates() -> [NSWindow] {
@@ -131,12 +202,13 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
                 QuickConnectPanel(onDismiss: { [weak self] in
                     self?.quickPanel?.orderOut(nil)
                 }))
+            positionQuickPanel(existing)
             NSApp.activate(ignoringOtherApps:true)
             existing.makeKeyAndOrderFront(nil)
             return
         }
         let panel = QuickConnectWindow(
-            contentRect:NSRect(x:0,y:0,width:510,height:556),
+            contentRect:NSRect(x:0,y:0,width:650,height:536),
             styleMask:[.borderless],
             backing:.buffered,defer:false)
         panel.isFloatingPanel = true
@@ -145,16 +217,17 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
         panel.isOpaque = false
         panel.hasShadow = true
         panel.backgroundColor = .clear
-        panel.isMovableByWindowBackground = true
-        panel.collectionBehavior = [.moveToActiveSpace,.transient]
+        panel.isMovableByWindowBackground = false
+        // Support invoking the launcher over fullscreen apps / different Spaces.
+        panel.collectionBehavior = [.canJoinAllSpaces,.fullScreenAuxiliary,.transient]
         let host = NSHostingView(rootView:QuickConnectPanel(onDismiss: { [weak self] in
             self?.quickPanel?.orderOut(nil)
         }))
         host.wantsLayer = true
-        host.layer?.cornerRadius = 17
+        host.layer?.cornerRadius = 21
         host.layer?.masksToBounds = true
         panel.contentView = host
-        panel.center()
+        positionQuickPanel(panel)
         quickPanel = panel
         NSApp.activate(ignoringOtherApps:true)
         panel.makeKeyAndOrderFront(nil)
@@ -212,165 +285,288 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
 struct QuickConnectPanel: View {
     let onDismiss: () -> Void
     @StateObject private var store = ManagerStore()
-    @State private var launched = false
+    @State private var selectedIndex = 0
     @State private var hoveredID: String?
+    @State private var monitor: Any?
     @FocusState private var searchFocused: Bool
+
+    // With no query, prioritize actual recent sessions; if no host has yet been
+    // connected, display the available hosts rather than an empty launcher.
+    private var results: [HostRecord] {
+        let query=store.search.trimmingCharacters(in:.whitespacesAndNewlines)
+        if !query.isEmpty {
+            return store.hosts.filter { host in
+                [host.name,host.alias,host.hostname,host.tags,
+                 host.groupId.map { store.groupPath($0) } ?? ""]
+                    .contains(where:{ $0.localizedCaseInsensitiveContains(query) })
+            }.sorted { a,b in
+                if a.lastConnected != b.lastConnected {
+                    return (a.lastConnected ?? 0) > (b.lastConnected ?? 0)
+                }
+                return a.name.localizedStandardCompare(b.name) == .orderedAscending
+            }
+        }
+        return store.hosts.sorted { a,b in
+            if a.lastConnected != b.lastConnected {
+                return (a.lastConnected ?? 0) > (b.lastConnected ?? 0)
+            }
+            return a.name.localizedStandardCompare(b.name) == .orderedAscending
+        }
+    }
+
+    private var displayHeading: String {
+        if !store.search.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty {
+            return "搜索结果"
+        }
+        return store.hosts.contains(where:{ $0.lastConnected != nil }) ? "最近使用" : "全部主机"
+    }
 
     var body: some View {
         VStack(alignment:.leading,spacing:0) {
-            HStack(spacing:13) {
-                Image(nsImage: Design.brandIcon)
-                    .resizable().interpolation(.high)
-                    .frame(width:47,height:47)
-                    .clipShape(RoundedRectangle(cornerRadius:12))
-                VStack(alignment:.leading,spacing:4) {
-                    Text("快速连接")
-                        .font(Design.font(22,.semibold))
-                        .foregroundColor(Design.primary)
-                    Text("选择主机，在 Warp 中打开 SSH")
-                        .font(Design.font(13))
-                        .foregroundColor(Design.secondary)
-                }
-                Spacer()
-                if store.busy {ProgressView().controlSize(.small)}
-                Button(action:onDismiss) {
-                    Image(systemName:"xmark")
-                        .font(.system(size:12,weight:.semibold))
-                        .foregroundColor(Design.secondary)
-                        .frame(width:29,height:29)
-                }
-                .buttonStyle(.plain)
-                .help("关闭快速连接 (Esc)")
-                .accessibilityLabel("关闭快速连接")
-            }
-            .padding(.top,24)
-            .padding(.bottom,21)
+            searchBar
+                .padding(.horizontal,19)
+                .padding(.top,18)
+                .padding(.bottom,17)
 
-            HStack(spacing:10) {
-                Image(systemName:"magnifyingglass")
-                    .font(.system(size:16))
+            HStack {
+                Text(displayHeading)
+                    .font(Design.font(12.5,.medium))
                     .foregroundColor(Design.secondary)
-                TextField("搜索主机、SSH 别名或 IP",text:$store.search)
-                    .textFieldStyle(.plain)
-                    .font(Design.font(15))
-                    .focused($searchFocused)
-                    .accessibilityLabel("搜索主机")
-                if !store.search.isEmpty {
-                    Button {
-                        store.search = ""
-                    } label: {
-                        Image(systemName:"xmark.circle.fill")
-                            .foregroundColor(Design.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("清除搜索")
-                }
+                Spacer()
+                if store.busy { ProgressView().controlSize(.small) }
             }
-            .padding(.horizontal,14)
-            .frame(height:44)
-            .background(.thinMaterial,in:RoundedRectangle(cornerRadius:11))
-            .overlay(RoundedRectangle(cornerRadius:11).strokeBorder(Design.hairline))
-            .padding(.bottom,14)
+            .padding(.horizontal,30)
+            .padding(.bottom,8)
 
-            ScrollView(.vertical,showsIndicators:false) {
-                LazyVStack(spacing:8) {
-                    ForEach(store.filtered) { host in
-                        Button { store.connect(host) } label: {
-                            HStack(spacing:12) {
-                                TerminalIcon(name:host.name,tags:host.tagNames,size:43)
-                                VStack(alignment:.leading,spacing:5) {
-                                    Text(host.name)
-                                        .font(Design.font(16,.semibold))
-                                        .foregroundColor(Design.primary)
-                                        .lineLimit(1)
-                                    Text(host.hostname)
-                                        .font(Design.font(13))
-                                        .foregroundColor(Design.secondary)
-                                        .lineLimit(1)
-                                    if !host.tagNames.isEmpty {
-                                        HStack(spacing:5) {
-                                            ForEach(Array(host.tagNames.prefix(2)),id:\.self) { tag in
-                                                TerminalBadge(tag:tag,scale:0.83)
-                                            }
-                                        }
-                                    }
-                                }
-                                Spacer(minLength:4)
-                                Image(systemName:host.favorite ? "star.fill" : "arrow.up.right")
-                                    .font(.system(size:15,weight:.medium))
-                                    .foregroundColor(host.favorite ? .orange : Design.secondary)
-                                    .frame(width:23)
+            ScrollViewReader { proxy in
+                ScrollView(.vertical,showsIndicators:false) {
+                    LazyVStack(spacing:0) {
+                        ForEach(Array(results.enumerated()),id:\.element.id) { index,host in
+                            resultRow(host,index:index)
+                                .id(host.id)
+                            if index < results.count-1 {
+                                Rectangle().fill(Design.hairline.opacity(0.58))
+                                    .frame(height:1)
+                                    .padding(.leading,77)
+                                    .padding(.trailing,15)
                             }
-                            .padding(.horizontal,14)
-                            .padding(.vertical,12)
-                            .frame(maxWidth:.infinity,alignment:.leading)
-                            .background(hoveredID == host.id
-                                            ? Design.selectedSurface : Design.cardSurface,
-                                        in:RoundedRectangle(cornerRadius:12))
-                            .overlay(RoundedRectangle(cornerRadius:12)
-                                .strokeBorder(hoveredID == host.id
-                                    ? Design.blue.opacity(0.60) : Design.hairline,lineWidth:1))
                         }
-                        .buttonStyle(.plain)
-                        .disabled(store.busy)
-                        .onHover { hovering in
-                            if hovering { hoveredID = host.id }
-                            else if hoveredID == host.id { hoveredID = nil }
+                        if results.isEmpty {
+                            VStack(spacing:9) {
+                                Image(systemName:"magnifyingglass")
+                                    .font(.system(size:23))
+                                Text(store.hosts.isEmpty ? "还没有主机，请先在管理器中添加" :
+                                     "没有匹配的主机")
+                                    .font(Design.font(14))
+                            }
+                            .foregroundColor(Design.secondary)
+                            .frame(maxWidth:.infinity)
+                            .padding(.top,65)
                         }
                     }
-                    if store.filtered.isEmpty {
-                        VStack(spacing:10) {
-                            Image(systemName:"magnifyingglass")
-                                .font(.system(size:25))
-                            Text(store.hosts.isEmpty ? "暂无主机" : "没有匹配的主机")
-                                .font(Design.font(15,.medium))
-                        }
-                        .frame(maxWidth:.infinity)
-                        .foregroundColor(Design.secondary)
-                        .padding(.vertical,45)
+                    .padding(.horizontal,18)
+                    .background(NativeScrollbarCleaner())
+                }
+                .hideNativeScrollIndicators()
+                .onChange(of:selectedIndex) { next in
+                    guard next >= 0,next < results.count else {return}
+                    withAnimation(.easeOut(duration:0.10)) {
+                        proxy.scrollTo(results[next].id,anchor:.center)
                     }
                 }
-                .padding(.bottom,10)
-                .background(NativeScrollbarCleaner())
             }
-            .hideNativeScrollIndicators()
             .frame(maxWidth:.infinity,maxHeight:.infinity)
 
-            if let message = store.errorMessage {
-                Text(message)
-                    .font(Design.font(12))
-                    .foregroundColor(.red)
-                    .lineLimit(3)
-                    .padding(.vertical,7)
+            if let error = store.errorMessage {
+                Text(error).foregroundColor(.red)
+                    .font(Design.font(11.5))
+                    .lineLimit(2)
+                    .padding(.horizontal,26)
+                    .padding(.bottom,5)
             }
-            Rectangle().fill(Design.hairline).frame(height:1)
-                .padding(.top,7)
-            HStack {
-                Text("单击主机即可在 Warp 中打开")
-                    .font(Design.font(12))
+
+            Rectangle().fill(Design.hairline.opacity(0.65)).frame(height:1)
+                .padding(.horizontal,19)
+
+            HStack(spacing:10) {
+                Text("↵")
+                    .font(.system(size:14,weight:.semibold,design:.rounded))
+                    .foregroundColor(Design.secondary)
+                Text("打开连接")
+                    .font(Design.font(12.5))
                     .foregroundColor(Design.secondary)
                 Spacer()
-                Text("\(store.filtered.count) 台主机")
-                    .font(Design.font(12,.medium))
+                shortcutHint("↑")
+                shortcutHint("↓")
+                Text("选择")
+                    .font(Design.font(12.5))
+                    .foregroundColor(Design.secondary)
+                Text("·")
+                    .foregroundColor(Design.secondary)
+                Text("Esc 关闭")
+                    .font(Design.font(12.5))
                     .foregroundColor(Design.secondary)
             }
-            .padding(.top,13)
-            .padding(.bottom,18)
+            .padding(.horizontal,27)
+            .frame(height:48)
         }
-        .padding(.horizontal,20)
-        .frame(width:510,height:556)
-        // Native popover blur and real wallpaper sampling, without a
-        // screenshot or an artificial background gradient.
+        .frame(width:650,height:536)
         .background {
-            MacMaterial(material:.popover,blendingMode:.behindWindow)
+            MacMaterial(material:.popover,blendingMode:.behindWindow,opacity:0.96)
         }
-        .clipShape(RoundedRectangle(cornerRadius:17,style:.continuous))
+        .clipShape(RoundedRectangle(cornerRadius:21,style:.continuous))
+        .overlay(RoundedRectangle(cornerRadius:21,style:.continuous)
+            .strokeBorder(Design.surface(0.38),lineWidth:1))
         .onExitCommand(perform:onDismiss)
         .preferredColorScheme(store.appearance == "dark" ? .dark :
                               (store.appearance == "light" ? .light : nil))
+        .onChange(of:store.search) { _ in selectedIndex=0 }
         .onAppear {
-            if !launched { launched = true; store.refresh() }
-            DispatchQueue.main.async { searchFocused = true }
+            store.refresh()
+            installKeyboardMonitor()
+            DispatchQueue.main.async {searchFocused=true}
+        }
+        .onDisappear {
+            if let monitor=monitor {NSEvent.removeMonitor(monitor)}
+            monitor=nil
+        }
+    }
+
+    private var searchBar: some View {
+        HStack(spacing:12) {
+            Image(systemName:"magnifyingglass")
+                .font(.system(size:21,weight:.regular))
+                .foregroundColor(Design.secondary)
+            TextField("搜索主机、SSH 别名或 IP",text:$store.search)
+                .font(Design.font(20))
+                .textFieldStyle(.plain)
+                .focused($searchFocused)
+                .accessibilityLabel("搜索主机、SSH 别名或 IP")
+            if !store.search.isEmpty {
+                Button {
+                    store.search=""
+                    selectedIndex=0
+                } label: {
+                    Image(systemName:"xmark.circle.fill")
+                        .foregroundColor(Design.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("清除搜索")
+            }
+            Image(nsImage:Design.brandIcon)
+                .resizable()
+                .interpolation(.high)
+                .frame(width:27,height:27)
+                .clipShape(RoundedRectangle(cornerRadius:7))
+                .padding(.leading,3)
+            Text("⌃⌥⌘ K")
+                .font(.system(size:12.5,weight:.medium,design:.rounded))
+                .foregroundColor(Design.secondary)
+                .padding(.horizontal,8)
+                .frame(height:27)
+                .background(Design.surface(0.23),
+                            in:RoundedRectangle(cornerRadius:6))
+                .overlay(RoundedRectangle(cornerRadius:6)
+                    .strokeBorder(Design.hairline.opacity(0.7),lineWidth:1))
+        }
+        .padding(.horizontal,19)
+        .frame(height:61)
+        .background(Design.surface(0.27),
+                    in:RoundedRectangle(cornerRadius:15))
+        .overlay(RoundedRectangle(cornerRadius:15)
+            .strokeBorder(Design.hairline.opacity(0.5),lineWidth:1))
+    }
+
+    private func resultRow(_ host:HostRecord,index:Int) -> some View {
+        let isSelected=selectedIndex==index
+        let isHovered=hoveredID==host.id
+        return Button {
+            open(host)
+        } label: {
+            HStack(spacing:15) {
+                TerminalIcon(name:host.name,tags:host.tagNames,size:42)
+                VStack(alignment:.leading,spacing:4) {
+                    Text(host.name)
+                        .font(Design.font(15.5,.semibold))
+                        .foregroundColor(Design.primary)
+                        .lineLimit(1)
+                    HStack(spacing:9) {
+                        Text(host.hostname)
+                            .font(Design.font(13))
+                            .foregroundColor(Design.secondary)
+                            .lineLimit(1)
+                        ForEach(Array(host.tagNames.prefix(2)),id:\.self) { tag in
+                            TerminalBadge(tag:tag,scale:0.78)
+                        }
+                    }
+                }
+                Spacer(minLength:5)
+                Image(systemName:"arrow.up.right")
+                    .font(.system(size:16,weight:.medium))
+                    .foregroundColor(Design.secondary)
+                    .frame(width:22)
+            }
+            .padding(.horizontal,14)
+            .frame(height:65)
+            .frame(maxWidth:.infinity,alignment:.leading)
+            .background(isSelected ? Design.blue.opacity(0.10) :
+                (isHovered ? Design.surface(0.22) : Color.clear),
+                in:RoundedRectangle(cornerRadius:11))
+            .overlay(RoundedRectangle(cornerRadius:11)
+                .strokeBorder(isSelected ? Design.blue.opacity(0.25) : Color.clear))
+            .contentShape(RoundedRectangle(cornerRadius:11))
+        }
+        .buttonStyle(.plain)
+        .disabled(store.busy)
+        .onHover { hovering in
+            hoveredID=hovering ? host.id : (hoveredID==host.id ? nil : hoveredID)
+        }
+        .help("在 Warp 中打开 \(host.alias)")
+    }
+
+    private func shortcutHint(_ value:String) -> some View {
+        Text(value)
+            .font(.system(size:12,weight:.medium,design:.rounded))
+            .foregroundColor(Design.secondary)
+            .frame(width:22,height:22)
+            .background(Design.surface(0.20),
+                        in:RoundedRectangle(cornerRadius:5))
+            .overlay(RoundedRectangle(cornerRadius:5)
+                .strokeBorder(Design.hairline.opacity(0.60)))
+    }
+
+    private func open(_ host:HostRecord) {
+        guard !store.busy else {return}
+        store.connect(host)
+        onDismiss()
+    }
+
+    // The search TextField normally consumes arrow/Return keyDown events;
+    // a window-scoped local monitor keeps navigation responsive while typing.
+    // This is NOT a global keyboard event tap and does not affect Warp.
+    private func installKeyboardMonitor() {
+        guard monitor == nil else {return}
+        monitor=NSEvent.addLocalMonitorForEvents(matching:.keyDown) { event in
+            guard event.window is QuickConnectWindow else {return event}
+            // Leave IME composition to the native text input client.
+            if let input=event.window?.firstResponder as? NSTextView,
+               input.hasMarkedText() {return event}
+            switch event.keyCode {
+            case 125: // down
+                if !results.isEmpty {selectedIndex=min(selectedIndex+1,results.count-1)}
+                return nil
+            case 126: // up
+                if !results.isEmpty {selectedIndex=max(0,selectedIndex-1)}
+                return nil
+            case 36,76: // Return / keypad Enter
+                if results.indices.contains(selectedIndex) {open(results[selectedIndex])}
+                return nil
+            case 53: // Escape
+                onDismiss()
+                return nil
+            default:
+                return event
+            }
         }
     }
 }
