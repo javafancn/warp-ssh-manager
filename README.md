@@ -31,11 +31,17 @@
 | SSH host management | Authentication and credentials | Warp integration |
 | --- | --- | --- |
 | Search, favorites, recent connections | OpenSSH automatic negotiation, key-only or password mode | Open hosts in Warp using native `ssh <alias>` |
-| **Nested groups** with expand/collapse, rename and move | macOS Keychain for SSH and sudo passwords | Menu-bar quick connections |
+| **Nested groups** with expand/collapse, rename and move | macOS Keychain for SSH and sudo passwords | **Spotlight-style quick launcher (⌃⌥⌘K)** |
 | Group-aware filtering and descendant host counts | Optional one-time SSH password Askpass assistance | Dedicated Warp Tab Config files |
 | Color-coded tags, notes, ports, jump hosts | Copy passwords; no automatic sudo entry | Import existing `~/.ssh/config` hosts |
 
 The native three-pane interface offers automatic, light, and dark appearances.
+
+### Spotlight-style Quick Connect
+
+Press **Control + Option + Command + K (⌃⌥⌘K)** from anywhere while Warp SSH Manager is running to toggle the floating quick launcher. This deliberately avoids more widely used shortcuts such as ⌘Space and ⌘K. A system-wide hotkey is registered with macOS (without Accessibility/Input Monitoring permissions); if another app has already claimed the chord, open **Quick Connect** from the menu-bar icon instead. The launcher appears near the top center of the display under your pointer, including when working in other apps or Spaces.
+
+Start typing to search host names, SSH aliases, IPs, tags, or group paths. With an empty query, recently connected hosts appear first. Use **↑ / ↓** to change selection, **Return** to open the selected host in Warp, or **Esc** to dismiss the launcher. Click a row to connect directly. Opening a host still uses the original Warp/OpenSSH integration.
 
 ## Installation
 
