@@ -314,6 +314,12 @@ struct HostInspector: View {
 
     // A consistent inline editor instead of an unstyled native roundedBorder
     // field that stretches beneath the tag chips when focused.
+    private var reusableTagSuggestions:[String] {
+        HostTagCatalog.available(store.availableTagNames,
+                                 excluding:store.draft.tagNames,
+                                 search:newTag)
+    }
+
     private var newTagValidation: String? {
         let candidate=newTag.trimmingCharacters(in:.whitespacesAndNewlines)
         if candidate.contains(",") || candidate.contains("，") {
@@ -323,7 +329,7 @@ struct HostInspector: View {
             return "标签名称最多 32 个字符"
         }
         if store.draft.tagNames.contains(where:{
-            $0.caseInsensitiveCompare(candidate) == .orderedSame
+            HostTagCatalog.key($0) == HostTagCatalog.key(candidate)
         }) {
             return "标签已存在"
         }
@@ -383,6 +389,42 @@ struct HostInspector: View {
                 .frame(height:36 * scale)
 
                 if editingTags {
+                    if !reusableTagSuggestions.isEmpty {
+                        VStack(alignment:.leading,spacing:6 * scale) {
+                            HStack(spacing:5 * scale) {
+                                Image(systemName:"tag.fill")
+                                Text("已有标签 · 点击即可复用")
+                            }
+                            .font(Design.font(11.5 * textScale))
+                            .foregroundColor(Design.secondary)
+
+                            ScrollView(.horizontal,showsIndicators:false) {
+                                HStack(spacing:7 * scale) {
+                                    ForEach(reusableTagSuggestions,id:\.self) { tag in
+                                        Button {
+                                            selectExistingTag(tag)
+                                        } label: {
+                                            HStack(spacing:4 * scale) {
+                                                Image(systemName:"plus.circle.fill")
+                                                    .font(.system(size:12 * textScale))
+                                                    .foregroundColor(Design.blue)
+                                                TerminalBadge(tag:tag,scale:scale)
+                                            }
+                                            .padding(.horizontal,7 * scale)
+                                            .frame(height:33 * scale)
+                                            .background(Design.surface(0.35),
+                                                        in:RoundedRectangle(cornerRadius:9 * scale))
+                                            .contentShape(RoundedRectangle(cornerRadius:9 * scale))
+                                        }
+                                        .buttonStyle(.plain)
+                                        .help("使用已有标签：\(tag)")
+                                    }
+                                }
+                                .padding(.vertical,3 * scale)
+                            }
+                        }
+                    }
+
                     HStack(spacing:8 * scale) {
                         HStack(spacing:8 * scale) {
                             Image(systemName:"tag")
@@ -434,13 +476,20 @@ struct HostInspector: View {
         .frame(minHeight:46 * scale)
     }
 
+    private func selectExistingTag(_ tag:String) {
+        guard !store.draft.tagNames.contains(where:{
+            HostTagCatalog.key($0) == HostTagCatalog.key(tag)
+        }) else {return}
+        store.draft.tags=(store.draft.tagNames + [tag]).joined(separator:",")
+        newTag=""
+        tagInputFocused=true
+    }
+
     private func addTag() {
         let tag=newTag.trimmingCharacters(in:.whitespacesAndNewlines)
         guard !tag.isEmpty,newTagValidation == nil else {return}
-        store.draft.tags=(store.draft.tagNames + [tag]).joined(separator:",")
-        newTag=""
-        // Keep the editor open for consecutive tags, including keyboard entry.
-        tagInputFocused=true
+        let canonical=HostTagCatalog.canonical(tag,in:store.availableTagNames)
+        selectExistingTag(canonical)
     }
 
     private var notesRow: some View {

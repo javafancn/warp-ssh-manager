@@ -32,6 +32,7 @@
 | --- | --- | --- |
 | Search, favorites, recent connections | OpenSSH automatic negotiation, key-only or password mode | Open hosts in Warp using native `ssh <alias>` |
 | **Nested groups** with expand/collapse, rename and move | macOS Keychain for SSH and sudo passwords | **Spotlight-style quick launcher (⌃⌥⌘K)** |
+| **Reusable tags:** Pick labels already used by another host, or type a new tag | Saved/copied/deleted password success notices auto-dismiss after about 3 seconds | Warp/OpenSSH transport unchanged |
 | Group-aware filtering and descendant host counts | Optional one-time SSH password Askpass assistance | Dedicated Warp Tab Config files |
 | Color-coded tags, notes, ports, jump hosts | Copy passwords; no automatic sudo entry | Import existing `~/.ssh/config` hosts |
 

@@ -269,13 +269,32 @@ final class ManagerStore: ObservableObject {
     @Published var includeEnabled = false
     @Published var busy = false
     @Published var credentialRevision = 0
-    @Published var noticeMessage: String? = nil
+    // All non-error notices behave like transient toasts. Each reassignment
+    // invalidates an earlier timer, even when the same text is shown twice.
+    @Published var noticeMessage:String? = nil {
+        didSet {
+            noticeSequence &+= 1
+            let currentSequence=noticeSequence
+            guard noticeMessage != nil else {return}
+            DispatchQueue.main.asyncAfter(deadline:.now()+3.2) { [weak self] in
+                guard let self=self,self.noticeSequence==currentSequence else {return}
+                self.noticeMessage=nil
+            }
+        }
+    }
+    private var noticeSequence:UInt64 = 0
     @Published var errorMessage: String? = nil
     @AppStorage("warp.appearance") var appearance: String = "auto"
 
     var selected: HostRecord? { hosts.first { $0.id == selectedID } }
     var favoriteCount: Int { hosts.filter { $0.favorite }.count }
     var recentCount: Int { hosts.filter { $0.lastConnected != nil }.count }
+
+    /// Tag choices are inferred from all saved hosts, not just the current host.
+    /// The catalog survives app restarts through the existing host snapshots.
+    var availableTagNames:[String] {
+        HostTagCatalog.available(hosts.flatMap(\.tagNames))
+    }
 
     // The database already stores parentId; keep the hierarchy derived from
     // snapshots so a rename/move is reflected everywhere without a UI cache.
@@ -459,6 +478,7 @@ final class ManagerStore: ObservableObject {
                 return
             }
             PasswordClipboard.copy(value)
+            errorMessage=nil
             noticeMessage = "密码已复制，30 秒后尝试清空剪贴板"
         } catch { errorMessage = error.localizedDescription }
     }
@@ -467,6 +487,7 @@ final class ManagerStore: ObservableObject {
         do {
             try CredentialVault.save(password,for:hostID,kind:kind)
             credentialRevision += 1
+            errorMessage=nil
             noticeMessage = "密码已安全保存到 macOS 钥匙串"
             return true
         } catch {
@@ -479,6 +500,7 @@ final class ManagerStore: ObservableObject {
         do {
             try CredentialVault.remove(hostID,kind)
             credentialRevision += 1
+            errorMessage=nil
             noticeMessage = "保存的密码已删除"
             return true
         } catch {
