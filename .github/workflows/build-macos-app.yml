@@ -109,13 +109,13 @@ jobs:
       - name: Upload separate DMG installers
         uses: actions/upload-artifact@v4
         with:
-          name: WarpSSHManager-Native-1.0.1-${{ matrix.arch }}-macOS12
-          path: dist/WarpSSHManager-1.0.1-${{ matrix.arch }}.dmg
+          name: WarpSSHManager-Native-1.0.2-${{ matrix.arch }}-macOS12
+          path: dist/WarpSSHManager-1.0.2-${{ matrix.arch }}.dmg
           if-no-files-found: error
           retention-days: 30
 
-  publish_v1_0_1:
-    name: Publish v1.0.1 GitHub Release
+  publish_v1_0_2:
+    name: Publish v1.0.2 GitHub Release
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: package
     runs-on: ubuntu-latest
@@ -123,7 +123,7 @@ jobs:
       contents: write
       actions: read
     concurrency:
-      group: publish-wsm-v1.0.1
+      group: publish-wsm-v1.0.2
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
@@ -133,7 +133,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fx 'version = "1.0.1"' Cargo.toml
+          grep -Fx 'version = "1.0.2"' Cargo.toml
           state=""
           for i in $(seq 1 48); do
             state="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name == "Rust and SwiftUI checks" and .event == "push")] | first | .conclusion // ""')"
@@ -145,59 +145,64 @@ jobs:
       - name: Download both macOS DMGs
         uses: actions/download-artifact@v4
         with:
-          pattern: WarpSSHManager-Native-1.0.1-*-macOS12
+          pattern: WarpSSHManager-Native-1.0.2-*-macOS12
           merge-multiple: true
           path: release-assets
       - name: Verify DMGs and generate SHA256SUMS
         shell: bash
         run: |
           set -euo pipefail
-          test -s release-assets/WarpSSHManager-1.0.1-apple-silicon.dmg
-          test -s release-assets/WarpSSHManager-1.0.1-intel.dmg
+          test -s release-assets/WarpSSHManager-1.0.2-apple-silicon.dmg
+          test -s release-assets/WarpSSHManager-1.0.2-intel.dmg
           cd release-assets
-          shasum -a 256 WarpSSHManager-1.0.1-apple-silicon.dmg WarpSSHManager-1.0.1-intel.dmg > SHA256SUMS.txt
-      - name: Create official v1.0.1 release
+          shasum -a 256 WarpSSHManager-1.0.2-apple-silicon.dmg WarpSSHManager-1.0.2-intel.dmg > SHA256SUMS.txt
+      - name: Create official v1.0.2 release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          if gh release view v1.0.1 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "v1.0.1 already exists, preserving the existing release"
+          if gh release view v1.0.2 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "v1.0.2 already exists, preserving the existing release"
             exit 0
           fi
           # Query the tag ref directly; no tag means an empty SHA, never JSON error text.
-          tag_sha="$(git ls-remote --refs --tags origin refs/tags/v1.0.1 | awk '{print $1}')"
+          tag_sha="$(git ls-remote --refs --tags origin refs/tags/v1.0.2 | awk '{print $1}')"
           [[ -z "$tag_sha" || "$tag_sha" == "$GITHUB_SHA" ]] || {
-            echo "Refusing release: v1.0.1 tag points at $tag_sha" >&2; exit 1;
+            echo "Refusing release: v1.0.2 tag points at $tag_sha" >&2; exit 1;
           }
           cat > release-notes.md <<'NOTES'
-          ## Warp SSH Manager v1.0.1
+          ## Warp SSH Manager v1.0.2
 
-          This release brings nested SSH host groups and an improved native macOS interface.
+          This release introduces a **Spotlight-style Quick Connect launcher** and a system-wide keyboard shortcut.
 
           ### What's new
-          - Nested groups with tree expansion, subgroups, group rename and relocation.
-          - Parent group filtering and host counts include all descendants.
-          - Safeguards against duplicate sibling names, cyclic hierarchy changes, and deleting groups with children.
-          - Polished group creation/editing sheet, custom parent picker, larger and easier-to-click sidebar navigation.
-          - Default English README plus complete [简体中文](https://github.com/javafancn/warp-ssh-manager/blob/main/README.zh-CN.md) documentation.
-          - Existing SSH settings, saved credentials and prior flat groups remain compatible; no new database migration is needed.
+          - **Spotlight-inspired quick search:** A compact, translucent search panel with host names, addresses and colorful labels.
+          - **Global hotkey:** Press **Control + Option + Command + K** (⌃⌥⌘K) to open or dismiss Quick Connect while the app is running, including from other applications. The menu-bar item is a fallback if the shortcut is already reserved.
+          - **Smarter placement:** The launcher appears near the top center of the display containing your mouse pointer; supports multiple Spaces and full-screen auxiliary windows.
+          - **Keyboard-first navigation:** Search by hostname, SSH alias, IP, tag and group path, browse recent hosts first, navigate with ↑ / ↓, connect with Enter and close with Escape.
+          - **Preserved integration:** Connections still launch through Warp and OpenSSH, retaining existing SSH mode selection and Keychain / Askpass behavior.
+          - **Updated documentation:** English default [README](https://github.com/javafancn/warp-ssh-manager/blob/main/README.md) and complete [简体中文](https://github.com/javafancn/warp-ssh-manager/blob/main/README.zh-CN.md) guide.
 
           ### Installation
-          Download the appropriate DMG attached below: **Apple Silicon** or **Intel**. Install [Warp Terminal](https://www.warp.dev/) separately.
+          Choose the appropriate attached DMG:
+          - **Apple Silicon:** WarpSSHManager-1.0.2-apple-silicon.dmg
+          - **Intel Mac:** WarpSSHManager-1.0.2-intel.dmg
 
-          ### Notes
-          Both installers target macOS 12+ and are ad-hoc-signed, **not Apple-notarized**. CI tests and packaging checks do not verify all real-world SSH password auto-login or Warp SSH enhancement behaviors; sudo passwords remain copy-only.
+          Install [Warp Terminal](https://www.warp.dev/) separately. These packages target macOS 12+ and are **ad-hoc signed, not Apple-notarized**. Mac Gatekeeper may require a security confirmation.
+
+          ### Security and compatibility
+          This update does not add remote sudo autofill or a new SSH client. The global shortcut uses the native macOS hotkey API and does not request Accessibility or Input Monitoring permissions. Other applications may already claim the shortcut. CI verifies builds and native window routing, but full real-world multi-monitor, hotkey-conflict and Warp SSH enhancement compatibility still requires physical Mac validation.
 
           ### 中文更新摘要
-          新增多级嵌套分组、层级编辑和循环保护，并优化新建分组弹窗、侧栏字体及整行点击区域；README 默认英文，可以切换到[简体中文](https://github.com/javafancn/warp-ssh-manager/blob/main/README.zh-CN.md)。
+          v1.0.2 将「快速打开」改为 **Spotlight 风格**：更轻盈的毛玻璃搜索面板、屏幕上方居中显示、最近连接优先、方向键选择与回车连接；新增全局快捷键 **⌃⌥⌘K**。保持 Warp / OpenSSH 原有登录和密码管理逻辑不变。
 
-          Full documentation: [English](https://github.com/javafancn/warp-ssh-manager/blob/main/README.md) · [简体中文](https://github.com/javafancn/warp-ssh-manager/blob/main/README.zh-CN.md)
+          Download integrity: Verify the two DMGs against the attached SHA256SUMS.txt.
+
           NOTES
-          gh release create v1.0.1 \
-            release-assets/WarpSSHManager-1.0.1-apple-silicon.dmg \
-            release-assets/WarpSSHManager-1.0.1-intel.dmg \
+          gh release create v1.0.2 \
+            release-assets/WarpSSHManager-1.0.2-apple-silicon.dmg \
+            release-assets/WarpSSHManager-1.0.2-intel.dmg \
             release-assets/SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "Warp SSH Manager v1.0.1" --notes-file release-notes.md --latest
+            --title "Warp SSH Manager v1.0.2" --notes-file release-notes.md --latest

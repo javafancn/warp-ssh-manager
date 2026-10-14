@@ -24,7 +24,7 @@
 
 > **Community project, not affiliated with Warp.** Warp SSH Manager organizes SSH hosts and launches connections in Warp. The actual SSH transport and interactive terminal are still provided by **OpenSSH and Warp**. This app does not implement a separate SSH client.
 
-> **v1.0.1 release:** Includes nested SSH host groups, the refreshed sidebar and group editor, and bilingual documentation. The previous v1.0.0 installer does not include nested groups.
+> **v1.0.2 release:** Adds the Spotlight-style Quick Connect launcher, global ⌃⌥⌘K shortcut, recent-first host search and refined macOS window placement. v1.0.1 added nested groups; both features are included in v1.0.2.
 
 ## Features
 
@@ -37,7 +37,7 @@
 
 The native three-pane interface offers automatic, light, and dark appearances.
 
-### Spotlight-style Quick Connect
+### Spotlight-style Quick Connect (v1.0.2)
 
 Press **Control + Option + Command + K (⌃⌥⌘K)** from anywhere while Warp SSH Manager is running to toggle the floating quick launcher. This deliberately avoids more widely used shortcuts such as ⌘Space and ⌘K. A system-wide hotkey is registered with macOS (without Accessibility/Input Monitoring permissions); if another app has already claimed the chord, open **Quick Connect** from the menu-bar icon instead. The launcher appears near the top center of the display under your pointer, including when working in other apps or Spaces.
 
