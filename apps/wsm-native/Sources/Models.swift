@@ -272,6 +272,13 @@ final class ManagerStore: ObservableObject {
     @Published var noticeMessage: String? = nil
     @Published var errorMessage: String? = nil
     @AppStorage("warp.appearance") var appearance: String = "auto"
+    @Published var language:String = UserDefaults.standard.string(forKey:"warp.language") ?? "system" {
+        didSet {
+            guard language != oldValue else {return}
+            UserDefaults.standard.set(language,forKey:"warp.language")
+            NotificationCenter.default.post(name:AppLanguage.didChange,object:nil)
+        }
+    }
 
     var selected: HostRecord? { hosts.first { $0.id == selectedID } }
     var favoriteCount: Int { hosts.filter { $0.favorite }.count }

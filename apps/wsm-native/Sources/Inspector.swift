@@ -179,7 +179,7 @@ struct HostInspector: View {
             ForEach(InspectorTab.allCases,id:\.self) { tab in
                 Button {store.tab=tab} label: {
                     VStack(spacing:11 * scale) {
-                        Text(tab.rawValue)
+                        Text(LocalizedStringKey(tab.rawValue))
                             .font(Design.font(17 * textScale,store.tab==tab ? .semibold : .medium))
                             .foregroundColor(store.tab==tab ? Design.blue : Design.secondary)
                             .fixedSize(horizontal:true,vertical:false)
@@ -199,7 +199,7 @@ struct HostInspector: View {
     private func field(_ title:String, _ value:Binding<String>,
                        editable:Bool=true,compact:Bool=false) -> some View {
         HStack(spacing:12 * scale) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(Design.font(16 * textScale))
                 .foregroundColor(Design.primary)
                 .frame(width:106 * scale,alignment:.leading)
@@ -476,10 +476,10 @@ struct HostInspector: View {
                     .foregroundColor(Design.primary)
                     .frame(width:27 * scale,height:27 * scale)
                 VStack(alignment:.leading,spacing:4 * scale) {
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(Design.font(17 * textScale,.semibold))
                         .foregroundColor(Design.primary)
-                    Text(subtitle)
+                    Text(LocalizedStringKey(subtitle))
                         .font(Design.font(12 * textScale))
                         .foregroundColor(Design.secondary)
                         .fixedSize(horizontal:false,vertical:true)
@@ -508,14 +508,14 @@ struct HostInspector: View {
                 HStack(spacing:6 * scale) {
                     Image(systemName:icon)
                         .font(.system(size:18 * textScale,weight:.medium))
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(Design.font(13.5 * textScale,.semibold))
                         .lineLimit(2)
                         .minimumScaleFactor(0.78)
                 }
                 .foregroundColor(selected ? Design.blue : Design.primary)
                 .frame(maxWidth:.infinity)
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(Design.font(11.5 * textScale))
                     .foregroundColor(Design.secondary)
                     .multilineTextAlignment(.center)
@@ -559,7 +559,7 @@ struct HostInspector: View {
                 HStack(alignment:.top,spacing:7 * scale) {
                     Image(systemName:"info.circle")
                         .foregroundColor(Design.blue)
-                    Text(authHint)
+                    Text(LocalizedStringKey(authHint))
                         .foregroundColor(Design.secondary)
                         .fixedSize(horizontal:false,vertical:true)
                 }
@@ -639,17 +639,17 @@ struct HostInspector: View {
                         .background(Design.surface(0.20),
                                     in:RoundedRectangle(cornerRadius:11 * scale))
                     VStack(alignment:.leading,spacing:5 * scale) {
-                        Text(title)
+                        Text(LocalizedStringKey(title))
                             .font(Design.font(14 * textScale,.semibold))
                             .foregroundColor(Design.primary)
-                        Text(detail)
+                        Text(LocalizedStringKey(detail))
                             .font(Design.font(11.5 * textScale))
                             .foregroundColor(Design.secondary)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
                     }
                     .frame(maxWidth:.infinity,alignment:.leading)
-                    Text(store.selectedID == nil ? "先保存主机" : status)
+                    Text(LocalizedStringKey(store.selectedID == nil ? "先保存主机" : status))
                         .font(Design.font(11.5 * textScale,.medium))
                         .foregroundColor(Design.secondary)
                         .padding(.horizontal,8 * scale)

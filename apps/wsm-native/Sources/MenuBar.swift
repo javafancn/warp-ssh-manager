@@ -45,6 +45,9 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
         for entry in menu.items { entry.target = self }
         item = status
         status.menu = menu
+        refreshMenuLanguage()
+        NotificationCenter.default.addObserver(self,selector:#selector(refreshMenuLanguage),
+                                               name:AppLanguage.didChange,object:nil)
         registerQuickHotKey()
 
         // SwiftUI owns the initial manager window. Only discover/register
@@ -103,7 +106,23 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
         }
     }
 
+    @objc private func refreshMenuLanguage() {
+        guard let entries=item?.menu?.items else {return}
+        for entry in entries {
+            switch entry.action {
+            case #selector(showQuickPanel):
+                entry.title=AppLanguage.text("快速打开…")
+            case #selector(showMainWindow):
+                entry.title=AppLanguage.text("打开主机管理器")
+            case #selector(quitApp):
+                entry.title=AppLanguage.text("退出 Warp SSH 管理器")
+            default: break
+            }
+        }
+    }
+
     func applicationWillTerminate(_ notification:Notification) {
+        NotificationCenter.default.removeObserver(self)
         if let ref=quickHotKey {UnregisterEventHotKey(ref)}
         if let handler=quickHotKeyHandler {RemoveEventHandler(handler)}
     }
@@ -329,7 +348,7 @@ struct QuickConnectPanel: View {
                 .padding(.bottom,17)
 
             HStack {
-                Text(displayHeading)
+                Text(LocalizedStringKey(displayHeading))
                     .font(Design.font(12.5,.medium))
                     .foregroundColor(Design.secondary)
                 Spacer()
@@ -355,8 +374,8 @@ struct QuickConnectPanel: View {
                             VStack(spacing:9) {
                                 Image(systemName:"magnifyingglass")
                                     .font(.system(size:23))
-                                Text(store.hosts.isEmpty ? "还没有主机，请先在管理器中添加" :
-                                     "没有匹配的主机")
+                                Text(LocalizedStringKey(store.hosts.isEmpty ? "还没有主机，请先在管理器中添加" :
+                                     "没有匹配的主机"))
                                     .font(Design.font(14))
                             }
                             .foregroundColor(Design.secondary)
@@ -418,6 +437,7 @@ struct QuickConnectPanel: View {
         .overlay(RoundedRectangle(cornerRadius:21,style:.continuous)
             .strokeBorder(Design.surface(0.38),lineWidth:1))
         .onExitCommand(perform:onDismiss)
+        .environment(\.locale,AppLanguage.locale(store.language))
         .preferredColorScheme(store.appearance == "dark" ? .dark :
                               (store.appearance == "light" ? .light : nil))
         .onChange(of:store.search) { _ in selectedIndex=0 }

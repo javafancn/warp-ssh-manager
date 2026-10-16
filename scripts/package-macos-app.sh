@@ -67,7 +67,8 @@ cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>CFBundleDevelopmentRegion</key><string>zh_CN</string>
+<key>CFBundleDevelopmentRegion</key><string>zh-Hans</string>
+<key>CFBundleLocalizations</key><array><string>en</string><string>zh-Hans</string></array>
 <key>CFBundleExecutable</key><string>warp-ssh-manager</string>
 <key>CFBundleIdentifier</key><string>dev.warpsshmanager.app</string>
 <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
@@ -82,6 +83,15 @@ cat > "$app/Contents/Info.plist" <<PLIST
 </dict></plist>
 PLIST
 plutil -lint "$app/Contents/Info.plist"
+# The app is built using swiftc rather than Xcode's automatic resource phase,
+# so explicitly bundle the two localizations before signing the app.
+for lang in en zh-Hans; do
+  source="apps/wsm-native/Resources/${lang}.lproj/Localizable.strings"
+  [[ -s "$source" ]] || { echo "Missing localization: $source" >&2; exit 1; }
+  mkdir -p "$app/Contents/Resources/${lang}.lproj"
+  cp "$source" "$app/Contents/Resources/${lang}.lproj/Localizable.strings"
+  plutil -lint "$app/Contents/Resources/${lang}.lproj/Localizable.strings"
+done
 # Use the exact user-approved images extracted from the supplied brand board:
 # dark rounded-square icon for Finder/Dock/Launchpad, transparent chevron in the UI.
 # The checked-in PNGs are compressed masters; sips creates every macOS iconset size.
