@@ -177,7 +177,11 @@ jobs:
           This release adds multilingual UI support, more reliable menu bar operation, reusable host tags, and improved notifications.
 
           ### What's new
-          - **Interface language:** Choose Simplified Chinese, English, or Follow System; settings persist across restarts.\n          - **Menu bar lifecycle:** Closing the main window hides it without exiting; use the menu bar or Dock to restore it.\n          - **Host tags:** Reuse tags from previously saved hosts.\n          - **Notification behavior:** Successful actions auto-dismiss after approximately 3.2 seconds; errors remain visible.\n          - **Spotlight-inspired quick search:** A compact, translucent search panel with host names, addresses and colorful labels.
+          - **Interface language:** Choose Simplified Chinese, English, or Follow System; settings persist across restarts.
+          - **Menu bar lifecycle:** Closing the main window hides it without exiting; use the menu bar or Dock to restore it.
+          - **Host tags:** Reuse tags from previously saved hosts.
+          - **Notification behavior:** Successful actions auto-dismiss after approximately 3.2 seconds; errors remain visible.
+          - **Spotlight-inspired quick search:** A compact, translucent search panel with host names, addresses and colorful labels.
           - **Global hotkey:** Press **Control + Option + Command + K** (⌃⌥⌘K) to open or dismiss Quick Connect while the app is running, including from other applications. The menu-bar item is a fallback if the shortcut is already reserved.
           - **Smarter placement:** The launcher appears near the top center of the display containing your mouse pointer; supports multiple Spaces and full-screen auxiliary windows.
           - **Keyboard-first navigation:** Search by hostname, SSH alias, IP, tag and group path, browse recent hosts first, navigate with ↑ / ↓, connect with Enter and close with Escape.
