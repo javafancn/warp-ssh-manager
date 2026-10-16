@@ -202,3 +202,5 @@
 "sudo 独立密码" = "Separate sudo Password";
 "sudo 密码" = "sudo Password";
 "Warp SSH 管理器" = "Warp SSH Manager";
+"已有标签 · 点击即可复用" = "Existing tags · Click to reuse";
+"使用已有标签：\\(tag)" = "Use existing tag: \\(tag)";
