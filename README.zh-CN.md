@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>v1.0.2</strong> · macOS 12+（构建目标） · Apple Silicon / Intel · SwiftUI + AppKit + Rust
+  <strong>v1.0.3</strong> · macOS 12+（构建目标） · Apple Silicon / Intel · SwiftUI + AppKit + Rust
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
   <a href="LICENSE">MIT License</a>
 </p>
 
-> **v1.0.2 更新：** 快速打开升级为 Spotlight 风格，新增全局快捷键 **⌃⌥⌘K**、最近连接优先及上方居中窗口定位。保留 v1.0.1 的多级嵌套分组、界面优化及双语文档。
+> **v1.0.3 更新：** 快速打开升级为 Spotlight 风格，新增全局快捷键 **⌃⌥⌘K**、最近连接优先及上方居中窗口定位。保留 v1.0.1 的多级嵌套分组、界面优化及双语文档。
 
 > **关于项目**：Warp SSH Manager 是社区项目，并非 Warp 官方应用。它管理本地 SSH 主机和 Warp 的启动配置；SSH 传输与交互式终端仍由 **OpenSSH + Warp** 提供，而不是在应用内重新实现 SSH 客户端。
 
@@ -59,10 +59,10 @@
 
 ## 下载安装
 
-1. 前往 [GitHub Releases](https://github.com/javafancn/warp-ssh-manager/releases/latest)，下载 Apple Silicon 或 Intel 对应的 v1.0.2 DMG。
+1. 前往 [GitHub Releases](https://github.com/javafancn/warp-ssh-manager/releases/latest)，下载 Apple Silicon 或 Intel 对应的 v1.0.3 DMG。
 2. 如果使用 [GitHub Actions](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml) 的测试构建，请在 **Artifacts** 下载对应架构的构建产物，并解压：
-   - Apple Silicon（M 系列）：`WarpSSHManager-Native-1.0.2-apple-silicon-macOS12`
-   - Intel（x86_64）：`WarpSSHManager-Native-1.0.2-intel-macOS12`
+   - Apple Silicon（M 系列）：`WarpSSHManager-Native-1.0.3-apple-silicon-macOS12`
+   - Intel（x86_64）：`WarpSSHManager-Native-1.0.3-intel-macOS12`
 3. 打开 DMG，将 **Warp SSH Manager.app** 拖入 `/Applications`。
 4. 安装 [Warp Terminal](https://www.warp.dev/)。macOS 自带 OpenSSH；确保终端能使用 `ssh`。
 
