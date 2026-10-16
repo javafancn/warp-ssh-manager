@@ -281,7 +281,7 @@ struct HostInspector: View {
             Button {showGroupPicker.toggle()} label: {
                 HStack(spacing:8) {
                     Image(systemName:"folder").font(.system(size:15 * textScale))
-                    Text(store.draft.groupId.map {store.groupPath($0)} ?? "未分组")
+                    Text(store.draft.groupId.map {store.groupPath($0)} ?? AppLanguage.text("未分组"))
                         .font(Design.font(16 * textScale))
                     Spacer()
                     Image(systemName:"chevron.down").font(.system(size:12 * textScale))
@@ -740,7 +740,7 @@ struct HostInspector: View {
                         Text("连接来源")
                             .font(Design.font(13 * textScale))
                             .foregroundColor(Design.secondary)
-                        Text(store.draft.imported ? "OpenSSH 配置导入" : "管理器创建")
+                        Text(LocalizedStringKey(store.draft.imported ? "OpenSSH 配置导入" : "管理器创建"))
                             .font(Design.font(16 * textScale,.medium))
                             .foregroundColor(Design.primary)
                     }
@@ -781,7 +781,7 @@ struct HostInspector: View {
                         .disabled(store.draft.id == nil)
                         .help("复制主机 ID")
                     }
-                    Text(store.draft.id ?? "保存后自动生成")
+                    Text(store.draft.id ?? AppLanguage.text("保存后自动生成"))
                         .font(.system(size:13 * textScale,weight:.medium,design:.monospaced))
                         .foregroundColor(Design.secondary)
                         .textSelection(.enabled)
@@ -810,7 +810,7 @@ struct HostInspector: View {
                             .font(Design.font(15 * textScale,.medium))
                             .foregroundColor(Design.primary)
                         Spacer()
-                        Text(store.includeEnabled ? "已就绪" : "未初始化")
+                        Text(LocalizedStringKey(store.includeEnabled ? "已就绪" : "未初始化"))
                             .font(Design.font(12 * textScale,.medium))
                             .foregroundColor(store.includeEnabled ? Design.blue : .orange)
                             .padding(.horizontal,9 * scale)
@@ -818,9 +818,9 @@ struct HostInspector: View {
                             .background(Design.surface(0.50),in:Capsule())
                     }
 
-                    Text(store.draft.imported
+                    Text(LocalizedStringKey(store.draft.imported
                          ? "此主机由 ~/.ssh/config 管理，连接参数请在原配置文件中修改。"
-                         : "管理器通过 SSH Include 管理自建主机，不覆盖你的原始 SSH 配置。")
+                         : "管理器通过 SSH Include 管理自建主机，不覆盖你的原始 SSH 配置。"))
                         .font(Design.font(13 * textScale))
                         .foregroundColor(Design.secondary)
                         .fixedSize(horizontal:false,vertical:true)
@@ -1124,7 +1124,7 @@ private struct CredentialEditor: View {
                             .strokeBorder(passwordFocused ? Design.blue : Design.inputBorder,
                                           lineWidth:passwordFocused ? 1.4 : 1))
                 if let inlineError=inlineError {
-                    Text(inlineError)
+                    Text(LocalizedStringKey(inlineError))
                         .font(Design.font(12))
                         .foregroundColor(.red)
                 }

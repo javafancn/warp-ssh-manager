@@ -86,11 +86,13 @@ plutil -lint "$app/Contents/Info.plist"
 # The app is built using swiftc rather than Xcode's automatic resource phase,
 # so explicitly bundle the two localizations before signing the app.
 for lang in en zh-Hans; do
-  source="apps/wsm-native/Resources/${lang}.lproj/Localizable.strings"
-  [[ -s "$source" ]] || { echo "Missing localization: $source" >&2; exit 1; }
   mkdir -p "$app/Contents/Resources/${lang}.lproj"
-  cp "$source" "$app/Contents/Resources/${lang}.lproj/Localizable.strings"
-  plutil -lint "$app/Contents/Resources/${lang}.lproj/Localizable.strings"
+  for table in Localizable.strings InfoPlist.strings; do
+    source="apps/wsm-native/Resources/${lang}.lproj/${table}"
+    [[ -s "$source" ]] || { echo "Missing localization: $source" >&2; exit 1; }
+    cp "$source" "$app/Contents/Resources/${lang}.lproj/${table}"
+    plutil -lint "$app/Contents/Resources/${lang}.lproj/${table}"
+  done
 done
 # Use the exact user-approved images extracted from the supplied brand board:
 # dark rounded-square icon for Finder/Dock/Launchpad, transparent chevron in the UI.

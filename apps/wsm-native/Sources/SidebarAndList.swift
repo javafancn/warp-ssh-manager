@@ -588,11 +588,11 @@ private struct GroupEditorSheet: View {
                     .foregroundColor(selected ? Design.blue : Design.secondary)
                     .frame(width:19)
                 VStack(alignment:.leading,spacing:3) {
-                    Text(title)
+                    Text(id == nil ? AppLanguage.text(title) : title)
                         .font(Design.font(13.5,selected ? .semibold : .medium))
                         .foregroundColor(Design.primary)
                         .lineLimit(1)
-                    Text(path)
+                    Text(id == nil ? AppLanguage.text(path) : path)
                         .font(Design.font(11))
                         .foregroundColor(Design.secondary)
                         .lineLimit(1)
@@ -814,7 +814,7 @@ struct ConnectionList: View {
             showFilters=false
         } label: {
             HStack(spacing:10) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                 Spacer()
                 if store.filter==filter {Image(systemName:"checkmark").foregroundColor(Design.blue)}
             }

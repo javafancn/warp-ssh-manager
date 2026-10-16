@@ -33,6 +33,8 @@ jobs:
           xcrun swiftc -typecheck -target arm64-apple-macos12.0 \
             -framework SwiftUI -framework AppKit \
             apps/wsm-native/Sources/*.swift
+      - name: Verify English and Chinese localization catalogs
+        run: python3 scripts/i18n-catalog-smoke.py
       - name: Typecheck ASKPASS helper
         run: |
           xcrun swiftc -typecheck -target arm64-apple-macos12.0 \
