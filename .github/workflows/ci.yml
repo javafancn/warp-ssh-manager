@@ -33,6 +33,13 @@ jobs:
           xcrun swiftc -typecheck -target arm64-apple-macos12.0 \
             -framework SwiftUI -framework AppKit \
             apps/wsm-native/Sources/*.swift
+      - name: Test reusable host tag catalog
+        run: |
+          xcrun swiftc -O -target arm64-apple-macos12.0 \
+            apps/wsm-native/Sources/TagCatalog.swift \
+            scripts/tag-catalog-smoke.swift \
+            -o "$RUNNER_TEMP/tag-catalog-smoke"
+          "$RUNNER_TEMP/tag-catalog-smoke"
       - name: Typecheck ASKPASS helper
         run: |
           xcrun swiftc -typecheck -target arm64-apple-macos12.0 \
