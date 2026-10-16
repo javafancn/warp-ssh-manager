@@ -179,7 +179,7 @@ struct HostInspector: View {
             ForEach(InspectorTab.allCases,id:\.self) { tab in
                 Button {store.tab=tab} label: {
                     VStack(spacing:11 * scale) {
-                        Text(tab.rawValue)
+                        Text(LocalizedStringKey(tab.rawValue))
                             .font(Design.font(17 * textScale,store.tab==tab ? .semibold : .medium))
                             .foregroundColor(store.tab==tab ? Design.blue : Design.secondary)
                             .fixedSize(horizontal:true,vertical:false)
@@ -199,7 +199,7 @@ struct HostInspector: View {
     private func field(_ title:String, _ value:Binding<String>,
                        editable:Bool=true,compact:Bool=false) -> some View {
         HStack(spacing:12 * scale) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(Design.font(16 * textScale))
                 .foregroundColor(Design.primary)
                 .frame(width:106 * scale,alignment:.leading)
@@ -281,7 +281,7 @@ struct HostInspector: View {
             Button {showGroupPicker.toggle()} label: {
                 HStack(spacing:8) {
                     Image(systemName:"folder").font(.system(size:15 * textScale))
-                    Text(store.draft.groupId.map {store.groupPath($0)} ?? "未分组")
+                    Text(store.draft.groupId.map {store.groupPath($0)} ?? AppLanguage.text("未分组"))
                         .font(Design.font(16 * textScale))
                     Spacer()
                     Image(systemName:"chevron.down").font(.system(size:12 * textScale))
@@ -525,10 +525,10 @@ struct HostInspector: View {
                     .foregroundColor(Design.primary)
                     .frame(width:27 * scale,height:27 * scale)
                 VStack(alignment:.leading,spacing:4 * scale) {
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(Design.font(17 * textScale,.semibold))
                         .foregroundColor(Design.primary)
-                    Text(subtitle)
+                    Text(LocalizedStringKey(subtitle))
                         .font(Design.font(12 * textScale))
                         .foregroundColor(Design.secondary)
                         .fixedSize(horizontal:false,vertical:true)
@@ -557,14 +557,14 @@ struct HostInspector: View {
                 HStack(spacing:6 * scale) {
                     Image(systemName:icon)
                         .font(.system(size:18 * textScale,weight:.medium))
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(Design.font(13.5 * textScale,.semibold))
                         .lineLimit(2)
                         .minimumScaleFactor(0.78)
                 }
                 .foregroundColor(selected ? Design.blue : Design.primary)
                 .frame(maxWidth:.infinity)
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(Design.font(11.5 * textScale))
                     .foregroundColor(Design.secondary)
                     .multilineTextAlignment(.center)
@@ -608,7 +608,7 @@ struct HostInspector: View {
                 HStack(alignment:.top,spacing:7 * scale) {
                     Image(systemName:"info.circle")
                         .foregroundColor(Design.blue)
-                    Text(authHint)
+                    Text(LocalizedStringKey(authHint))
                         .foregroundColor(Design.secondary)
                         .fixedSize(horizontal:false,vertical:true)
                 }
@@ -688,17 +688,17 @@ struct HostInspector: View {
                         .background(Design.surface(0.20),
                                     in:RoundedRectangle(cornerRadius:11 * scale))
                     VStack(alignment:.leading,spacing:5 * scale) {
-                        Text(title)
+                        Text(LocalizedStringKey(title))
                             .font(Design.font(14 * textScale,.semibold))
                             .foregroundColor(Design.primary)
-                        Text(detail)
+                        Text(LocalizedStringKey(detail))
                             .font(Design.font(11.5 * textScale))
                             .foregroundColor(Design.secondary)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
                     }
                     .frame(maxWidth:.infinity,alignment:.leading)
-                    Text(store.selectedID == nil ? "先保存主机" : status)
+                    Text(LocalizedStringKey(store.selectedID == nil ? "先保存主机" : status))
                         .font(Design.font(11.5 * textScale,.medium))
                         .foregroundColor(Design.secondary)
                         .padding(.horizontal,8 * scale)
@@ -789,7 +789,7 @@ struct HostInspector: View {
                         Text("连接来源")
                             .font(Design.font(13 * textScale))
                             .foregroundColor(Design.secondary)
-                        Text(store.draft.imported ? "OpenSSH 配置导入" : "管理器创建")
+                        Text(LocalizedStringKey(store.draft.imported ? "OpenSSH 配置导入" : "管理器创建"))
                             .font(Design.font(16 * textScale,.medium))
                             .foregroundColor(Design.primary)
                     }
@@ -830,7 +830,7 @@ struct HostInspector: View {
                         .disabled(store.draft.id == nil)
                         .help("复制主机 ID")
                     }
-                    Text(store.draft.id ?? "保存后自动生成")
+                    Text(store.draft.id ?? AppLanguage.text("保存后自动生成"))
                         .font(.system(size:13 * textScale,weight:.medium,design:.monospaced))
                         .foregroundColor(Design.secondary)
                         .textSelection(.enabled)
@@ -859,7 +859,7 @@ struct HostInspector: View {
                             .font(Design.font(15 * textScale,.medium))
                             .foregroundColor(Design.primary)
                         Spacer()
-                        Text(store.includeEnabled ? "已就绪" : "未初始化")
+                        Text(LocalizedStringKey(store.includeEnabled ? "已就绪" : "未初始化"))
                             .font(Design.font(12 * textScale,.medium))
                             .foregroundColor(store.includeEnabled ? Design.blue : .orange)
                             .padding(.horizontal,9 * scale)
@@ -867,9 +867,9 @@ struct HostInspector: View {
                             .background(Design.surface(0.50),in:Capsule())
                     }
 
-                    Text(store.draft.imported
+                    Text(LocalizedStringKey(store.draft.imported
                          ? "此主机由 ~/.ssh/config 管理，连接参数请在原配置文件中修改。"
-                         : "管理器通过 SSH Include 管理自建主机，不覆盖你的原始 SSH 配置。")
+                         : "管理器通过 SSH Include 管理自建主机，不覆盖你的原始 SSH 配置。"))
                         .font(Design.font(13 * textScale))
                         .foregroundColor(Design.secondary)
                         .fixedSize(horizontal:false,vertical:true)
@@ -1173,7 +1173,7 @@ private struct CredentialEditor: View {
                             .strokeBorder(passwordFocused ? Design.blue : Design.inputBorder,
                                           lineWidth:passwordFocused ? 1.4 : 1))
                 if let inlineError=inlineError {
-                    Text(inlineError)
+                    Text(LocalizedStringKey(inlineError))
                         .font(Design.font(12))
                         .foregroundColor(.red)
                 }

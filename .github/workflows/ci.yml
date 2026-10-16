@@ -40,6 +40,8 @@ jobs:
             scripts/tag-catalog-smoke.swift \
             -o "$RUNNER_TEMP/tag-catalog-smoke"
           "$RUNNER_TEMP/tag-catalog-smoke"
+      - name: Verify English and Chinese localization catalogs
+        run: python3 scripts/i18n-catalog-smoke.py
       - name: Typecheck ASKPASS helper
         run: |
           xcrun swiftc -typecheck -target arm64-apple-macos12.0 \

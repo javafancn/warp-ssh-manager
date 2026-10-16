@@ -38,6 +38,10 @@
 
 The native three-pane interface offers automatic, light, and dark appearances.
 
+### Interface language
+
+In the **sidebar settings (gear icon)**, choose **Language → Follow System / 简体中文 / English**. The main window, host inspector, group editor, quick launcher, and menu-bar commands switch language without restarting the app. Your choice is stored in macOS user defaults and restored at the next launch. User-defined host names, aliases, group names and tags are never translated. Some server/SSH diagnostic output remains in its original language.
+
 ### Spotlight-style Quick Connect (v1.0.2)
 
 Press **Control + Option + Command + K (⌃⌥⌘K)** from anywhere while Warp SSH Manager is running to toggle the floating quick launcher. This deliberately avoids more widely used shortcuts such as ⌘Space and ⌘K. A system-wide hotkey is registered with macOS (without Accessibility/Input Monitoring permissions); if another app has already claimed the chord, open **Quick Connect** from the menu-bar icon instead. The launcher appears near the top center of the display under your pointer, including when working in other apps or Spaces.

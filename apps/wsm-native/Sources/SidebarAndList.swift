@@ -127,6 +127,17 @@ struct ManagerSidebar: View {
                         }
                         .labelsHidden()
                         .pickerStyle(.segmented)
+                        Divider()
+                        Text("语言")
+                            .font(Design.font(13,.medium))
+                            .foregroundColor(Design.secondary)
+                        Picker("语言",selection:$store.language) {
+                            Text("跟随系统").tag("system")
+                            Text("简体中文").tag("zh-Hans")
+                            Text("English").tag("en")
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
                     }
                     .buttonStyle(.plain)
                     .padding(16)
@@ -285,7 +296,7 @@ struct ManagerSidebar: View {
                 Image(systemName:symbol)
                     .font(.system(size:navigationIconSize,weight:.regular))
                     .frame(width:23 * sidebarScale)
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(Design.font(navigationFontSize,selected ? .semibold : .medium))
                     .lineLimit(1)
                 Spacer(minLength:4)
@@ -300,8 +311,8 @@ struct ManagerSidebar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(title)
-        .help(title)
+        .accessibilityLabel(AppLanguage.text(title))
+        .help(AppLanguage.text(title))
     }
 }
 
@@ -404,7 +415,7 @@ private struct GroupEditorSheet: View {
                 .keyboardShortcut(.cancelAction)
 
                 Button(action:submit) {
-                    Text(isEditing ? "保存更改" : "创建分组")
+                    Text(LocalizedStringKey(isEditing ? "保存更改" : "创建分组"))
                         .font(Design.font(13.5,.semibold))
                         .foregroundColor(.white)
                         .frame(width:98,height:38)
@@ -442,7 +453,7 @@ private struct GroupEditorSheet: View {
                 .overlay(RoundedRectangle(cornerRadius:14)
                             .strokeBorder(Design.blue.opacity(0.11)))
             VStack(alignment:.leading,spacing:5) {
-                Text(isEditing ? "编辑分组" : "新建分组")
+                Text(LocalizedStringKey(isEditing ? "编辑分组" : "新建分组"))
                     .font(Design.font(21,.semibold))
                     .foregroundColor(Design.primary)
                 Text(isEditing ? "调整分组名称或移动到其他位置"
@@ -479,7 +490,7 @@ private struct GroupEditorSheet: View {
                         .strokeBorder(nameFocused ? Design.blue : Design.inputBorder,
                                       lineWidth:nameFocused ? 1.5 : 1))
             HStack {
-                Text(isNameInvalid ? validation! : "同一上级分组下名称不可重复")
+                Text(LocalizedStringKey(isNameInvalid ? validation! : "同一上级分组下名称不可重复"))
                     .foregroundColor(isNameInvalid ? .red : Design.secondary)
                 Spacer()
                 Text("\(candidateName.count)/24")
@@ -534,8 +545,8 @@ private struct GroupEditorSheet: View {
             HStack(spacing:5) {
                 Image(systemName:"arrow.turn.down.right")
                     .font(.system(size:10))
-                Text(parentID == nil ? "创建在分组列表的顶层" :
-                     (isEditing ? "当前分组及其子分组会一起移动" : "创建为所选分组的子分组"))
+                Text(LocalizedStringKey(parentID == nil ? "创建在分组列表的顶层" :
+                     (isEditing ? "当前分组及其子分组会一起移动" : "创建为所选分组的子分组")))
             }
             .font(Design.font(11.5))
             .foregroundColor(Design.secondary)
@@ -577,11 +588,11 @@ private struct GroupEditorSheet: View {
                     .foregroundColor(selected ? Design.blue : Design.secondary)
                     .frame(width:19)
                 VStack(alignment:.leading,spacing:3) {
-                    Text(title)
+                    Text(id == nil ? AppLanguage.text(title) : title)
                         .font(Design.font(13.5,selected ? .semibold : .medium))
                         .foregroundColor(Design.primary)
                         .lineLimit(1)
-                    Text(path)
+                    Text(id == nil ? AppLanguage.text(path) : path)
                         .font(Design.font(11))
                         .foregroundColor(Design.secondary)
                         .lineLimit(1)
@@ -803,7 +814,7 @@ struct ConnectionList: View {
             showFilters=false
         } label: {
             HStack(spacing:10) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                 Spacer()
                 if store.filter==filter {Image(systemName:"checkmark").foregroundColor(Design.blue)}
             }

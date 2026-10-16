@@ -278,13 +278,14 @@ struct ManagerShell: View {
         // the SwiftUI toolbar on macOS.
         .ignoresSafeArea(.container,edges:.top)
         .environmentObject(store)
+        .environment(\.locale,AppLanguage.locale(store.language))
         .preferredColorScheme(store.appearance == "dark" ? .dark :
                             (store.appearance == "light" ? .light : nil))
         .overlay(alignment:.top) {
             if let notice = store.noticeMessage, store.errorMessage == nil {
                 HStack(spacing:10) {
                     Image(systemName:"checkmark.circle.fill").foregroundColor(.green)
-                    Text(notice).font(Design.font(13))
+                    Text(LocalizedStringKey(notice)).font(Design.font(13))
                     Spacer()
                     Button("关闭") {store.noticeMessage=nil}.buttonStyle(.plain)
                 }
@@ -298,7 +299,7 @@ struct ManagerShell: View {
             if let message = store.errorMessage {
                 HStack(spacing:12) {
                     Image(systemName:"exclamationmark.triangle.fill").foregroundColor(.orange)
-                    Text(message).font(Design.font(13)).lineLimit(3)
+                    Text(LocalizedStringKey(message)).font(Design.font(13)).lineLimit(3)
                     Spacer()
                     Button("关闭") {store.errorMessage = nil}.buttonStyle(.plain)
                 }
