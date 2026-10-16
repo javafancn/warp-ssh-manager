@@ -54,8 +54,8 @@
 "复制 sudo 密码" = "Copy sudo Password";
 "复制主机 ID" = "Copy Host ID";
 "该位置已存在同名分组" = "A group with this name already exists here";
-"高级设置" = "Advanced Settings";
-"高效管理 · 快速连接" = "Organize hosts · Connect faster";
+"高级设置" = "Advanced";
+"高效管理 · 快速连接" = "Manage · Connect";
 "跟随系统" = "Follow System";
 "更多连接操作" = "More Connection Actions";
 "更多选项" = "More Options";
@@ -64,7 +64,7 @@
 "管理器创建" = "Created in Manager";
 "管理器通过 SSH Include 管理自建主机，不覆盖你的原始 SSH 配置。" = "Managed hosts use an SSH Include; your original SSH config is preserved.";
 "还没有主机，请先在管理器中添加" = "No hosts yet. Add one in Host Manager.";
-"基本信息" = "Basic Information";
+"基本信息" = "General";
 "简体中文" = "Simplified Chinese";
 "将从管理器移除这台主机，不会删除用户自己维护的 OpenSSH 配置。" = "Remove this host from the manager? Your existing OpenSSH configuration will not be deleted.";
 "仅保存在 macOS 钥匙串，不写入 SSH 配置或数据库" = "Stored only in macOS Keychain, never in SSH config or the database";
@@ -78,7 +78,7 @@
 "连接来源" = "Connection Source";
 "连接来源与主机标识" = "Connection origin and host identifier";
 "连接列表" = "Connections";
-"连接配置" = "Connection Settings";
+"连接配置" = "Connection";
 "连接信息来自 ~/.ssh/config，修改请编辑原始文件" = "Connection settings come from ~/.ssh/config; edit the source file to change them";
 "没有匹配的主机" = "No Matching Hosts";
 "密码" = "Password";
@@ -167,7 +167,7 @@
 "已配置" = "Configured";
 "隐藏密码" = "Hide Password";
 "用户名" = "Username";
-"用户名 + 密码" = "Username + Password";
+"用户名 + 密码" = "Password";
 "语言" = "Language";
 "预发布" = "Staging";
 "原有 SSH 配置保持不变；保存密码后可尝试辅助登录。" = "Existing SSH config stays unchanged; saved passwords may assist login.";
@@ -181,13 +181,13 @@
 "只读" = "Read Only";
 "重命名或移动" = "Rename or Move";
 "主机 ID" = "Host ID";
-"主机名 / IP" = "Hostname / IP";
+"主机名 / IP" = "Host / IP";
 "主机属性" = "Host Properties";
 "主机详情" = "Host Details";
 "自动" = "Automatic";
 "自动登录初始化失败，改为普通 SSH 连接" = "Automatic login initialization failed; using regular SSH";
 "自动选择" = "Automatic";
-"最近连接" = "Recent Connections";
+"最近连接" = "Recent";
 "最近使用" = "Recently Used";
 "Esc 关闭" = "Esc to Close";
 "OpenSSH 配置" = "OpenSSH Configuration";
@@ -196,7 +196,7 @@
 "SSH 别名" = "SSH Alias";
 "SSH 登录密码" = "SSH Login Password";
 "SSH 集成" = "SSH Integration";
-"SSH 连接参数" = "SSH Connection Settings";
+"SSH 连接参数" = "SSH Connection";
 "SSH 密钥" = "SSH Key";
 "SSH 认证方式" = "SSH Authentication";
 "sudo 独立密码" = "Separate sudo Password";
