@@ -44,6 +44,10 @@ Press **Control + Option + Command + K (⌃⌥⌘K)** from anywhere while Warp S
 
 Start typing to search host names, SSH aliases, IPs, tags, or group paths. With an empty query, recently connected hosts appear first. Use **↑ / ↓** to change selection, **Return** to open the selected host in Warp, or **Esc** to dismiss the launcher. Click a row to connect directly. Opening a host still uses the original Warp/OpenSSH integration.
 
+### Keep running in the menu bar
+
+Closing the main window with the **red macOS close button** (or **⌘W**) hides that window **without quitting Warp SSH Manager**. The application stays running in the background with its menu bar icon and global **⌃⌥⌘K** shortcut available. Select **Open Host Manager** from the menu bar or click the Dock icon to restore the existing manager window; no duplicate window is created. To completely exit and unregister the global shortcut, choose **Quit Warp SSH Manager** from the menu bar or press **⌘Q** while the app is active. This does not enable automatic launch at login.
+
 ## Installation
 
 **Recommended stable release:**

@@ -103,6 +103,12 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
         }
     }
 
+    // Closing the last manager window must not end the process. The menu
+    // bar status item and global hotkey remain available until explicit Quit.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender:NSApplication) -> Bool {
+        false
+    }
+
     func applicationWillTerminate(_ notification:Notification) {
         if let ref=quickHotKey {UnregisterEventHotKey(ref)}
         if let handler=quickHotKeyHandler {RemoveEventHandler(handler)}
@@ -149,12 +155,13 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
     }
 
     func registerManagerWindow(_ window: NSWindow) {
-        guard managerWindow !== window else { return }
         managerWindow = window
-        // Closing the sole manager window hides it instead of destroying the
-        // SwiftUI scene; clicking Dock or the tray can restore it reliably.
+        // Retain the SwiftUI WindowGroup scene while hidden, and restore our
+        // delegate if SwiftUI reconfigured the existing window on remount.
+        // An early return for a known window could otherwise leave the close
+        // button using default semantics after a later scene update.
         window.isReleasedWhenClosed = false
-        window.delegate = self
+        if window.delegate !== self { window.delegate = self }
         if pendingManagerPresentation {
             pendingManagerPresentation = false
             DispatchQueue.main.async { [weak self] in self?.showMainWindow() }
@@ -254,6 +261,20 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
             // The manager must be retained and hidden by windowShouldClose.
             self.managerWindow?.performClose(nil)
             let hiddenAfterClose = self.managerWindow?.isVisible == false
+            let staysRunning = NSApp.isRunning &&
+                !self.applicationShouldTerminateAfterLastWindowClosed(NSApp)
+            let menuSurvives = self.item?.button != nil &&
+                self.item?.menu?.items.contains(where:{$0.title == "快速打开…"}) == true &&
+                self.item?.menu?.items.contains(where:{$0.title == "打开主机管理器"}) == true &&
+                self.item?.menu?.items.contains(where:{$0.title == "退出 Warp SSH 管理器"}) == true
+            // The same quick-panel action used by the global Carbon hotkey
+            // must work with the manager closed and no visible main window.
+            self.toggleQuickPanel()
+            let quickAfterClose = self.quickPanel?.isVisible == true &&
+                self.managerWindow?.isVisible == false &&
+                NSApp.keyWindow === self.quickPanel
+            self.toggleQuickPanel()
+            let quickDismissed = self.quickPanel?.isVisible == false
             var suppressesDefaultReopen = true
             var reopenedSingleWindow = true
             // Simulate repeated Dock reopen callbacks. No WindowGroup scene
@@ -271,9 +292,11 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
             let managerCount = self.managerCandidates().count
             let passed = mainBefore != nil && initialCount == 1 &&
                          quickOpened && menuOpenedMain && hiddenAfterClose &&
-                         dockRestoredMain && suppressesDefaultReopen &&
-                         reopenedSingleWindow && managerCount == 1
-            let report = "quickPanel=\(quickOpened) managerMenu=\(menuOpenedMain) dockReopen=\(dockRestoredMain) initialManager=\(mainBefore != nil) initialCount=\(initialCount) managerCount=\(managerCount) closeHides=\(hiddenAfterClose) suppressDefaultReopen=\(suppressesDefaultReopen) repeatDockSingle=\(reopenedSingleWindow) PASS=\(passed)\n"
+                         staysRunning && menuSurvives && quickAfterClose &&
+                         quickDismissed && dockRestoredMain &&
+                         suppressesDefaultReopen && reopenedSingleWindow &&
+                         managerCount == 1
+            let report = "quickPanel=\(quickOpened) managerMenu=\(menuOpenedMain) dockReopen=\(dockRestoredMain) initialManager=\(mainBefore != nil) initialCount=\(initialCount) managerCount=\(managerCount) closeHides=\(hiddenAfterClose) appAlive=\(staysRunning) menuAlive=\(menuSurvives) quickAfterClose=\(quickAfterClose) quickDismissed=\(quickDismissed) suppressDefaultReopen=\(suppressesDefaultReopen) repeatDockSingle=\(reopenedSingleWindow) PASS=\(passed)\n"
             try? report.write(toFile:path,atomically:true,encoding:.utf8)
             NSLog("WSM window routing audit: %@",report)
         }

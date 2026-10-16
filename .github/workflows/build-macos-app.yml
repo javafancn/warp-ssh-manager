@@ -2,7 +2,7 @@ name: 构建 macOS 原生安装包（SwiftUI + Rust）
 on:
   workflow_dispatch:
   push:
-    branches: [main, feature/ssh-credentials-ui, feature/nested-groups, feature/spotlight-quick-launcher, fix/reusable-tags-and-transient-notices]
+    branches: [main, feature/ssh-credentials-ui, feature/nested-groups, feature/spotlight-quick-launcher, fix/reusable-tags-and-transient-notices, fix/keep-running-in-menu-bar]
     tags: ['v*']
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
