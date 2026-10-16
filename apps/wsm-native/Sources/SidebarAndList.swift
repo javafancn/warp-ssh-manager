@@ -546,7 +546,7 @@ private struct GroupEditorSheet: View {
                 Image(systemName:"arrow.turn.down.right")
                     .font(.system(size:10))
                 Text(LocalizedStringKey(parentID == nil ? "创建在分组列表的顶层" :
-                     (isEditing ? "当前分组及其子分组会一起移动" : "创建为所选分组的子分组"))
+                     (isEditing ? "当前分组及其子分组会一起移动" : "创建为所选分组的子分组")))
             }
             .font(Design.font(11.5))
             .foregroundColor(Design.secondary)
