@@ -195,7 +195,7 @@ jobs:
           This update does not add remote sudo autofill or a new SSH client. The global shortcut uses the native macOS hotkey API and does not request Accessibility or Input Monitoring permissions. Other applications may already claim the shortcut. CI verifies builds and native window routing, but full real-world multi-monitor, hotkey-conflict and Warp SSH enhancement compatibility still requires physical Mac validation.
 
           ### 中文更新摘要
-          v1.0.3 将「快速打开」改为 **Spotlight 风格**：更轻盈的毛玻璃搜索面板、屏幕上方居中显示、最近连接优先、方向键选择与回车连接；新增全局快捷键 **⌃⌥⌘K**。保持 Warp / OpenSSH 原有登录和密码管理逻辑不变。
+          v1.0.3 新增中英文界面语言切换、已有标签复用、操作成功提示自动消失，以及关闭主窗口后仍保持菜单栏和快捷键运行。
 
           Download integrity: Verify the two DMGs against the attached SHA256SUMS.txt.
 

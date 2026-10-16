@@ -283,9 +283,9 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
             let staysRunning = NSApp.isRunning &&
                 !self.applicationShouldTerminateAfterLastWindowClosed(NSApp)
             let menuSurvives = self.item?.button != nil &&
-                self.item?.menu?.items.contains(where:{$0.title == "快速打开…"}) == true &&
-                self.item?.menu?.items.contains(where:{$0.title == "打开主机管理器"}) == true &&
-                self.item?.menu?.items.contains(where:{$0.title == "退出 Warp SSH 管理器"}) == true
+                self.item?.menu?.items.contains(where:{$0.title == AppLanguage.text("快速打开…")}) == true &&
+                self.item?.menu?.items.contains(where:{$0.title == AppLanguage.text("打开主机管理器")}) == true &&
+                self.item?.menu?.items.contains(where:{$0.title == AppLanguage.text("退出 Warp SSH 管理器")}) == true
             // The same quick-panel action used by the global Carbon hotkey
             // must work with the manager closed and no visible main window.
             self.toggleQuickPanel()
