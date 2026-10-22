@@ -4,7 +4,7 @@ import AppKit
 /// Checks the official stable GitHub Release without downloading or installing
 /// anything until the user explicitly asks to open the installer link.
 final class AppUpdateManager: ObservableObject {
-    enum CheckState {
+    enum CheckState: Equatable {
         case idle, checking, upToDate, available, failed
     }
 
