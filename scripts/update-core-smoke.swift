@@ -36,10 +36,12 @@ enum AppUpdateSmoke {
             from:body,installed:"1.0.3",architecture:"apple-silicon")
         assert(arm?.version == "1.0.4")
         assert(arm?.installerURL?.lastPathComponent == "WarpSSHManager-1.0.4-apple-silicon.dmg")
-        assert(try AppUpdateRelease.newerRelease(
-            from:body,installed:"1.0.4",architecture:"apple-silicon") == nil)
-        assert(try AppUpdateRelease.newerRelease(
-            from:body,installed:"1.2.0",architecture:"apple-silicon") == nil)
+        let upToDate = try AppUpdateRelease.newerRelease(
+            from:body,installed:"1.0.4",architecture:"apple-silicon")
+        let newerInstalled = try AppUpdateRelease.newerRelease(
+            from:body,installed:"1.2.0",architecture:"apple-silicon")
+        assert(upToDate == nil)
+        assert(newerInstalled == nil)
 
         // An architecture without an official matching DMG still opens the
         // release notes, never the wrong machine's binary.
