@@ -234,6 +234,7 @@ extension View {
 
 struct ManagerShell: View {
     @StateObject private var store = ManagerStore()
+    @StateObject private var updater = AppUpdateManager()
     @State private var loaded = false
     var body: some View {
         GeometryReader { geometry in
@@ -278,6 +279,7 @@ struct ManagerShell: View {
         // the SwiftUI toolbar on macOS.
         .ignoresSafeArea(.container,edges:.top)
         .environmentObject(store)
+        .environmentObject(updater)
         .environment(\.locale,AppLanguage.locale(store.language))
         .preferredColorScheme(store.appearance == "dark" ? .dark :
                             (store.appearance == "light" ? .light : nil))
@@ -311,8 +313,16 @@ struct ManagerShell: View {
                 .zIndex(10)
             }
         }
+        .alert("发现新版本",isPresented:$updater.showUpdateAlert) {
+            Button("下载更新") { updater.downloadUpdate() }
+            Button("查看发布说明") { updater.openReleasePage() }
+            Button("稍后",role:.cancel) {}
+        } message: {
+            Text("GitHub 发布了新版本。下载后请手动安装，不会自动修改 SSH 配置或密码。")
+        }
         .onAppear {
             if !loaded {
+                updater.checkAtLaunch()
                 loaded = true
                 store.refresh()
                 // Isolated GUI screenshot fixture: display the actual
