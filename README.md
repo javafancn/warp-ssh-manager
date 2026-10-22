@@ -42,11 +42,11 @@ The native three-pane interface offers automatic, light, and dark appearances.
 
 In the **sidebar settings (gear icon)**, choose **Language → Follow System / 简体中文 / English**. The main window, host inspector, group editor, quick launcher, and menu-bar commands switch language without restarting the app. Your choice is stored in macOS user defaults and restored at the next launch. User-defined host names, aliases, group names and tags are never translated. Some server/SSH diagnostic output remains in its original language.
 
-### App update checks (new in source)
+### App update checks (v1.0.4)
 
 Open the sidebar **gear → Software Updates → Check for Updates** to compare this installed version with the latest **stable** GitHub Release. When enabled (the default), the app checks once at launch and prompts if a newer version is available. Turn off **Automatically Check for Updates at Launch** to disable these automatic network requests; manual checks remain available.
 
-**Download Update** opens the official Apple Silicon or Intel DMG link in your default browser. No background installer runs, and host records, SSH configuration and Keychain passwords are not modified by the update check. Install manually by opening the DMG and replacing the app. If the expected architecture-specific DMG is missing, only the release notes link is offered. This feature will be available in a release built from these changes (it is **not** in the v1.0.3 download).
+**Download Update** opens the official Apple Silicon or Intel DMG link in your default browser. No background installer runs, and host records, SSH configuration and Keychain passwords are not modified by the update check. Install manually by opening the DMG and replacing the app. If the expected architecture-specific DMG is missing, only the release notes link is offered.
 
 ### Spotlight-style Quick Connect (v1.0.3)
 

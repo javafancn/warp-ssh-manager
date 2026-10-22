@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>v1.0.3</strong> · macOS 12+（构建目标） · Apple Silicon / Intel · SwiftUI + AppKit + Rust
+  <strong>v1.0.4</strong> · macOS 12+（构建目标） · Apple Silicon / Intel · SwiftUI + AppKit + Rust
 </p>
 
 <p align="center">
@@ -46,11 +46,11 @@
 
 点击左侧栏底部**齿轮设置 → 语言**，可选择「**跟随系统 / 简体中文 / English**」。主窗口、主机详情、分组编辑、快速打开以及菜单栏命令会立即切换，不需要重新启动。选择会自动保存在本机，下次启动继续使用。服务器名称、SSH 别名、自建分组名和标签保持原文；部分 SSH 诊断信息仍由底层程序原样提供。
 
-### 应用内检查更新（当前仅在新代码中）
+### 应用内检查更新（v1.0.4）
 
 点击左侧栏**齿轮 → 软件更新 → 检查更新**，应用会请求 GitHub 最新的**正式版 Release**，并比较本机安装的版本号。默认在启动时自动检查一次，发现新版本会提示；可以关闭「启动时自动检查更新」，仍可手动检查。
 
-「**下载更新**」在浏览器中打开对应 Apple Silicon / Intel 的官方 DMG 下载链接，不会静默安装，也不会操作 SSH 主机数据、配置或 Keychain。请自行打开 DMG，将新版本应用替换安装。若新版本缺少对应架构安装包，只提供 Release 说明链接。**此功能需要后续新版本发布，现有 v1.0.3 安装包尚不包含。**
+「**下载更新**」在浏览器中打开对应 Apple Silicon / Intel 的官方 DMG 下载链接，不会静默安装，也不会操作 SSH 主机数据、配置或 Keychain。请自行打开 DMG，将新版本应用替换安装。若新版本缺少对应架构安装包，只提供 Release 说明链接。**v1.0.3 及更早版本尚无应用内检查更新，需要先手动升级至 v1.0.4。**
 
 ### Spotlight 风格快速打开
 
@@ -65,10 +65,10 @@
 
 ## 下载安装
 
-1. 前往 [GitHub Releases](https://github.com/javafancn/warp-ssh-manager/releases/latest)，下载 Apple Silicon 或 Intel 对应的 v1.0.3 DMG。
+1. 前往 [GitHub Releases](https://github.com/javafancn/warp-ssh-manager/releases/latest)，下载 Apple Silicon 或 Intel 对应的 v1.0.4 DMG。
 2. 如果使用 [GitHub Actions](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml) 的测试构建，请在 **Artifacts** 下载对应架构的构建产物，并解压：
-   - Apple Silicon（M 系列）：`WarpSSHManager-Native-1.0.3-apple-silicon-macOS12`
-   - Intel（x86_64）：`WarpSSHManager-Native-1.0.3-intel-macOS12`
+   - Apple Silicon（M 系列）：`WarpSSHManager-Native-1.0.4-apple-silicon-macOS12`
+   - Intel（x86_64）：`WarpSSHManager-Native-1.0.4-intel-macOS12`
 3. 打开 DMG，将 **Warp SSH Manager.app** 拖入 `/Applications`。
 4. 安装 [Warp Terminal](https://www.warp.dev/)。macOS 自带 OpenSSH；确保终端能使用 `ssh`。
 
