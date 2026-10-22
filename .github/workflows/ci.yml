@@ -40,6 +40,13 @@ jobs:
             scripts/tag-catalog-smoke.swift \
             -o "$RUNNER_TEMP/tag-catalog-smoke"
           "$RUNNER_TEMP/tag-catalog-smoke"
+      - name: Test release update selection and version comparison
+        run: |
+          xcrun swiftc -O -target arm64-apple-macos12.0 \
+            apps/wsm-native/Sources/UpdateCore.swift \
+            scripts/update-core-smoke.swift \
+            -o "$RUNNER_TEMP/update-core-smoke"
+          "$RUNNER_TEMP/update-core-smoke"
       - name: Verify English and Chinese localization catalogs
         run: python3 scripts/i18n-catalog-smoke.py
       - name: Typecheck ASKPASS helper

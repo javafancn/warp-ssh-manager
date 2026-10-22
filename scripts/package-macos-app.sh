@@ -76,7 +76,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
 <key>CFBundleDisplayName</key><string>Warp SSH 管理器</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>$app_version</string>
-<key>CFBundleVersion</key><string>103</string>
+<key>CFBundleVersion</key><string>104</string>
 <key>CFBundleIconFile</key><string>WarpSSHManager</string>
 <key>LSMinimumSystemVersion</key><string>12.0</string>
 <key>NSHighResolutionCapable</key><true/>

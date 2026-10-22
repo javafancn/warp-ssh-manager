@@ -204,3 +204,17 @@
 "Warp SSH 管理器" = "Warp SSH Manager";
 "已有标签 · 点击即可复用" = "Existing tags · Click to reuse";
 "使用已有标签：\\(tag)" = "Use existing tag: \\(tag)";
+"发现新版本" = "Update Available";
+"下载更新" = "Download Update";
+"查看发布说明" = "View Release Notes";
+"稍后" = "Later";
+"GitHub 发布了新版本。下载后请手动安装，不会自动修改 SSH 配置或密码。" = "A new release is available on GitHub. Download and install it manually. Your SSH settings and credentials will not be changed automatically.";
+"软件更新" = "Software Updates";
+"当前版本" = "Current Version";
+"启动时自动检查更新" = "Automatically Check for Updates at Launch";
+"检查更新" = "Check for Updates";
+"正在检查更新…" = "Checking for Updates…";
+"已是最新版本" = "You're Up to Date";
+"最新版本" = "Latest Version";
+"检查更新失败，请检查网络后重试" = "Unable to Check for Updates. Check Your Connection and Try Again.";
+"更新包来自 GitHub Releases，下载后需要手动安装。" = "Downloads come from GitHub Releases. Installation is manual.";

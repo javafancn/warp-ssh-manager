@@ -30,6 +30,8 @@ struct ManagerSidebar: View {
     private var navigationIconSize:CGFloat {19 * navigationTextScale}
     private var sectionHeaderFontSize:CGFloat {15 * navigationTextScale}
     @EnvironmentObject private var store: ManagerStore
+    @EnvironmentObject private var updater: AppUpdateManager
+    @AppStorage("warp.updates.autoCheck") private var autoCheckUpdates = true
     @State private var groupEditor: GroupEditorRequest?
     @State private var pendingDeleteGroup: GroupRecord?
     @State private var expandedGroupIDs: Set<String>=[]
@@ -138,10 +140,57 @@ struct ManagerSidebar: View {
                         }
                         .labelsHidden()
                         .pickerStyle(.menu)
+                        Divider()
+                        Text("软件更新")
+                            .font(Design.font(13,.medium))
+                            .foregroundColor(Design.secondary)
+                        HStack {
+                            Text("当前版本")
+                            Spacer()
+                            Text(verbatim:updater.installedVersion)
+                                .foregroundColor(Design.secondary)
+                        }
+                        Toggle("启动时自动检查更新",isOn:$autoCheckUpdates)
+                        Button {
+                            updater.checkForUpdates()
+                        } label: {
+                            Label("检查更新",systemImage:"arrow.clockwise")
+                        }
+                        .disabled(updater.state == .checking)
+                        switch updater.state {
+                        case .checking:
+                            HStack {
+                                ProgressView().controlSize(.small)
+                                Text("正在检查更新…")
+                            }
+                        case .upToDate:
+                            Text("已是最新版本").foregroundColor(Design.secondary)
+                        case .available:
+                            if let release = updater.update {
+                                HStack(spacing:5) {
+                                    Text("最新版本")
+                                    Text(verbatim:release.version).fontWeight(.medium)
+                                }
+                                HStack {
+                                    if release.installerURL != nil {
+                                        Button("下载更新") { updater.downloadUpdate() }
+                                    }
+                                    Button("查看发布说明") { updater.openReleasePage() }
+                                }
+                            }
+                        case .failed:
+                            Text("检查更新失败，请检查网络后重试")
+                                .foregroundColor(.orange)
+                        case .idle:
+                            EmptyView()
+                        }
+                        Text("更新包来自 GitHub Releases，下载后需要手动安装。")
+                            .font(Design.font(11))
+                            .foregroundColor(Design.muted)
                     }
                     .buttonStyle(.plain)
                     .padding(16)
-                    .frame(width:240)
+                    .frame(width:280)
                 }
             }
             .font(Design.font(15 * sidebarScale))
