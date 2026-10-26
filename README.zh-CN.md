@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>v1.0.4</strong> · macOS 12+（构建目标） · Apple Silicon / Intel · SwiftUI + AppKit + Rust
+  <strong>v1.0.5</strong> · macOS 12+（构建目标） · Apple Silicon / Intel · SwiftUI + AppKit + Rust
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
   <a href="LICENSE">MIT License</a>
 </p>
 
-> **v1.0.3 更新：** 快速打开升级为 Spotlight 风格，新增全局快捷键 **⌃⌥⌘K**、最近连接优先及上方居中窗口定位。保留 v1.0.1 的多级嵌套分组、界面优化及双语文档。
+> **v1.0.5 更新：** 关闭主窗口后隐藏正在运行的 Dock 图标，但保留菜单栏图标和全局 **⌃⌥⌘K** 快捷键；重新打开主机管理器时恢复 Dock 图标。保留此前的全部主机管理、双语和更新检查功能。
 
 > **关于项目**：Warp SSH Manager 是社区项目，并非 Warp 官方应用。它管理本地 SSH 主机和 Warp 的启动配置；SSH 传输与交互式终端仍由 **OpenSSH + Warp** 提供，而不是在应用内重新实现 SSH 客户端。
 
@@ -60,15 +60,15 @@
 
 ### 关闭窗口后继续在菜单栏运行
 
-点击主窗口左上角的**红色关闭按钮**（或按 **⌘W**）只会隐藏主窗口，**不会退出 Warp SSH Manager**。菜单栏图标会保留，全局快捷键 **⌃⌥⌘K** 仍可随时唤出快速打开。需要重新打开管理界面时，选择菜单栏里的「**打开主机管理器**」或者点击 Dock 图标，恢复原来的窗口而不会重复创建。只有通过菜单栏的「**退出 Warp SSH 管理器**」或应用激活时按 **⌘Q** 才会真正退出并注销快捷键。此功能不会自动设置登录时启动。
+点击主窗口左上角的**红色关闭按钮**（或按 **⌘W**），会隐藏主窗口和**运行中的 Dock 图标**，但**不会退出 Warp SSH Manager**。菜单栏图标与全局快捷键 **⌃⌥⌘K** 继续可用；使用快速打开也不会使 Dock 图标重新出现。选择菜单栏「**打开主机管理器**」将恢复同一个窗口并重新显示 Dock 图标，不会创建重复窗口。若手动将应用固定在 Dock，固定快捷方式仍可能显示并可用于重新打开。选择菜单栏「退出 Warp SSH 管理器」或在应用激活时按 **⌘Q** 才会真正退出。不会自动设置登录时启动。
 
 
 ## 下载安装
 
-1. 前往 [GitHub Releases](https://github.com/javafancn/warp-ssh-manager/releases/latest)，下载 Apple Silicon 或 Intel 对应的 v1.0.4 DMG。
+1. 前往 [GitHub Releases](https://github.com/javafancn/warp-ssh-manager/releases/latest)，下载 Apple Silicon 或 Intel 对应的 v1.0.5 DMG。
 2. 如果使用 [GitHub Actions](https://github.com/javafancn/warp-ssh-manager/actions/workflows/build-macos-app.yml) 的测试构建，请在 **Artifacts** 下载对应架构的构建产物，并解压：
-   - Apple Silicon（M 系列）：`WarpSSHManager-Native-1.0.4-apple-silicon-macOS12`
-   - Intel（x86_64）：`WarpSSHManager-Native-1.0.4-intel-macOS12`
+   - Apple Silicon（M 系列）：`WarpSSHManager-Native-1.0.5-apple-silicon-macOS12`
+   - Intel（x86_64）：`WarpSSHManager-Native-1.0.5-intel-macOS12`
 3. 打开 DMG，将 **Warp SSH Manager.app** 拖入 `/Applications`。
 4. 安装 [Warp Terminal](https://www.warp.dev/)。macOS 自带 OpenSSH；确保终端能使用 `ssh`。
 
