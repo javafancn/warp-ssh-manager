@@ -61,6 +61,15 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
                 self.managerWindow?.orderOut(nil)
                 NSApp.deactivate()
             }
+            // WindowGroup can deliver another deferred display update after
+            // AppKit changes policy; keep the intentional closed state until
+            // an explicit manager reopen invalidates this revision.
+            DispatchQueue.main.asyncAfter(deadline:.now()+0.32) { [weak self] in
+                guard let self = self,
+                      self.dockPolicyRevision == revision,
+                      NSApp.activationPolicy() == .accessory else { return }
+                self.managerWindow?.orderOut(nil)
+            }
         }
     }
 
@@ -338,7 +347,7 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
 
             // The actual close button must hide both window and Dock.
             self.managerWindow?.performClose(nil)
-            DispatchQueue.main.asyncAfter(deadline:.now()+0.25) {
+            DispatchQueue.main.asyncAfter(deadline:.now()+0.50) {
                 let hiddenAfterClose = self.managerWindow?.isVisible == false
                 let dockHidden = NSApp.activationPolicy() == .accessory
                 let staysRunning = NSApp.isRunning &&
