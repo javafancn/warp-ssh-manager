@@ -24,7 +24,7 @@
 
 > **Community project, not affiliated with Warp.** Warp SSH Manager organizes SSH hosts and launches connections in Warp. The actual SSH transport and interactive terminal are still provided by **OpenSSH and Warp**. This app does not implement a separate SSH client.
 
-> **v1.0.3 release:** Adds the Spotlight-style Quick Connect launcher, global ⌃⌥⌘K shortcut, recent-first host search and refined macOS window placement. v1.0.1 added nested groups; both features are included in v1.0.3.
+> **v1.0.5 release:** Closing the main window hides the running Dock icon without quitting. The menu bar and ⌃⌥⌘K quick launcher keep working; reopening the manager restores the Dock icon. Other features from v1.0.4 remain available.
 
 ## Features
 
@@ -56,7 +56,7 @@ Start typing to search host names, SSH aliases, IPs, tags, or group paths. With 
 
 ### Keep running in the menu bar
 
-Closing the main window with the **red macOS close button** (or **⌘W**) hides that window **without quitting Warp SSH Manager**. The application stays running in the background with its menu bar icon and global **⌃⌥⌘K** shortcut available. Select **Open Host Manager** from the menu bar or click the Dock icon to restore the existing manager window; no duplicate window is created. To completely exit and unregister the global shortcut, choose **Quit Warp SSH Manager** from the menu bar or press **⌘Q** while the app is active. This does not enable automatic launch at login.
+Closing the main window with the **red macOS close button** (or **⌘W**) hides both the manager window and the **running application's Dock icon** without quitting Warp SSH Manager. The menu bar icon and global **⌃⌥⌘K** shortcut stay available; Quick Connect does not bring back the Dock icon. Choose **Open Host Manager** from the menu bar to restore the same window and Dock icon (no duplicate windows). A Dock shortcut you pinned manually may remain visible and can also reopen the manager. Choose **Quit Warp SSH Manager** or use **⌘Q** while active to exit completely. Automatic login launch is not enabled.
 
 ## Installation
 
