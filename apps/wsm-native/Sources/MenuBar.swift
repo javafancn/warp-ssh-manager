@@ -42,10 +42,15 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
             guard let self = self,
                   self.dockPolicyRevision == revision,
                   self.managerWindow?.isVisible == false else { return }
+            // Hide the application before changing its role. A live
+            // WindowGroup can otherwise be re-presented when the active
+            // foreground app is switched directly to accessory mode.
+            NSApp.hide(nil)
             if NSApp.activationPolicy() != .accessory &&
                 !NSApp.setActivationPolicy(.accessory) {
                 NSLog("WSM: unable to enter menu-bar-only activation policy")
             }
+            self.managerWindow?.orderOut(nil)
         }
     }
 
@@ -160,7 +165,7 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
     }
 
     private func toggleQuickPanel() {
-        if quickPanel?.isVisible == true && NSApp.keyWindow === quickPanel {
+        if quickPanel?.isVisible == true {
             quickPanel?.orderOut(nil)
         } else {
             showQuickPanel()
@@ -236,6 +241,7 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
     @objc func showMainWindow() {
         quickPanel?.orderOut(nil)
         restoreDockForManager()
+        NSApp.unhide(nil)
         NSApp.activate(ignoringOtherApps:true)
         if let main = findManagerWindow() {
             registerManagerWindow(main)
@@ -257,6 +263,10 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
                     self?.quickPanel?.orderOut(nil)
                 }))
             positionQuickPanel(existing)
+            NSApp.unhide(nil)
+            if NSApp.activationPolicy() == .accessory {
+                managerWindow?.orderOut(nil)
+            }
             NSApp.activate(ignoringOtherApps:true)
             existing.makeKeyAndOrderFront(nil)
             return
@@ -283,6 +293,10 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
         panel.contentView = host
         positionQuickPanel(panel)
         quickPanel = panel
+        NSApp.unhide(nil)
+        if NSApp.activationPolicy() == .accessory {
+            managerWindow?.orderOut(nil)
+        }
         NSApp.activate(ignoringOtherApps:true)
         panel.makeKeyAndOrderFront(nil)
     }
