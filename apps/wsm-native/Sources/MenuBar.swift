@@ -348,48 +348,55 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
                     self.item?.menu?.items.contains(where:{$0.title == AppLanguage.text("打开主机管理器")}) == true &&
                     self.item?.menu?.items.contains(where:{$0.title == AppLanguage.text("退出 Warp SSH 管理器")}) == true
 
-                // The global shortcut/menu launcher must stay accessory-only.
+                // AppKit focus/activation is asynchronous after switching
+                // between accessory and regular policies. Assert the settled
+                // WindowServer state, not the synchronous return path.
                 self.toggleQuickPanel()
-                let quickAfterClose = self.quickPanel?.isVisible == true &&
-                    self.managerWindow?.isVisible == false &&
-                    NSApp.keyWindow === self.quickPanel
-                let quickKeepsDockHidden = NSApp.activationPolicy() == .accessory
-                self.toggleQuickPanel()
-                let quickDismissed = self.quickPanel?.isVisible == false
-
-                var suppressesDefaultReopen = true
-                var reopenedSingleWindow = true
-                for _ in 0..<3 {
-                    let result = self.applicationShouldHandleReopen(NSApp,hasVisibleWindows:false)
-                    suppressesDefaultReopen = suppressesDefaultReopen && !result
-                    reopenedSingleWindow = reopenedSingleWindow &&
-                        self.managerCandidates().count == 1 &&
-                        self.managerWindow?.isVisible == true &&
-                        NSApp.keyWindow === self.managerWindow &&
-                        NSApp.activationPolicy() == .regular
-                }
-                let dockRestoredMain = self.managerWindow?.isVisible == true &&
-                    NSApp.keyWindow === self.managerWindow &&
-                    NSApp.activationPolicy() == .regular
-
-                // A rapid reopen must cancel the queued Dock demotion.
-                self.managerWindow?.performClose(nil)
-                self.showMainWindow()
                 DispatchQueue.main.asyncAfter(deadline:.now()+0.20) {
-                    let rapidReopenKeepsDock = self.managerWindow?.isVisible == true &&
-                        NSApp.activationPolicy() == .regular &&
-                        NSApp.keyWindow === self.managerWindow
-                    let managerCount = self.managerCandidates().count
-                    let passed = mainBefore != nil && initialCount == 1 &&
-                                 menuOpenedMain && hiddenAfterClose && dockHidden &&
-                                 staysRunning && menuSurvives && quickAfterClose &&
-                                 quickKeepsDockHidden && quickDismissed &&
-                                 dockRestoredMain && rapidReopenKeepsDock &&
-                                 suppressesDefaultReopen && reopenedSingleWindow &&
-                                 managerCount == 1
-                    let report = "quickPanel=\(quickOpened) managerMenu=\(menuOpenedMain) dockReopen=\(dockRestoredMain) initialManager=\(mainBefore != nil) initialCount=\(initialCount) managerCount=\(managerCount) closeHides=\(hiddenAfterClose) dockHides=\(dockHidden) appAlive=\(staysRunning) menuAlive=\(menuSurvives) quickAfterClose=\(quickAfterClose) quickKeepsDockHidden=\(quickKeepsDockHidden) quickDismissed=\(quickDismissed) rapidReopen=\(rapidReopenKeepsDock) suppressDefaultReopen=\(suppressesDefaultReopen) repeatDockSingle=\(reopenedSingleWindow) PASS=\(passed)\n"
-                    try? report.write(toFile:path,atomically:true,encoding:.utf8)
-                    NSLog("WSM window routing audit: %@",report)
+                    let quickVisible = self.quickPanel?.isVisible == true
+                    let quickManagerHidden = self.managerWindow?.isVisible == false
+                    let quickKey = NSApp.keyWindow === self.quickPanel
+                    let quickAfterClose = quickVisible && quickManagerHidden && quickKey
+                    let quickKeepsDockHidden = NSApp.activationPolicy() == .accessory
+                    self.toggleQuickPanel()
+                    let quickDismissed = self.quickPanel?.isVisible == false
+
+                    var suppressesDefaultReopen = true
+                    var singleWindowOnReopen = true
+                    for _ in 0..<3 {
+                        let result = self.applicationShouldHandleReopen(NSApp,hasVisibleWindows:false)
+                        suppressesDefaultReopen = suppressesDefaultReopen && !result
+                        singleWindowOnReopen = singleWindowOnReopen &&
+                            self.managerCandidates().count == 1
+                    }
+                    DispatchQueue.main.asyncAfter(deadline:.now()+0.20) {
+                        let dockRestoredMain = self.managerWindow?.isVisible == true &&
+                            NSApp.keyWindow === self.managerWindow &&
+                            NSApp.activationPolicy() == .regular
+                        let reopenedSingleWindow = singleWindowOnReopen &&
+                            dockRestoredMain && self.managerCandidates().count == 1
+
+                        // Reopening immediately after close must cancel any
+                        // queued demotion, leaving Dock visible and one window.
+                        self.managerWindow?.performClose(nil)
+                        self.showMainWindow()
+                        DispatchQueue.main.asyncAfter(deadline:.now()+0.20) {
+                            let rapidReopenKeepsDock = self.managerWindow?.isVisible == true &&
+                                NSApp.activationPolicy() == .regular &&
+                                NSApp.keyWindow === self.managerWindow
+                            let managerCount = self.managerCandidates().count
+                            let passed = mainBefore != nil && initialCount == 1 &&
+                                menuOpenedMain && hiddenAfterClose && dockHidden &&
+                                staysRunning && menuSurvives && quickAfterClose &&
+                                quickKeepsDockHidden && quickDismissed &&
+                                dockRestoredMain && rapidReopenKeepsDock &&
+                                suppressesDefaultReopen && reopenedSingleWindow &&
+                                managerCount == 1
+                            let report = "quickPanel=\(quickOpened) managerMenu=\(menuOpenedMain) dockReopen=\(dockRestoredMain) initialManager=\(mainBefore != nil) initialCount=\(initialCount) managerCount=\(managerCount) closeHides=\(hiddenAfterClose) dockHides=\(dockHidden) appAlive=\(staysRunning) menuAlive=\(menuSurvives) quickAfterClose=\(quickAfterClose) quickVisible=\(quickVisible) quickManagerHidden=\(quickManagerHidden) quickKey=\(quickKey) quickKeepsDockHidden=\(quickKeepsDockHidden) quickDismissed=\(quickDismissed) rapidReopen=\(rapidReopenKeepsDock) suppressDefaultReopen=\(suppressesDefaultReopen) repeatDockSingle=\(reopenedSingleWindow) PASS=\(passed)\n"
+                            try? report.write(toFile:path,atomically:true,encoding:.utf8)
+                            NSLog("WSM window routing audit: %@",report)
+                        }
+                    }
                 }
             }
         }
