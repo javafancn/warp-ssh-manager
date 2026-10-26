@@ -51,6 +51,16 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
                 NSLog("WSM: unable to enter menu-bar-only activation policy")
             }
             self.managerWindow?.orderOut(nil)
+            // SwiftUI's WindowGroup may re-order its retained scene during
+            // the activation-policy transition. Reassert the hidden state
+            // once the scene's own main-queue updates have been processed.
+            DispatchQueue.main.asyncAfter(deadline:.now()+0.12) { [weak self] in
+                guard let self = self,
+                      self.dockPolicyRevision == revision,
+                      NSApp.activationPolicy() == .accessory else { return }
+                self.managerWindow?.orderOut(nil)
+                NSApp.deactivate()
+            }
         }
     }
 
@@ -269,6 +279,9 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
             }
             NSApp.activate(ignoringOtherApps:true)
             existing.makeKeyAndOrderFront(nil)
+            if NSApp.activationPolicy() == .accessory {
+                managerWindow?.orderOut(nil)
+            }
             return
         }
         let panel = QuickConnectWindow(
@@ -299,6 +312,9 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
         }
         NSApp.activate(ignoringOtherApps:true)
         panel.makeKeyAndOrderFront(nil)
+        if NSApp.activationPolicy() == .accessory {
+            managerWindow?.orderOut(nil)
+        }
     }
 
     private func runWindowRoutingSmoke() {
