@@ -80,8 +80,12 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
         let artwork = Bundle.main.resourceURL?.appendingPathComponent("brand-mark.png")
         let icon = artwork.flatMap { NSImage(contentsOf:$0) } ??
                    NSImage(systemSymbolName:"terminal",accessibilityDescription:"Warp SSH")
-        icon?.size = NSSize(width:19,height:19)
+        // W has visually heavy strokes; 16pt gives it the same optical
+        // footprint as other standard macOS menu-bar symbols. Keep the
+        // native square status-item width for a consistent click target.
+        icon?.size = NSSize(width:16,height:16)
         icon?.isTemplate = true
+        status.button?.imageScaling = .scaleProportionallyDown
         status.button?.image = icon
         status.button?.toolTip = "Warp SSH 管理器"
         let menu = NSMenu()
@@ -394,14 +398,19 @@ final class StatusBarDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate
                                 NSApp.activationPolicy() == .regular &&
                                 NSApp.keyWindow === self.managerWindow
                             let managerCount = self.managerCandidates().count
-                            let passed = mainBefore != nil && initialCount == 1 &&
+                            let iconSize = self.item?.button?.image?.size ?? .zero
+                            let statusIconFits = iconSize.width <= 16 &&
+                                iconSize.height <= 16 && iconSize.width > 0 &&
+                                iconSize.height > 0
+                            let passed = statusIconFits &&
+                                mainBefore != nil && initialCount == 1 &&
                                 menuOpenedMain && hiddenAfterClose && dockHidden &&
                                 staysRunning && menuSurvives && quickAfterClose &&
                                 quickKeepsDockHidden && quickDismissed &&
                                 dockRestoredMain && rapidReopenKeepsDock &&
                                 suppressesDefaultReopen && reopenedSingleWindow &&
                                 managerCount == 1
-                            let report = "quickPanel=\(quickOpened) managerMenu=\(menuOpenedMain) dockReopen=\(dockRestoredMain) initialManager=\(mainBefore != nil) initialCount=\(initialCount) managerCount=\(managerCount) closeHides=\(hiddenAfterClose) dockHides=\(dockHidden) appAlive=\(staysRunning) menuAlive=\(menuSurvives) quickAfterClose=\(quickAfterClose) quickVisible=\(quickVisible) quickManagerHidden=\(quickManagerHidden) quickKey=\(quickKey) quickKeepsDockHidden=\(quickKeepsDockHidden) quickDismissed=\(quickDismissed) rapidReopen=\(rapidReopenKeepsDock) suppressDefaultReopen=\(suppressesDefaultReopen) repeatDockSingle=\(reopenedSingleWindow) PASS=\(passed)\n"
+                            let report = "quickPanel=\(quickOpened) managerMenu=\(menuOpenedMain) dockReopen=\(dockRestoredMain) initialManager=\(mainBefore != nil) initialCount=\(initialCount) managerCount=\(managerCount) closeHides=\(hiddenAfterClose) dockHides=\(dockHidden) appAlive=\(staysRunning) menuAlive=\(menuSurvives) quickAfterClose=\(quickAfterClose) quickVisible=\(quickVisible) quickManagerHidden=\(quickManagerHidden) quickKey=\(quickKey) quickKeepsDockHidden=\(quickKeepsDockHidden) quickDismissed=\(quickDismissed) rapidReopen=\(rapidReopenKeepsDock) suppressDefaultReopen=\(suppressesDefaultReopen) repeatDockSingle=\(reopenedSingleWindow) statusIconFits=\(statusIconFits) PASS=\(passed)\n"
                             try? report.write(toFile:path,atomically:true,encoding:.utf8)
                             NSLog("WSM window routing audit: %@",report)
                         }
