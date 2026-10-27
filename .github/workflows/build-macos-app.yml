@@ -2,7 +2,7 @@ name: 构建 macOS 原生安装包（SwiftUI + Rust）
 on:
   workflow_dispatch:
   push:
-    branches: [main, feature/ssh-credentials-ui, feature/nested-groups, feature/spotlight-quick-launcher, fix/reusable-tags-and-transient-notices, fix/keep-running-in-menu-bar, feat/interface-language-settings, fix/hide-dock-on-close-v1.0.6, fix/menubar-icon-size-v1.0.6]
+    branches: [main, feature/ssh-credentials-ui, feature/nested-groups, feature/spotlight-quick-launcher, fix/reusable-tags-and-transient-notices, fix/keep-running-in-menu-bar, feat/interface-language-settings, fix/hide-dock-on-close-v1.0.5, fix/menubar-icon-size-v1.0.6]
     tags: ['v*']
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
