@@ -24,7 +24,7 @@
 
 > **Community project, not affiliated with Warp.** Warp SSH Manager organizes SSH hosts and launches connections in Warp. The actual SSH transport and interactive terminal are still provided by **OpenSSH and Warp**. This app does not implement a separate SSH client.
 
-> **v1.0.5 release:** Closing the main window hides the running Dock icon without quitting. The menu bar and ⌃⌥⌘K quick launcher keep working; reopening the manager restores the Dock icon. Other features from v1.0.4 remain available.
+> **v1.0.6 release:** The W menu bar icon is reduced from 19 pt to 16 pt for better alignment with adjacent macOS status icons. Dock hide/restore, menu bar background mode and ⌃⌥⌘K Quick Connect remain unchanged.
 
 ## Features
 
