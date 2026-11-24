@@ -138,7 +138,7 @@ struct HostInspector: View {
                 .popover(isPresented:$showMoreOptions,arrowEdge:.bottom) {
                     VStack(alignment:.leading,spacing:12) {
                         Button("刷新主机列表"){showMoreOptions=false;store.refresh()}
-                        Button("导入 SSH 配置"){showMoreOptions=false;store.act(["import"])}
+                        Button("导入 SSH 配置"){showMoreOptions=false;store.showImportPreview=true}
                         if let host = store.selected {
                             Divider()
                             Button {
@@ -898,7 +898,7 @@ struct HostInspector: View {
                     Rectangle().fill(Design.hairline).frame(height:1)
 
                     Button {
-                        store.act(["import"])
+                        store.showImportPreview = true
                     } label: {
                         HStack(spacing:10 * scale) {
                             Image(systemName:"square.and.arrow.down")

@@ -268,6 +268,7 @@ final class ManagerStore: ObservableObject {
     @Published var tab: InspectorTab = .basic
     @Published var includeEnabled = false
     @Published var busy = false
+    @Published var showImportPreview = false
     @Published var credentialRevision = 0
     // All non-error notices behave like transient toasts. Each reassignment
     // invalidates an earlier timer, even when the same text is shown twice.

@@ -150,30 +150,6 @@ impl Manager {
         Ok(())
     }
 
-    pub fn import_ssh(&self) -> Result<(usize,usize,Vec<String>)> {
-        let aliases=ssh::find_aliases(&self.paths.ssh_config)?;
-        let mut added=0;let mut updated=0;let mut errors=Vec::new();
-        for alias in aliases {
-            let current=self.db.find_alias(&alias)?;
-            if matches!(current.as_ref().map(|h|h.source),Some(HostSource::Managed)) { continue; }
-            match ssh::effective_config(&alias) {
-                Ok(c) => {
-                    let mut host=if let Some(h)=current { updated+=1;h } else {
-                        added+=1;
-                        HostInput{name:alias.clone(),alias:alias.clone(),hostname:c.hostname.clone(),username:c.username.clone(),port:c.port,
-                            identity_file:c.identity_file.clone(),proxy_jump:c.proxy_jump.clone(),auth_mode:AuthMode::Auto,group_id:None,favorite:false}
-                            .into_host(HostSource::Imported)
-                    };
-                    host.hostname=c.hostname;host.username=c.username;host.port=c.port;
-                    host.identity_file=c.identity_file;host.proxy_jump=c.proxy_jump;
-                    self.db.save_host(&host)?;
-                }
-                Err(e)=>errors.push(format!("{alias}: {e:#}")),
-            }
-        }
-        Ok((added,updated,errors))
-    }
-
     fn group_name(&self, group_id:Option<Uuid>) -> Result<Option<String>> {
         let groups=self.db.list_groups()?;
         Ok(group_id.and_then(|id|groups.iter().find(|g|g.id==id)).map(|g|g.name.clone()))

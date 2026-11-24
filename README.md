@@ -75,7 +75,7 @@ Closing the main window with the **red macOS close button** (or **⌘W**) hides 
 
 ### 1. Import or create a host
 
-**Import an existing host:** Import aliases from your existing `~/.ssh/config`. Imported connection parameters continue to be managed by the original SSH configuration: edit the source file and re-import instead of expecting Warp SSH Manager to rewrite it.
+**Import preview (current source)**. Choose **Import SSH Config** to preview aliases from `~/.ssh/config` and its included files. New aliases are selected by default. For existing hosts, review the connection changes and select the updates you want to import. Your groups, tags, notes, and saved credentials stay associated with the same host. Edit the source SSH configuration to change an imported host's connection parameters, then import the update.
 
 **Create a managed host:** Run the app's SSH integration initialization, or `wsm init`, before your first managed connection. Initialization backs up the existing top-level SSH config and adds an `Include` pointing to a dedicated WSM-managed file. Then add a host with:
 
@@ -143,9 +143,12 @@ You can optionally store a different **sudo password** for a host. If not config
 The app bundle contains the Rust `wsm` CLI. From the repository root:
 
 ```bash
-# Basic diagnostics, import and enumeration
+# Basic diagnostics
 cargo run -p wsm-cli -- doctor
-cargo run -p wsm-cli -- import
+
+# Preview, then import selected aliases or run import without flags for all aliases
+cargo run -p wsm-cli -- import --dry-run
+cargo run -p wsm-cli -- import --alias dev-api --alias staging-db
 cargo run -p wsm-cli -- list
 
 # Initialize WSM-managed SSH configuration

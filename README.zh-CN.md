@@ -78,7 +78,7 @@
 
 ### 1. 导入 SSH 主机或初始化新主机
 
-**已有 SSH 配置**：从应用中选择「导入 SSH 配置」，导入 `~/.ssh/config` 里的主机别名。导入主机的主机名、用户、端口等信息仍由原始 SSH 配置管理；要修改连接参数，请编辑原文件再重新导入。
+**导入预览（当前源码）**。选择「导入 SSH 配置」，预览 `~/.ssh/config` 及其包含文件中的主机别名。新增主机默认勾选。已有主机可查看连接参数的前后差异，再勾选要更新的条目。分组、标签、备注和已保存的凭据会保留在原主机上。要修改连接参数，请编辑原 SSH 配置文件，再选择导入更新。
 
 **自建主机**：首次使用前通过应用的「初始化 SSH 集成」或执行 `wsm init`。它会先备份主 SSH 配置，再加入一个指向专用托管配置的 `Include`；后续由 WSM 维护自己的 SSH Host。接着新建主机，填写：
 
@@ -147,8 +147,9 @@
 # 环境检查
 cargo run -p wsm-cli -- doctor
 
-# 导入和列出已有 SSH 主机
-cargo run -p wsm-cli -- import
+# 预览后按别名导入，无参数的 import 可导入全部别名
+cargo run -p wsm-cli -- import --dry-run
+cargo run -p wsm-cli -- import --alias dev-api --alias staging-db
 cargo run -p wsm-cli -- list
 
 # 初始化托管 SSH Config，再添加服务器

@@ -819,7 +819,7 @@ struct ConnectionList: View {
                         filterChoice("最近连接",filter:.recent)
                         Divider()
                         Button("刷新") {showFilters=false;store.refresh()}
-                        Button("导入 SSH 配置") {showFilters=false;store.act(["import"])}
+                        Button("导入 SSH 配置") {showFilters=false;store.showImportPreview=true}
                     }
                     .font(Design.font(14))
                     .padding(15)
@@ -842,6 +842,9 @@ struct ConnectionList: View {
                             Text(store.hosts.isEmpty ? "点击右上角新建主机，或导入已有 OpenSSH 配置。" : "试试其他搜索条件")
                                 .font(Design.font(13))
                                 .multilineTextAlignment(.center)
+                            if store.hosts.isEmpty {
+                                Button("导入 SSH 配置") { store.showImportPreview = true }
+                            }
                         }
                         .foregroundColor(Design.secondary)
                         .padding(30)

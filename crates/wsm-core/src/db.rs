@@ -1,4 +1,5 @@
 use crate::model::{AuthMode, Group, Host, HostSource};
+use crate::ssh::EffectiveSsh;
 use anyhow::{Context, Result};
 use rusqlite::{params, Connection, OptionalExtension, Row};
 use std::path::Path;
@@ -7,6 +8,23 @@ use uuid::Uuid;
 pub struct Repository { conn: Connection }
 
 impl Repository {
+    pub(crate) fn with_write_transaction<T>(&self, action: impl FnOnce() -> Result<T>) -> Result<T> {
+        let transaction = rusqlite::Transaction::new_unchecked(
+            &self.conn, rusqlite::TransactionBehavior::Immediate,
+        )?;
+        let result = action()?;
+        transaction.commit()?;
+        Ok(result)
+    }
+
+    pub(crate) fn update_imported_connection(&self, id: Uuid, config: &EffectiveSsh) -> Result<()> {
+        self.conn.execute(
+            "UPDATE hosts SET hostname=?2, username=?3, port=?4, identity_file=?5, proxy_jump=?6 WHERE id=?1 AND source='imported'",
+            params![id.to_string(), config.hostname, config.username, config.port, config.identity_file, config.proxy_jump],
+        )?;
+        Ok(())
+    }
+
     pub fn open(path: &Path) -> Result<Self> {
         if path.is_symlink() { anyhow::bail!("refusing to open symlinked database: {}", path.display()); }
         if let Some(parent) = path.parent() {

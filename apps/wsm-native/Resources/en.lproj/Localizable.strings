@@ -218,3 +218,23 @@
 "最新版本" = "Latest Version";
 "检查更新失败，请检查网络后重试" = "Unable to Check for Updates. Check Your Connection and Try Again.";
 "更新包来自 GitHub Releases，下载后需要手动安装。" = "Downloads come from GitHub Releases. Installation is manual.";
+
+/* SSH import preview */
+"新增" = "New";
+"更新" = "Update";
+"无变化" = "Unchanged";
+"已由管理器托管" = "Managed by WSM";
+"别名大小写冲突" = "Alias capitalization conflict";
+"解析失败" = "Could not resolve";
+"预览 SSH 导入" = "Preview SSH Import";
+"SSH 配置路径" = "SSH config path";
+"正在读取 SSH 配置…" = "Reading SSH config…";
+"未找到可导入的 SSH 别名" = "No importable SSH aliases found";
+"全选可导入项" = "Select All Importable";
+"清空勾选" = "Clear Selection";
+"已选 %lld 项" = "%lld selected";
+"配置或主机记录已变化，请重新扫描后再导入。" = "The config or host records changed. Scan again to continue.";
+"重新扫描" = "Scan Again";
+"导入所选主机" = "Import Selected Hosts";
+"主机 / IP" = "Host / IP";
+"已新增 %lld 台主机，更新 %lld 台主机" = "Added %lld hosts, updated %lld hosts";

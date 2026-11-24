@@ -4,6 +4,7 @@ use clap::Subcommand;
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read};
 use uuid::Uuid;
+use wsm_core::import::ImportCandidate;
 use wsm_core::{AuthMode, Group, Host, HostInput, HostSource, Manager};
 
 #[derive(Subcommand)]
@@ -17,6 +18,8 @@ pub enum UiCommand {
     Connect { id: Uuid, #[arg(long)] askpass_session: Option<Uuid> },
     Init,
     Import,
+    ImportPreview,
+    ImportApply,
     AddGroup { name: String, #[arg(long)] parent: Option<Uuid> },
     UpdateGroup { id: Uuid, name: String,
         #[arg(long,conflicts_with = "root")] parent: Option<Uuid>,
@@ -53,6 +56,11 @@ struct Draft {
     favorite: bool,
     tags: String,
     notes: String,
+}
+
+#[derive(Deserialize)]
+struct ImportSelection {
+    candidates: Vec<ImportCandidate>,
 }
 
 fn snapshot(manager: &Manager) -> Result<Snapshot> {
@@ -138,6 +146,15 @@ pub fn run(manager: &Manager, command: UiCommand) -> Result<()> {
         UiCommand::Import => {
             let (_added, _updated, errors) = manager.import_ssh()?;
             for error in errors {eprintln!("Warning: {error}");}
+        }
+        UiCommand::ImportPreview => {
+            println!("{}", serde_json::to_string(&manager.preview_ssh_import(&[])?)?);
+        }
+        UiCommand::ImportApply => {
+            let selection: ImportSelection = serde_json::from_reader(io::stdin().lock())
+                .context("invalid SSH import selection from UI")?;
+            let result = manager.apply_ssh_import(&selection.candidates)?;
+            println!("{}", serde_json::to_string(&result)?);
         }
         UiCommand::AddGroup {name,parent} => {
             let group=manager.group_add(&name,parent)?;

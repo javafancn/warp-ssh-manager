@@ -1,5 +1,6 @@
 use anyhow::{bail, Context, Result};
 use glob::glob;
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -149,39 +150,62 @@ pub fn write_managed(paths: &AppPaths, hosts: &[Host]) -> Result<()> {
 
 /// Parse the literal aliases in the Host directives (not wildcard patterns). Recursively follows Include.
 pub fn find_aliases(root: &Path) -> Result<Vec<String>> {
+    find_aliases_from(root, root.parent().unwrap_or(Path::new(".")))
+}
+
+pub(crate) fn find_aliases_from(root: &Path, include_base: &Path) -> Result<Vec<String>> {
     let mut out=BTreeSet::new();
     let mut visited=HashSet::new();
-    read_aliases(root,&mut visited,&mut out,0)?;
+    read_aliases(root,include_base,&mut visited,&mut out,0)?;
     Ok(out.into_iter().collect())
 }
 
-fn read_aliases(file: &Path, visited: &mut HashSet<PathBuf>, out: &mut BTreeSet<String>, depth: usize) -> Result<()> {
+fn directive_arguments(mut arguments: &str) -> impl Iterator<Item = &str> {
+    std::iter::from_fn(move || {
+        arguments = arguments.trim_start();
+        if arguments.is_empty() || arguments.starts_with('#') { return None; }
+        let (word, rest) = if let Some(quote @ ('"' | '\'')) = arguments.chars().next() {
+            arguments[1..].split_once(quote)?
+        } else {
+            let end = arguments.find(char::is_whitespace).unwrap_or(arguments.len());
+            arguments.split_at(end)
+        };
+        arguments = rest;
+        Some(word)
+    })
+}
+
+fn read_aliases(file: &Path, include_base: &Path, visited: &mut HashSet<PathBuf>, out: &mut BTreeSet<String>, depth: usize) -> Result<()> {
     if depth>12 { bail!("SSH Include depth exceeded 12"); }
-    if !file.exists() { return Ok(()); }
-    let canonical=fs::canonicalize(file)?;
+    let canonical = match fs::canonicalize(file) {
+        Ok(path) => path,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(error).with_context(|| format!("reading {}", file.display())),
+    };
     if !visited.insert(canonical) { return Ok(()); }
     let content=fs::read_to_string(file).with_context(||format!("reading {}",file.display()))?;
     for line in content.lines() {
         let s=line.trim();
         if s.is_empty() || s.starts_with('#') { continue; }
-        let mut parts=s.split_whitespace();
-        match parts.next().unwrap_or("").to_ascii_lowercase().as_str() {
+        let end = s.find(|ch: char| ch.is_whitespace() || ch == '=').unwrap_or(s.len());
+        let (keyword, arguments) = s.split_at(end);
+        let parts = directive_arguments(arguments.trim_start().trim_start_matches('='));
+        match keyword.to_ascii_lowercase().as_str() {
             "host" => {
-                for item in parts.take_while(|p|!p.starts_with('#')) {
+                for item in parts {
                     if validate_alias(item).is_ok() { out.insert(item.to_string()); }
                 }
             }
             "include" => {
-                for pattern in parts.take_while(|p|!p.starts_with('#')) {
-                    let pattern=pattern.trim_matches('"');
+                for pattern in parts {
                     let resolved=if let Some(tail)=pattern.strip_prefix("~/") {
                         dirs::home_dir().unwrap_or_default().join(tail)
                     } else if Path::new(pattern).is_absolute() { PathBuf::from(pattern) }
-                    else { file.parent().unwrap_or(Path::new(".")).join(pattern) };
+                    else { include_base.join(pattern) };
                     let expr=resolved.to_string_lossy();
                     if let Ok(globbed)=glob(&expr) {
                         for item in globbed.flatten() {
-                            if item.is_file() { read_aliases(&item,visited,out,depth+1)?; }
+                            if item.is_file() { read_aliases(&item,include_base,visited,out,depth+1)?; }
                         }
                     }
                 }
@@ -192,7 +216,7 @@ fn read_aliases(file: &Path, visited: &mut HashSet<PathBuf>, out: &mut BTreeSet<
     Ok(())
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct EffectiveSsh {
     pub hostname: String,
     pub username: String,
@@ -203,8 +227,15 @@ pub struct EffectiveSsh {
 
 /// Uses OpenSSH's own configuration resolver. Does not initiate a network connection.
 pub fn effective_config(alias: &str) -> Result<EffectiveSsh> {
+    effective_config_from(alias, None)
+}
+
+pub(crate) fn effective_config_from(alias: &str, config: Option<&Path>) -> Result<EffectiveSsh> {
     validate_alias(alias)?;
-    let output=Command::new("ssh").arg("-G").arg(alias).output().context("running ssh -G")?;
+    let mut command = Command::new("ssh");
+    command.args(["-G", "-T"]).stdin(std::process::Stdio::null());
+    if let Some(config) = config { command.arg("-F").arg(config); }
+    let output = command.arg(alias).output().context("running ssh -G")?;
     if !output.status.success() { bail!("ssh -G {alias} failed: {}",String::from_utf8_lossy(&output.stderr)); }
     let text=String::from_utf8(output.stdout)?;
     let mut hostname=String::new(); let mut username=String::new(); let mut port=22u16;

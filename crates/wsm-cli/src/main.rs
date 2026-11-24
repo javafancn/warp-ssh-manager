@@ -3,6 +3,8 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
 use uuid::Uuid;
+use wsm_core::import::{ImportCandidate, ImportStatus};
+use wsm_core::ssh::EffectiveSsh;
 use wsm_core::{AuthMode, HostInput, Manager};
 
 #[derive(Parser)]
@@ -18,7 +20,14 @@ enum Commands {
     /// Check installation and paths.
     Doctor,
     /// Import existing OpenSSH aliases without changing their files.
-    Import,
+    Import {
+        /// Show the changes that would be imported.
+        #[arg(long)]
+        dry_run: bool,
+        /// Select an SSH alias (repeat for multiple aliases).
+        #[arg(long = "alias", value_name = "ALIAS")]
+        aliases: Vec<String>,
+    },
     /// Show known hosts.
     List { #[arg(short,long)] search:Option<String> },
     /// Create a managed SSH host (run init first).
@@ -64,6 +73,33 @@ fn main() {
     if let Err(error)=run() { eprintln!("Error: {error:#}");std::process::exit(1); }
 }
 
+fn print_import_candidate(row: &ImportCandidate) {
+    let status = match row.status {
+        ImportStatus::New => "new",
+        ImportStatus::Update => "update",
+        ImportStatus::Unchanged => "unchanged",
+        ImportStatus::Managed => "managed",
+        ImportStatus::Conflict => "conflict",
+        ImportStatus::Error => "error",
+    };
+    fn target(config: &EffectiveSsh) -> String {
+        format!(
+            "{}@{} port {} (IdentityFile {}, ProxyJump {})",
+            config.username, config.hostname, config.port,
+            config.identity_file.as_deref().unwrap_or("none"),
+            config.proxy_jump.as_deref().unwrap_or("none"),
+        )
+    }
+    print!("{status}\t{}", row.alias);
+    if let (ImportStatus::Update, Some(before), Some(after)) = (row.status, &row.before, &row.after) {
+        print!("\t{} -> {}", target(before), target(after));
+    } else if let Some(after) = &row.after {
+        print!("\t{}", target(after));
+    }
+    if let Some(detail) = &row.detail { print!("\t{}", detail.trim()); }
+    println!();
+}
+
 fn run()->Result<()> {
     let cli=Cli::parse();
     let manager=Manager::discover()?;
@@ -80,10 +116,17 @@ fn run()->Result<()> {
             println!("Managed hosts: {}\nImported hosts: {}",r.managed_hosts,r.imported_hosts);
             println!("SSH config: {}\nWarp Tab Configs: {}",r.ssh_config.display(),r.warp_config_directory.display());
         }
-        Commands::Import=> {
-            let (a,u,errors)=manager.import_ssh()?;
-            println!("Imported {a} new, updated {u} existing hosts");
-            for e in errors { eprintln!("Warning: {e}"); }
+        Commands::Import { dry_run, aliases } => {
+            if dry_run {
+                let preview = manager.preview_ssh_import(&aliases)?;
+                println!("SSH config: {}", preview.config_path.display());
+                if preview.candidates.is_empty() { println!("No SSH aliases found"); }
+                for row in &preview.candidates { print_import_candidate(row); }
+            } else {
+                let (report, warnings) = manager.import_ssh_aliases(&aliases)?;
+                println!("Imported {} new, updated {} existing hosts", report.added, report.updated);
+                for warning in warnings { eprintln!("Warning: {warning}"); }
+            }
         }
         Commands::List{search}=> {
             let groups:HashMap<_,_>=manager.db.list_groups()?.into_iter().map(|g|(g.id,g.name)).collect();

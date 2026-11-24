@@ -278,6 +278,9 @@ struct ManagerShell: View {
         // explicitly occupies it; otherwise a dark 22px stripe appears above
         // the SwiftUI toolbar on macOS.
         .ignoresSafeArea(.container,edges:.top)
+        .sheet(isPresented: $store.showImportPreview) {
+            SSHImportSheet(store: store)
+        }
         .environmentObject(store)
         .environmentObject(updater)
         .environment(\.locale,AppLanguage.locale(store.language))
